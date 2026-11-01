@@ -10,4 +10,13 @@ publish = false
 workspace = true
 
 [dependencies]
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
 shorted_core = { path = "../shorted_core" }
+thiserror = "2.0.21"
+tracing = "0.1.44"
+uuid = "1.29.0"
+
+[dev-dependencies]
+tempfile = "3.27.0"
+uuid = "1.29.0"

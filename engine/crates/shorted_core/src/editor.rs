@@ -144,15 +144,16 @@ impl Editor {
         Ok(self.event(&before, true))
     }
 
-    pub fn undo(&mut self) -> Result<Option<ChangeEvent>, ModelError> {
+    /// Undoes one step. Also returns the command applied, which the journal records.
+    pub fn undo(&mut self) -> Result<Option<(ChangeEvent, Command)>, ModelError> {
         self.step(true)
     }
 
-    pub fn redo(&mut self) -> Result<Option<ChangeEvent>, ModelError> {
+    pub fn redo(&mut self) -> Result<Option<(ChangeEvent, Command)>, ModelError> {
         self.step(false)
     }
 
-    fn step(&mut self, undo: bool) -> Result<Option<ChangeEvent>, ModelError> {
+    fn step(&mut self, undo: bool) -> Result<Option<(ChangeEvent, Command)>, ModelError> {
         if self.gesture_base.is_some() {
             self.cancel_gesture()?;
         }
@@ -172,6 +173,6 @@ impl Editor {
                 return Err(error);
             }
         }
-        Ok(Some(self.event(&before, false)))
+        Ok(Some((self.event(&before, false), command)))
     }
 }
