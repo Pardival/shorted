@@ -38,7 +38,7 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - run: flutter build apk --debug
+      - run: flutter build apk --debug --target-platform android-arm64
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: shorted-android-debug
