@@ -18,7 +18,9 @@ fn main() {
     let (status, _keep_open) = mpsc::channel();
     let mut session = ProjectSession::open(Path::new(&root), id, status).expect("open");
     let mut output = std::io::stdout();
-    for step in 0u64.. {
+    let mut step = 0u64;
+    loop {
+        step += 1;
         session
             .execute(&Command::Rename {
                 title: step.to_string(),
