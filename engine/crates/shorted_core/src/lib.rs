@@ -2,6 +2,10 @@
 
 #![deny(unsafe_op_in_unsafe_fn)]
 
+pub mod error;
+pub mod model;
+pub mod validate;
+
 /// Name of this crate, used by the workspace smoke tests.
 pub const CRATE_NAME: &str = "shorted_core";
 
