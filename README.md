@@ -48,6 +48,11 @@ The first build compiles the engine through the `rust_builder` plugin. After cha
 
 Replace `macos` with `windows`, `linux`, or the id of a connected device (`flutter devices`).
 
+## Performance
+
+`scripts/perf.py` runs the engine benchmarks, measures decoding and, on macOS, runs the app, then prints a table
+against the budgets. The window opens for about 75 seconds. It covers this machine only.
+
 ## Contributing and security
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).

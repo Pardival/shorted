@@ -1,0 +1,20 @@
+[package]
+name = "shorted_benches"
+description = "Engine benchmarks (T-0007)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+shorted_render = { path = "../crates/shorted_render" }
+
+[dev-dependencies]
+criterion = "0.8"
+
+[[bench]]
+name = "engine"
+harness = false
