@@ -43,6 +43,9 @@ cd engine && cargo build && cargo test
 cd app && flutter pub get && flutter run -d macos
 ```
 
+The first build compiles the engine through the `rust_builder` plugin. After changing the API in
+`engine/crates/shorted_ffi/src/api`, install `flutter_rust_bridge_codegen` 2.13.0 and run `scripts/codegen.sh`.
+
 Replace `macos` with `windows`, `linux`, or the id of a connected device (`flutter devices`).
 
 ## Contributing and security

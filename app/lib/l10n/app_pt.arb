@@ -1,5 +1,7 @@
 {
   "@@locale": "pt",
   "appTitle": "Shorted",
-  "placeholderTagline": "Seus clipes, um short caprichado."
+  "placeholderTagline": "Seus clipes, um short caprichado.",
+  "engineVersion": "Motor {version}",
+  "engineCounter": "Contador do motor: {value}"
 }
