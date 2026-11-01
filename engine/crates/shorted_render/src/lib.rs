@@ -4,6 +4,7 @@
 
 #[cfg(target_vendor = "apple")]
 pub mod apple;
+pub mod compositor;
 pub mod spike;
 
 /// Name of this crate, used by the workspace smoke tests.

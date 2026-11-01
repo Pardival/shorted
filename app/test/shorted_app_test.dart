@@ -6,7 +6,9 @@ import 'package:shorted/bridge/api/projects.dart';
 import 'package:shorted/bridge/error.dart';
 import 'package:shorted/features/editor/editor_parts.dart';
 import 'package:shorted/features/project/project_providers.dart';
+import 'package:shorted/features/timeline/timeline_view.dart';
 
+import 'features/preview/fake_transport.dart';
 import 'features/project/fake_gateway.dart';
 
 void resize(WidgetTester tester, Size size) {
@@ -26,7 +28,10 @@ Future<FakeGateway> open(
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [projectGatewayProvider.overrideWithValue(fake)],
+      overrides: [
+        projectGatewayProvider.overrideWithValue(fake),
+        previewTransportProvider.overrideWithValue(FakeTransport()),
+      ],
       child: ShortedApp(engineVersion: '1.2.3', initialLocation: location),
     ),
   );
@@ -121,6 +126,44 @@ void main() {
     await tester.tap(find.byTooltip('Redo'));
     await tester.pumpAndSettle();
     expect(find.text('New name'), findsOneWidget);
+  });
+
+  testWidgets('play follows the engine and scrubbing moves it', (tester) async {
+    final transport = FakeTransport();
+    final gateway = FakeGateway()..projects.add(FakeProject('p1', 'Mine'));
+    resize(tester, const Size(1280, 800));
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          projectGatewayProvider.overrideWithValue(gateway),
+          previewTransportProvider.overrideWithValue(transport),
+        ],
+        child: const ShortedApp(
+          engineVersion: '1',
+          initialLocation: '/editor/p1/clips',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(Texture), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Play or pause'));
+    await tester.pump();
+    transport.positionUs = 2000000;
+    await tester.pump(const Duration(milliseconds: 16));
+    expect(find.text('0:02 / 0:04'), findsOneWidget);
+    expect(transport.seeks, isEmpty);
+
+    transport.isPlaying = false;
+    await tester.pump(const Duration(milliseconds: 16));
+    await tester.pump();
+    expect(find.byIcon(Icons.play_arrow), findsOneWidget);
+
+    final timeline = tester.getTopLeft(find.byType(TimelineView));
+    await tester.tapAt(timeline + const Offset(128, 8));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(transport.seeks.single, closeTo(1000000, 50000));
   });
 
   testWidgets('a project that cannot open shows a human message', (

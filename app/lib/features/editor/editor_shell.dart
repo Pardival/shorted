@@ -14,7 +14,7 @@ const _phoneTimelineHeight = 72.0;
 const _desktopTimelineHeight = 220.0;
 
 /// The section lives in the route, so resizing the window keeps it (T-0202).
-class EditorShell extends ConsumerWidget {
+class EditorShell extends ConsumerStatefulWidget {
   const EditorShell({
     super.key,
     required this.projectId,
@@ -24,19 +24,31 @@ class EditorShell extends ConsumerWidget {
   final String projectId;
   final EditorSection section;
 
+  @override
+  ConsumerState<EditorShell> createState() => _EditorShellState();
+}
+
+class _EditorShellState extends ConsumerState<EditorShell> {
+  final _playheadUs = ValueNotifier<int>(0);
+
+  String get projectId => widget.projectId;
+  EditorSection get section => widget.section;
+
+  @override
+  void dispose() {
+    _playheadUs.dispose();
+    super.dispose();
+  }
+
   void _select(BuildContext context, EditorSection next) =>
       context.go('/editor/$projectId/${next.name}');
 
-  void _close(BuildContext context, WidgetRef ref) {
+  void _close(BuildContext context) {
     ref.read(projectListProvider.notifier).reload();
     context.go('/home');
   }
 
-  Future<void> _rename(
-    BuildContext context,
-    WidgetRef ref,
-    String current,
-  ) async {
+  Future<void> _rename(BuildContext context, String current) async {
     final l10n = AppLocalizations.of(context);
     final title = await askTitle(context, current);
     if (title == null || title.isEmpty) return;
@@ -48,7 +60,7 @@ class EditorShell extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final editor = ref.watch(editorProvider(projectId));
     final state = editor.value;
@@ -73,6 +85,7 @@ class EditorShell extends ConsumerWidget {
     final controller = ref.read(editorProvider(projectId).notifier);
     final transport = TransportBar(
       durationUs: state.view.durationUs.toInt(),
+      playheadUs: _playheadUs,
       onUndo: state.view.canUndo ? controller.undo : null,
       onRedo: state.view.canRedo ? controller.redo : null,
     );
@@ -92,8 +105,8 @@ class EditorShell extends ConsumerWidget {
             EditorTopBar(
               title: state.view.title,
               save: state.save,
-              onRename: () => _rename(context, ref, state.view.title),
-              onClose: () => _close(context, ref),
+              onRename: () => _rename(context, state.view.title),
+              onClose: () => _close(context),
               onExport: () => _select(context, EditorSection.export),
             ),
             Expanded(child: body),
@@ -114,7 +127,11 @@ class EditorShell extends ConsumerWidget {
       children: [
         const Expanded(flex: 5, child: PreviewArea()),
         transport,
-        TimelineArea(height: _phoneTimelineHeight, view: state.view),
+        TimelineArea(
+          height: _phoneTimelineHeight,
+          view: state.view,
+          playheadUs: _playheadUs,
+        ),
         Expanded(flex: 3, child: _panel(state)),
         SectionBar(selected: section, onSelect: (s) => _select(context, s)),
       ],
@@ -143,7 +160,11 @@ class EditorShell extends ConsumerWidget {
                 ),
               ),
               transport,
-              TimelineArea(height: _desktopTimelineHeight, view: state.view),
+              TimelineArea(
+                height: _desktopTimelineHeight,
+                view: state.view,
+                playheadUs: _playheadUs,
+              ),
             ],
           ),
         ),

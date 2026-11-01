@@ -3,11 +3,17 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../bridge/api/projects.dart';
+import '../preview/preview_controller.dart';
 import 'project_gateway.dart';
 
 /// Overridden at startup, once the data folder is known.
 final projectGatewayProvider = Provider<ProjectGateway>(
   (ref) => throw UnimplementedError('projectGatewayProvider is not set'),
+);
+
+/// Overridden at startup, like the gateway.
+final previewTransportProvider = Provider<PreviewTransport>(
+  (ref) => throw UnimplementedError('previewTransportProvider is not set'),
 );
 
 final projectListProvider =

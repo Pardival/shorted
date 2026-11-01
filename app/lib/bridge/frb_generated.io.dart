@@ -5,6 +5,7 @@
 
 import 'api.dart';
 import 'api/media.dart';
+import 'api/preview.dart';
 import 'api/projects.dart';
 
 import 'dart:async';
