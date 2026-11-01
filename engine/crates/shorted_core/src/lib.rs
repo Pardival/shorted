@@ -5,6 +5,7 @@
 pub mod command;
 pub mod editor;
 pub mod error;
+pub mod evaluate;
 pub mod model;
 pub mod validate;
 
