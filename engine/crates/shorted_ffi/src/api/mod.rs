@@ -1,5 +1,6 @@
 //! Public API exposed to Dart. Generated bindings live in `app/lib/bridge/`.
 
+pub mod media;
 pub mod projects;
 
 use std::path::Path;

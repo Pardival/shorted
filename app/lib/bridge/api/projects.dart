@@ -5,10 +5,11 @@
 
 import '../error.dart';
 import '../frb_generated.dart';
+import 'media.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `close_active`, `lock`, `now`, `on_command_thread`, `parse_id`, `save_channel`, `summary`, `track_view`, `view_of`, `with_active`
+// These functions are ignored because they are not marked as `pub`: `active_folder`, `close_active`, `lock`, `now`, `on_command_thread`, `parse_id`, `save_channel`, `summary`, `track_view`, `view_of`, `with_active`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `clone`, `eq`
 
 /// The save state of the open project, for "Saved / Saving…". One listener at a time.
@@ -103,6 +104,7 @@ class ProjectView {
   final bool canUndo;
   final bool canRedo;
   final List<TrackView> tracks;
+  final List<MediaItemView> media;
 
   const ProjectView({
     required this.id,
@@ -111,6 +113,7 @@ class ProjectView {
     required this.canUndo,
     required this.canRedo,
     required this.tracks,
+    required this.media,
   });
 
   @override
@@ -120,7 +123,8 @@ class ProjectView {
       durationUs.hashCode ^
       canUndo.hashCode ^
       canRedo.hashCode ^
-      tracks.hashCode;
+      tracks.hashCode ^
+      media.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -132,7 +136,8 @@ class ProjectView {
           durationUs == other.durationUs &&
           canUndo == other.canUndo &&
           canRedo == other.canRedo &&
-          tracks == other.tracks;
+          tracks == other.tracks &&
+          media == other.media;
 }
 
 enum SaveStateView { saving, saved, failed }

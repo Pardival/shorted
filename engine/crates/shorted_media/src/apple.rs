@@ -5,6 +5,7 @@ use std::path::Path;
 
 use objc2::rc::{Retained, autoreleasepool};
 use objc2::runtime::AnyObject;
+use objc2::runtime::Bool;
 use objc2_av_foundation::{
     AVAssetReader, AVAssetReaderStatus, AVAssetReaderTrackOutput, AVAssetTrack, AVMediaTypeVideo,
     AVURLAsset,
@@ -15,7 +16,10 @@ use objc2_core_video::{
     CVImageBuffer, CVPixelBufferGetIOSurface, kCVPixelBufferIOSurfacePropertiesKey,
     kCVPixelBufferMetalCompatibilityKey, kCVPixelBufferPixelFormatTypeKey,
 };
-use objc2_foundation::{NSDictionary, NSNumber, NSString, NSURL};
+use objc2_foundation::{
+    NSData, NSDictionary, NSNumber, NSString, NSURL, NSURLBookmarkCreationOptions,
+    NSURLBookmarkResolutionOptions,
+};
 use objc2_io_surface::IOSurfaceRef;
 
 use crate::{DecodedFrame, MediaBackend, MediaError, MediaInfo, VideoDecoder};
@@ -24,6 +28,50 @@ const BGRA_FOURCC: u32 = 0x4247_5241;
 const TIMESCALE: i32 = 1_000_000;
 
 pub struct AppleBackend;
+
+/// Creates a hex-encoded security-scoped bookmark, which lets the sandboxed app reach a file again
+/// after a restart. None where bookmarks are unavailable: the path is then all there is.
+pub fn create_bookmark(path: &Path) -> Option<String> {
+    let url = NSURL::fileURLWithPath(&NSString::from_str(&path.to_string_lossy()));
+    let data = url
+        .bookmarkDataWithOptions_includingResourceValuesForKeys_relativeToURL_error(
+            NSURLBookmarkCreationOptions::WithSecurityScope
+                | NSURLBookmarkCreationOptions::SecurityScopeAllowOnlyReadAccess,
+            None,
+            None,
+        )
+        .ok()?;
+    Some(
+        data.to_vec()
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect(),
+    )
+}
+
+/// Finds a bookmarked file, wherever it moved, and opens access to it for this run.
+pub fn resolve_bookmark(bookmark: &str) -> Option<std::path::PathBuf> {
+    let bytes: Option<Vec<u8>> = (0..bookmark.len())
+        .step_by(2)
+        .map(|at| u8::from_str_radix(bookmark.get(at..at + 2)?, 16).ok())
+        .collect();
+    let data = NSData::with_bytes(&bytes?);
+    let mut stale = Bool::NO;
+    // SAFETY: `data` and `stale` outlive the call; the URL is used on this thread only.
+    let url = unsafe {
+        let url =
+            NSURL::URLByResolvingBookmarkData_options_relativeToURL_bookmarkDataIsStale_error(
+                &data,
+                NSURLBookmarkResolutionOptions::WithSecurityScope,
+                None,
+                &raw mut stale,
+            )
+            .ok()?;
+        url.startAccessingSecurityScopedResource();
+        url
+    };
+    Some(std::path::PathBuf::from(url.path()?.to_string()))
+}
 
 fn seconds_to_us(seconds: f64) -> i64 {
     (seconds * 1e6).round() as i64

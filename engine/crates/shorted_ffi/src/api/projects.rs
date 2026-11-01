@@ -11,11 +11,12 @@ use shorted_core::command::Command;
 use shorted_core::evaluate::clip_positions;
 use shorted_core::model::{AudioTrackRef, Id, Project};
 use shorted_store::library::{self, ProjectEntry};
-use shorted_store::session::{ProjectSession, SaveStatus, StoreError};
+use shorted_store::session::{project_folder, ProjectSession, SaveStatus, StoreError};
 use time::format_description::well_known::Rfc3339;
 use time::OffsetDateTime;
 use uuid::Uuid;
 
+use crate::api::media::{media_views, MediaItemView};
 use crate::error::{EngineError, EngineFailure};
 use crate::frb_generated::StreamSink;
 use crate::runtime;
@@ -56,6 +57,7 @@ pub struct ProjectView {
     pub can_undo: bool,
     pub can_redo: bool,
     pub tracks: Vec<TrackView>,
+    pub media: Vec<MediaItemView>,
 }
 
 #[derive(Clone, Copy)]
@@ -66,14 +68,20 @@ pub enum SaveStateView {
 }
 
 static ACTIVE: Mutex<Option<ProjectSession>> = Mutex::new(None);
+/// Data folder of the open project.
+static ROOT: Mutex<Option<PathBuf>> = Mutex::new(None);
 static SAVE_EVENTS: Mutex<Option<StreamSink<SaveStateView>>> = Mutex::new(None);
+
+pub(crate) fn active_folder(id: Id) -> Option<PathBuf> {
+    lock(&ROOT).as_ref().map(|root| project_folder(root, id))
+}
 
 fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
 /// Runs `work` on the command thread and waits. Called from bridge workers, never the UI isolate.
-fn on_command_thread<T: Send + 'static>(
+pub(crate) fn on_command_thread<T: Send + 'static>(
     work: impl FnOnce() -> Result<T, EngineError> + Send + 'static,
 ) -> Result<T, EngineFailure> {
     let (sender, receiver) = mpsc::sync_channel(1);
@@ -166,6 +174,7 @@ pub async fn create_project(root: String, title: String) -> Result<String, Engin
         let session = ProjectSession::create(Path::new(&root), project, save_channel())
             .map_err(EngineError::from)?;
         *lock(&ACTIVE) = Some(session);
+        *lock(&ROOT) = Some(PathBuf::from(root));
         Ok(id)
     })
 }
@@ -183,6 +192,7 @@ pub async fn open_project(root: String, id: String) -> Result<(), EngineFailure>
         let session = ProjectSession::open(Path::new(&root), id, save_channel())
             .map_err(EngineError::from)?;
         *lock(&ACTIVE) = Some(session);
+        *lock(&ROOT) = Some(PathBuf::from(root));
         Ok(())
     })
 }
@@ -239,7 +249,7 @@ pub async fn rename_project(root: String, id: String, title: String) -> Result<(
     })
 }
 
-fn with_active<T>(
+pub(crate) fn with_active<T>(
     work: impl FnOnce(&mut ProjectSession) -> Result<T, StoreError>,
 ) -> Result<T, EngineError> {
     let mut active = lock(&ACTIVE);
@@ -306,7 +316,7 @@ fn track_view(session: &ProjectSession) -> Vec<TrackView> {
     tracks
 }
 
-fn view_of(session: &ProjectSession) -> ProjectView {
+pub(crate) fn view_of(session: &ProjectSession) -> ProjectView {
     let project = session.project();
     ProjectView {
         id: project.id.to_string(),
@@ -315,6 +325,7 @@ fn view_of(session: &ProjectSession) -> ProjectView {
         can_undo: session.can_undo(),
         can_redo: session.can_redo(),
         tracks: track_view(session),
+        media: media_views(session),
     }
 }
 

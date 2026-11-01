@@ -45,6 +45,12 @@ impl MediaInfo {
 
 /// A decoded frame. Timing comes from the file, never from a frame index, so variable frame rate
 /// clips stay in sync.
+/// Reads an image's size from its header only.
+pub fn probe_image(path: &Path) -> Result<(u32, u32), MediaError> {
+    let size = imagesize::size(path).map_err(|_| MediaError::OpenFailed)?;
+    Ok((size.width as u32, size.height as u32))
+}
+
 pub trait DecodedFrame {
     fn pts_us(&self) -> i64;
 }

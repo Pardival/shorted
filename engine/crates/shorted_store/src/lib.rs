@@ -3,6 +3,7 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 
 pub mod library;
+pub mod media;
 pub mod migrations;
 pub mod session;
 

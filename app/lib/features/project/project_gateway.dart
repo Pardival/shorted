@@ -1,3 +1,4 @@
+import '../../bridge/api/media.dart' as media;
 import '../../bridge/api/projects.dart' as engine;
 import '../../bridge/api/projects.dart';
 
@@ -17,6 +18,11 @@ abstract interface class ProjectGateway {
   Future<ProjectView> undo();
   Future<ProjectView> redo();
   Stream<SaveStateView> saveEvents();
+
+  /// Returns how many files failed; the others are imported.
+  Future<int> importFiles(List<String> paths);
+  Future<ProjectView> placeClips(List<String> mediaIds);
+  Future<ProjectView> relink(String mediaId, String path);
 }
 
 class EngineGateway implements ProjectGateway {
@@ -66,4 +72,18 @@ class EngineGateway implements ProjectGateway {
 
   @override
   Stream<SaveStateView> saveEvents() => engine.saveEvents();
+
+  @override
+  Future<int> importFiles(List<String> paths) async {
+    final outcomes = await media.importFiles(paths: paths);
+    return outcomes.where((outcome) => outcome.error != null).length;
+  }
+
+  @override
+  Future<ProjectView> placeClips(List<String> mediaIds) =>
+      media.placeClips(mediaIds: mediaIds);
+
+  @override
+  Future<ProjectView> relink(String mediaId, String path) =>
+      media.relinkMedia(id: mediaId, path: path);
 }
