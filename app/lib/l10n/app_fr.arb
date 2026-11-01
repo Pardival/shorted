@@ -59,5 +59,6 @@
   "mediaOffline": "Média hors ligne",
   "relink": "Relier",
   "importFailed": "{count, plural, =1{1 fichier n'a pas pu être importé.} other{{count} fichiers n'ont pas pu être importés.}}",
-  "errorDifferentMedia": "Ce n'est pas le fichier manquant."
+  "errorDifferentMedia": "Ce n'est pas le fichier manquant.",
+  "split": "Couper"
 }

@@ -10,7 +10,7 @@ import '../project/project_providers.dart';
 import 'editor_parts.dart';
 import 'editor_section.dart';
 
-const _phoneTimelineHeight = 72.0;
+const _phoneTimelineHeight = 132.0;
 const _desktopTimelineHeight = 220.0;
 
 /// The section lives in the route, so resizing the window keeps it (T-0202).

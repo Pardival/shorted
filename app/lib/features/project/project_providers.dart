@@ -120,4 +120,23 @@ class EditorController extends AsyncNotifier<EditorState> {
 
   Future<void> relink(String mediaId, String path) async =>
       _show(await _gateway.relink(mediaId, path));
+
+  Future<void> splitClip(String id, int timeUs) async =>
+      _show(await _gateway.splitClip(id, timeUs));
+
+  Future<void> deleteClip(String id) async =>
+      _show(await _gateway.deleteClip(id));
+
+  Future<void> duplicateClip(String id) async =>
+      _show(await _gateway.duplicateClip(id));
+
+  Future<void> moveClip(String id, int to) async =>
+      _show(await _gateway.moveClip(id, to));
+
+  Future<void> trimClip(
+    String id, {
+    required bool start,
+    required int deltaUs,
+  }) async =>
+      _show(await _gateway.trimClip(id, start: start, deltaUs: deltaUs));
 }

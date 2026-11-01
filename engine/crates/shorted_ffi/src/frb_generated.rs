@@ -39,7 +39,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1355651867;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1392795069;
 
 // Section: executor
 
@@ -220,6 +220,78 @@ fn wire__crate__api__projects__create_project_impl(
                     (move || async move {
                         let output_ok =
                             crate::api::projects::create_project(api_root, api_title).await?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__clips__delete_clip_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "delete_clip",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, crate::error::EngineFailure>(
+                    (move || async move {
+                        let output_ok = crate::api::clips::delete_clip(api_id).await?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__clips__duplicate_clip_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "duplicate_clip",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, crate::error::EngineFailure>(
+                    (move || async move {
+                        let output_ok = crate::api::clips::duplicate_clip(api_id).await?;
                         std::result::Result::Ok(output_ok)
                     })()
                     .await,
@@ -464,6 +536,43 @@ fn wire__crate__api__projects__list_trash_impl(
                 transform_result_sse::<_, crate::error::EngineFailure>(
                     (move || async move {
                         let output_ok = crate::api::projects::list_trash(api_root).await?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__clips__move_clip_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "move_clip",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_id = <String>::sse_decode(&mut deserializer);
+            let api_to = <u32>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, crate::error::EngineFailure>(
+                    (move || async move {
+                        let output_ok = crate::api::clips::move_clip(api_id, api_to).await?;
                         std::result::Result::Ok(output_ok)
                     })()
                     .await,
@@ -921,6 +1030,43 @@ fn wire__crate__api__projects__save_events_impl(
         },
     )
 }
+fn wire__crate__api__clips__split_clip_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "split_clip",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_id = <String>::sse_decode(&mut deserializer);
+            let api_time_us = <i64>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, crate::error::EngineFailure>(
+                    (move || async move {
+                        let output_ok = crate::api::clips::split_clip(api_id, api_time_us).await?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
 fn wire__crate__api__start_demo_task_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -990,6 +1136,45 @@ fn wire__crate__api__projects__trash_project_impl(
                     (move || async move {
                         let output_ok =
                             crate::api::projects::trash_project(api_root, api_id).await?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__clips__trim_clip_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "trim_clip",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_id = <String>::sse_decode(&mut deserializer);
+            let api_edge = <crate::api::clips::ClipEdge>::sse_decode(&mut deserializer);
+            let api_delta_us = <i64>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, crate::error::EngineFailure>(
+                    (move || async move {
+                        let output_ok =
+                            crate::api::clips::trim_clip(api_id, api_edge, api_delta_us).await?;
                         std::result::Result::Ok(output_ok)
                     })()
                     .await,
@@ -1087,6 +1272,18 @@ impl SseDecode for bool {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         deserializer.cursor.read_u8().unwrap() != 0
+    }
+}
+
+impl SseDecode for crate::api::clips::ClipEdge {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::clips::ClipEdge::Start,
+            1 => crate::api::clips::ClipEdge::End,
+            _ => unreachable!("Invalid variant for ClipEdge: {}", inner),
+        };
     }
 }
 
@@ -1458,23 +1655,28 @@ fn pde_ffi_dispatcher_primary_impl(
         3 => wire__crate__api__projects__close_project_impl(port, ptr, rust_vec_len, data_len),
         4 => wire__crate__api__counter_stream_impl(port, ptr, rust_vec_len, data_len),
         5 => wire__crate__api__projects__create_project_impl(port, ptr, rust_vec_len, data_len),
-        6 => wire__crate__api__projects__duplicate_project_impl(port, ptr, rust_vec_len, data_len),
-        8 => wire__crate__api__media__import_files_impl(port, ptr, rust_vec_len, data_len),
-        9 => wire__crate__api__init_app_impl(port, ptr, rust_vec_len, data_len),
-        10 => wire__crate__api__init_engine_impl(port, ptr, rust_vec_len, data_len),
-        11 => wire__crate__api__projects__list_projects_impl(port, ptr, rust_vec_len, data_len),
-        12 => wire__crate__api__projects__list_trash_impl(port, ptr, rust_vec_len, data_len),
-        13 => wire__crate__api__projects__open_project_impl(port, ptr, rust_vec_len, data_len),
-        14 => wire__crate__api__media__place_clips_impl(port, ptr, rust_vec_len, data_len),
-        20 => wire__crate__api__projects__project_view_impl(port, ptr, rust_vec_len, data_len),
-        21 => wire__crate__api__projects__redo_impl(port, ptr, rust_vec_len, data_len),
-        22 => wire__crate__api__media__relink_media_impl(port, ptr, rust_vec_len, data_len),
-        23 => wire__crate__api__projects__rename_project_impl(port, ptr, rust_vec_len, data_len),
-        24 => wire__crate__api__projects__restore_project_impl(port, ptr, rust_vec_len, data_len),
-        25 => wire__crate__api__projects__save_events_impl(port, ptr, rust_vec_len, data_len),
-        26 => wire__crate__api__start_demo_task_impl(port, ptr, rust_vec_len, data_len),
-        27 => wire__crate__api__projects__trash_project_impl(port, ptr, rust_vec_len, data_len),
-        28 => wire__crate__api__projects__undo_impl(port, ptr, rust_vec_len, data_len),
+        6 => wire__crate__api__clips__delete_clip_impl(port, ptr, rust_vec_len, data_len),
+        7 => wire__crate__api__clips__duplicate_clip_impl(port, ptr, rust_vec_len, data_len),
+        8 => wire__crate__api__projects__duplicate_project_impl(port, ptr, rust_vec_len, data_len),
+        10 => wire__crate__api__media__import_files_impl(port, ptr, rust_vec_len, data_len),
+        11 => wire__crate__api__init_app_impl(port, ptr, rust_vec_len, data_len),
+        12 => wire__crate__api__init_engine_impl(port, ptr, rust_vec_len, data_len),
+        13 => wire__crate__api__projects__list_projects_impl(port, ptr, rust_vec_len, data_len),
+        14 => wire__crate__api__projects__list_trash_impl(port, ptr, rust_vec_len, data_len),
+        15 => wire__crate__api__clips__move_clip_impl(port, ptr, rust_vec_len, data_len),
+        16 => wire__crate__api__projects__open_project_impl(port, ptr, rust_vec_len, data_len),
+        17 => wire__crate__api__media__place_clips_impl(port, ptr, rust_vec_len, data_len),
+        23 => wire__crate__api__projects__project_view_impl(port, ptr, rust_vec_len, data_len),
+        24 => wire__crate__api__projects__redo_impl(port, ptr, rust_vec_len, data_len),
+        25 => wire__crate__api__media__relink_media_impl(port, ptr, rust_vec_len, data_len),
+        26 => wire__crate__api__projects__rename_project_impl(port, ptr, rust_vec_len, data_len),
+        27 => wire__crate__api__projects__restore_project_impl(port, ptr, rust_vec_len, data_len),
+        28 => wire__crate__api__projects__save_events_impl(port, ptr, rust_vec_len, data_len),
+        29 => wire__crate__api__clips__split_clip_impl(port, ptr, rust_vec_len, data_len),
+        30 => wire__crate__api__start_demo_task_impl(port, ptr, rust_vec_len, data_len),
+        31 => wire__crate__api__projects__trash_project_impl(port, ptr, rust_vec_len, data_len),
+        32 => wire__crate__api__clips__trim_clip_impl(port, ptr, rust_vec_len, data_len),
+        33 => wire__crate__api__projects__undo_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -1488,18 +1690,36 @@ fn pde_ffi_dispatcher_sync_impl(
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
         2 => wire__crate__api__cancel_task_impl(ptr, rust_vec_len, data_len),
-        7 => wire__crate__api__engine_version_impl(ptr, rust_vec_len, data_len),
-        15 => wire__crate__api__preview__preview_is_playing_impl(ptr, rust_vec_len, data_len),
-        16 => wire__crate__api__preview__preview_pause_impl(ptr, rust_vec_len, data_len),
-        17 => wire__crate__api__preview__preview_play_impl(ptr, rust_vec_len, data_len),
-        18 => wire__crate__api__preview__preview_position_us_impl(ptr, rust_vec_len, data_len),
-        19 => wire__crate__api__preview__preview_seek_impl(ptr, rust_vec_len, data_len),
+        9 => wire__crate__api__engine_version_impl(ptr, rust_vec_len, data_len),
+        18 => wire__crate__api__preview__preview_is_playing_impl(ptr, rust_vec_len, data_len),
+        19 => wire__crate__api__preview__preview_pause_impl(ptr, rust_vec_len, data_len),
+        20 => wire__crate__api__preview__preview_play_impl(ptr, rust_vec_len, data_len),
+        21 => wire__crate__api__preview__preview_position_us_impl(ptr, rust_vec_len, data_len),
+        22 => wire__crate__api__preview__preview_seek_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
 
 // Section: rust2dart
 
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::clips::ClipEdge {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::Start => 0.into_dart(),
+            Self::End => 1.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::api::clips::ClipEdge {}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::clips::ClipEdge>
+    for crate::api::clips::ClipEdge
+{
+    fn into_into_dart(self) -> crate::api::clips::ClipEdge {
+        self
+    }
+}
 // Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::error::EngineFailure {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
@@ -1817,6 +2037,22 @@ impl SseEncode for bool {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         serializer.cursor.write_u8(self as _).unwrap();
+    }
+}
+
+impl SseEncode for crate::api::clips::ClipEdge {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::clips::ClipEdge::Start => 0,
+                crate::api::clips::ClipEdge::End => 1,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
     }
 }
 

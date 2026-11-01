@@ -10,6 +10,7 @@ import '../../design_system/components.dart';
 import '../../design_system/tokens.g.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../clips/clips_panel.dart';
+import '../project/project_dialogs.dart';
 import '../preview/preview_controller.dart';
 import '../project/project_providers.dart';
 import '../timeline/timeline_layout.dart';
@@ -253,7 +254,7 @@ class _TransportBarState extends ConsumerState<TransportBar>
   }
 }
 
-class TimelineArea extends StatefulWidget {
+class TimelineArea extends ConsumerStatefulWidget {
   const TimelineArea({
     super.key,
     required this.height,
@@ -266,10 +267,31 @@ class TimelineArea extends StatefulWidget {
   final ValueNotifier<int> playheadUs;
 
   @override
-  State<TimelineArea> createState() => _TimelineAreaState();
+  ConsumerState<TimelineArea> createState() => _TimelineAreaState();
 }
 
-class _TimelineAreaState extends State<TimelineArea> {
+class _TimelineAreaState extends ConsumerState<TimelineArea> {
+  /// The selected clip, for the tools. Other tracks get their tools with their tickets.
+  TimelineItem? _clip;
+
+  EditorController get _editor =>
+      ref.read(editorProvider(widget.view.id).notifier);
+
+  Future<void> _guard(Future<void> Function() action) async {
+    final l10n = AppLocalizations.of(context);
+    try {
+      await action();
+    } on Object catch (error) {
+      if (mounted) showToast(context, errorMessage(l10n, error));
+    }
+  }
+
+  bool _isClip(TimelineItem item) => widget.view.tracks.any(
+    (track) =>
+        track.kind == TrackKindView.video &&
+        track.items.any((other) => other.id == item.id),
+  );
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -301,12 +323,52 @@ class _TimelineAreaState extends State<TimelineArea> {
           ],
         ),
     ];
+    final clip = _clip;
     return SizedBox(
       height: widget.height,
-      child: TimelineView(
-        tracks: tracks,
-        durationUs: widget.view.durationUs.toInt(),
-        playheadUs: widget.playheadUs,
+      child: Column(
+        children: [
+          if (clip != null)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ShortedIconButton(
+                  icon: Icons.content_cut,
+                  tooltip: l10n.split,
+                  onPressed: () => _guard(
+                    () => _editor.splitClip(clip.id, widget.playheadUs.value),
+                  ),
+                ),
+                ShortedIconButton(
+                  icon: Icons.copy_outlined,
+                  tooltip: l10n.duplicate,
+                  onPressed: () => _guard(() => _editor.duplicateClip(clip.id)),
+                ),
+                ShortedIconButton(
+                  icon: Icons.delete_outline,
+                  tooltip: l10n.delete,
+                  onPressed: () {
+                    setState(() => _clip = null);
+                    _guard(() => _editor.deleteClip(clip.id));
+                  },
+                ),
+              ],
+            ),
+          Expanded(
+            child: TimelineView(
+              tracks: tracks,
+              durationUs: widget.view.durationUs.toInt(),
+              playheadUs: widget.playheadUs,
+              onSelect: (item) => setState(() {
+                _clip = item != null && _isClip(item) ? item : null;
+              }),
+              onTrim: (item, start, deltaUs) => _guard(
+                () => _editor.trimClip(item.id, start: start, deltaUs: deltaUs),
+              ),
+              onMove: (item, to) => _guard(() => _editor.moveClip(item.id, to)),
+            ),
+          ),
+        ],
       ),
     );
   }

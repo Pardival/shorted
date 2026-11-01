@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../design_system/tokens.g.dart';
 import 'timeline_layout.dart';
@@ -9,6 +10,10 @@ const _headerWidth = 88.0;
 const _rulerHeight = 24.0;
 const _defaultPixelsPerSecond = 40.0;
 const _wheelZoomSpeed = 0.002;
+const _handleWidth = 14.0;
+const _snapPixels = 8.0;
+
+enum _DragKind { scrub, trimStart, trimEnd, move }
 
 /// Multi-track timeline. Collapsed and expanded modes come with T-0207.
 class TimelineView extends StatefulWidget {
@@ -21,6 +26,8 @@ class TimelineView extends StatefulWidget {
     required this.durationUs,
     required this.playheadUs,
     this.onSelect,
+    this.onTrim,
+    this.onMove,
   });
 
   final List<TimelineTrack> tracks;
@@ -29,6 +36,12 @@ class TimelineView extends StatefulWidget {
   /// Written while scrubbing; playback writes it too.
   final ValueNotifier<int> playheadUs;
   final ValueChanged<TimelineItem?>? onSelect;
+
+  /// A dragged edge of the selected item: the item, true for its start, the change in time.
+  final void Function(TimelineItem item, bool start, int deltaUs)? onTrim;
+
+  /// The selected item dragged to a new position among its track.
+  final void Function(TimelineItem item, int toIndex)? onMove;
 
   @override
   State<TimelineView> createState() => _TimelineViewState();
@@ -44,6 +57,117 @@ class _TimelineViewState extends State<TimelineView> {
   );
   TimelineLayout? _pinchStart;
   String? _selectedId;
+  _DragKind _drag = _DragKind.scrub;
+  TimelineItem? _dragItem;
+  int _dragTrack = 0;
+  double _dragStartX = 0;
+  (int, int, int)? _dragPreview;
+  int? _lastSnap;
+  var _pointers = 0;
+
+  void _pointerDown(PointerDownEvent event) {
+    _pointers++;
+    if (_pointers == 1) {
+      _beginDrag(event.localPosition);
+    } else {
+      // A second finger means zoom: the edit is dropped.
+      setState(() => _dragPreview = null);
+      _dragItem = null;
+      _drag = _DragKind.scrub;
+    }
+  }
+
+  void _pointerGone(PointerEvent event) {
+    _pointers--;
+    if (_drag != _DragKind.scrub) _endDrag();
+    _drag = _DragKind.scrub;
+  }
+
+  /// Decides at touch down what this drag does: only the selected item can be edited.
+  void _beginDrag(Offset position) {
+    _drag = _DragKind.scrub;
+    final index = _layout.trackAt(position.dy, widget.tracks.length);
+    if (index == null || _selectedId == null) return;
+    final time = _layout.timeForX(position.dx);
+    final slop = (_handleWidth / _layout.pixelsPerSecond * 1e6).round();
+    for (final item in widget.tracks[index].items) {
+      if (item.id != _selectedId) continue;
+      _dragItem = item;
+      _dragTrack = index;
+      _dragStartX = position.dx;
+      if ((time - item.startUs).abs() <= slop) {
+        _drag = _DragKind.trimStart;
+      } else if ((time - item.endUs).abs() <= slop) {
+        _drag = _DragKind.trimEnd;
+      } else if (time > item.startUs && time < item.endUs) {
+        _drag = _DragKind.move;
+      }
+    }
+  }
+
+  int _snapped(int timeUs, TimelineItem item) {
+    final threshold = (_snapPixels / _layout.pixelsPerSecond * 1e6).round();
+    final targets = <int>[
+      widget.playheadUs.value,
+      for (final other in widget.tracks[_dragTrack].items)
+        if (other.id != item.id) ...[other.startUs, other.endUs],
+    ];
+    final snapped = snapTime(timeUs, targets, threshold);
+    if (snapped != timeUs && snapped != _lastSnap) {
+      HapticFeedback.selectionClick();
+    }
+    _lastSnap = snapped == timeUs ? null : snapped;
+    return snapped;
+  }
+
+  void _updateDrag(double x) {
+    final item = _dragItem;
+    if (item == null) return;
+    final deltaUs = ((x - _dragStartX) / _layout.pixelsPerSecond * 1e6).round();
+    setState(() {
+      _dragPreview = switch (_drag) {
+        _DragKind.trimStart => (
+          _dragTrack,
+          _snapped(
+            item.startUs + deltaUs,
+            item,
+          ).clamp(0, item.endUs - 1).toInt(),
+          item.endUs,
+        ),
+        _DragKind.trimEnd => (
+          _dragTrack,
+          item.startUs,
+          _snapped(item.endUs + deltaUs, item),
+        ),
+        _ => (_dragTrack, item.startUs + deltaUs, item.endUs + deltaUs),
+      };
+    });
+  }
+
+  void _endDrag() {
+    final item = _dragItem;
+    final preview = _dragPreview;
+    setState(() => _dragPreview = null);
+    _dragItem = null;
+    if (item == null || preview == null) return;
+    final (_, start, end) = preview;
+    switch (_drag) {
+      case _DragKind.trimStart:
+        widget.onTrim?.call(item, true, start - item.startUs);
+      case _DragKind.trimEnd:
+        widget.onTrim?.call(item, false, end - item.endUs);
+      case _DragKind.move:
+        final items = widget.tracks[_dragTrack].items;
+        final centre = (start + end) ~/ 2;
+        final to = items.where((other) {
+          return other.id != item.id &&
+              (other.startUs + other.endUs) ~/ 2 < centre;
+        }).length;
+        if (to != items.indexOf(item)) widget.onMove?.call(item, to);
+      case _DragKind.scrub:
+        break;
+    }
+  }
 
   void _scrub(double x) {
     widget.playheadUs.value = _layout
@@ -76,6 +200,14 @@ class _TimelineViewState extends State<TimelineView> {
   @override
   Widget build(BuildContext context) {
     return Listener(
+      // Edits use raw pointers: the scale gesture only starts after 36 pixels, far too much
+      // for a precise trim.
+      onPointerDown: _pointerDown,
+      onPointerMove: (event) {
+        if (_drag != _DragKind.scrub) _updateDrag(event.localPosition.dx);
+      },
+      onPointerUp: _pointerGone,
+      onPointerCancel: _pointerGone,
       onPointerSignal: _onPointerSignal,
       child: GestureDetector(
         onTapUp: _tap,
@@ -86,7 +218,7 @@ class _TimelineViewState extends State<TimelineView> {
             setState(() {
               _layout = start.zoomed(details.scale, details.localFocalPoint.dx);
             });
-          } else if (details.pointerCount == 1) {
+          } else if (details.pointerCount == 1 && _drag == _DragKind.scrub) {
             _scrub(details.localFocalPoint.dx);
           }
         },
@@ -103,6 +235,7 @@ class _TimelineViewState extends State<TimelineView> {
                   durationUs: widget.durationUs,
                   selectedId: _selectedId,
                   textDirection: Directionality.of(context),
+                  dragPreview: _dragPreview,
                 ),
               ),
             ),

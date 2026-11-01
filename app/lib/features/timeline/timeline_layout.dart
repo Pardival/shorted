@@ -113,6 +113,20 @@ class TimelineLayout {
   }
 }
 
+/// The candidate nearest to `timeUs` within `thresholdUs`, or `timeUs` itself.
+int snapTime(int timeUs, Iterable<int> candidates, int thresholdUs) {
+  var best = timeUs;
+  var bestDistance = thresholdUs + 1;
+  for (final candidate in candidates) {
+    final distance = (candidate - timeUs).abs();
+    if (distance < bestDistance) {
+      best = candidate;
+      bestDistance = distance;
+    }
+  }
+  return best;
+}
+
 String formatTimecode(int timeUs) {
   final seconds = timeUs ~/ 1000000;
   final minutes = seconds ~/ 60;
