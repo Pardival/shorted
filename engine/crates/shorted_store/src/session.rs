@@ -16,6 +16,8 @@ use shorted_core::model::{Id, Project};
 use shorted_core::validate::{MAX_DOCUMENT_BYTES, MAX_JOURNAL_LINE_BYTES};
 use thiserror::Error;
 
+use crate::migrations::migrate;
+
 pub const PROJECT_FILE: &str = "project.json";
 pub const JOURNAL_FILE: &str = "journal.jsonl";
 pub const SNAPSHOT_EVERY_COMMANDS: u32 = 50;
@@ -33,6 +35,8 @@ pub enum StoreError {
     Malformed,
     #[error("the save thread stopped")]
     WriterStopped,
+    #[error("this project was saved by a newer version of the app")]
+    NewerVersion { found: u32 },
 }
 
 /// Writes through a temporary file: a crash leaves the old file or the new one, never a mix.
@@ -180,8 +184,18 @@ fn load(folder: &Path) -> Result<(Project, u64), StoreError> {
         }
         .into());
     }
+    let document = serde_json::from_str(&json).map_err(|_| StoreError::Malformed)?;
+    let (document, migrated_from) = migrate(document)?;
+    if let Some(version) = migrated_from {
+        // The original stays usable if this version of the app turns out to be wrong.
+        fs::copy(
+            folder.join(PROJECT_FILE),
+            folder.join(format!("project.v{version}.json")),
+        )?;
+    }
     let snapshot: Snapshot<Project> =
-        serde_json::from_str(&json).map_err(|_| StoreError::Malformed)?;
+        serde_json::from_value(document).map_err(|_| StoreError::Malformed)?;
+    let migrated = migrated_from.is_some();
     let mut project = snapshot.project;
     project.validate()?;
     let mut revision = snapshot.revision;
@@ -209,6 +223,11 @@ fn load(folder: &Path) -> Result<(Project, u64), StoreError> {
         };
         if entry.rev <= revision {
             continue;
+        }
+        if migrated {
+            // Commands of an older schema cannot be trusted against a migrated project.
+            tracing::warn!("journal of an older schema was not replayed");
+            break;
         }
         if entry.cmd.apply(&mut project).is_err() {
             tracing::warn!("journal replay stopped at an invalid command");
