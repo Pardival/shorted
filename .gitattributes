@@ -1,0 +1,2 @@
+# Compared byte for byte by tests: same line endings on every system.
+engine/fixtures/projects/*.json text eol=lf
