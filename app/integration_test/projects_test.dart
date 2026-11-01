@@ -6,6 +6,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:shorted/bridge/api/projects.dart';
 import 'package:shorted/bridge/error.dart';
 import 'package:shorted/bridge/frb_generated.dart';
+import 'package:shorted/bridge/runtime.dart';
 import 'package:shorted/features/project/project_gateway.dart';
 
 /// The whole path against the real engine and real files.
@@ -201,6 +202,46 @@ void main() {
         view = await gateway.undo();
         expect(view.tracks[1].items, hasLength(length));
       }
+    });
+
+    test('an export writes a real video that opens again', () async {
+      await gateway.create('Export');
+      final path = await write('still.png', png);
+      await gateway.importFiles([path]);
+      final view = await gateway.view();
+      final placed = await gateway.placeClips([view.media.single.id]);
+      expect(placed.durationUs.toInt(), 3000000);
+
+      final output = '${root.path}/short.mp4';
+      TaskEvent? last;
+      var progress = 0;
+      await for (final event in gateway.export(output, width: 720, fps: 30)) {
+        last = event;
+        if (event is TaskEvent_Progress) progress++;
+      }
+      expect(last, isA<TaskEvent_Finished>());
+      expect(progress, 90);
+      expect(File(output).lengthSync(), greaterThan(1000));
+
+      expect(await gateway.importFiles([output]), 0);
+      final media = (await gateway.view()).media.last;
+      expect(media.durationUs.toInt(), closeTo(3000000, 40000));
+    });
+
+    test('an export can be cancelled and leaves no file', () async {
+      await gateway.create('Cancel');
+      final path = await write('cancel.png', png);
+      await gateway.importFiles([path]);
+      final view = await gateway.view();
+      await gateway.placeClips([view.media.single.id]);
+      final output = '${root.path}/cancelled.mp4';
+      TaskEvent? last;
+      await for (final event in gateway.export(output, width: 1080, fps: 60)) {
+        last = event;
+        if (event is TaskEvent_Started) gateway.cancelTask(event.taskId);
+      }
+      expect(last, isA<TaskEvent_Cancelled>());
+      expect(File(output).existsSync(), isFalse);
     });
 
     test('a deleted file goes offline, relink brings it back', () async {

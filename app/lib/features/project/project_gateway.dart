@@ -1,7 +1,10 @@
+import '../../bridge/api.dart' as tasks;
 import '../../bridge/api/clips.dart' as clips;
+import '../../bridge/api/export.dart' as exporter;
 import '../../bridge/api/media.dart' as media;
 import '../../bridge/api/projects.dart' as engine;
 import '../../bridge/api/projects.dart';
+import '../../bridge/runtime.dart';
 
 /// Everything the app asks of the engine about projects. Screens use this, so widget tests can
 /// run on a fake (docs/09 §1).
@@ -33,6 +36,8 @@ abstract interface class ProjectGateway {
     required bool start,
     required int deltaUs,
   });
+  Stream<TaskEvent> export(String path, {required int width, required int fps});
+  void cancelTask(BigInt id);
 }
 
 class EngineGateway implements ProjectGateway {
@@ -121,4 +126,17 @@ class EngineGateway implements ProjectGateway {
     edge: start ? clips.ClipEdge.start : clips.ClipEdge.end,
     deltaUs: deltaUs,
   );
+
+  @override
+  Stream<TaskEvent> export(
+    String path, {
+    required int width,
+    required int fps,
+  }) => exporter.startExport(
+    path: path,
+    settings: exporter.ExportSettings(width: width, fps: fps),
+  );
+
+  @override
+  void cancelTask(BigInt id) => tasks.cancelTask(taskId: id);
 }

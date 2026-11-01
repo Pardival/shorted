@@ -120,6 +120,7 @@ class _EditorShellState extends ConsumerState<EditorShell> {
     section: section,
     projectId: projectId,
     media: state.view.media,
+    durationUs: state.view.durationUs.toInt(),
   );
 
   Widget _phone(BuildContext context, EditorState state, Widget transport) {
