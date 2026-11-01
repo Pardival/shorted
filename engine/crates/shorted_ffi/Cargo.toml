@@ -34,6 +34,8 @@ tracing-appender = "0.2.5"
 regex = "1.13.1"
 tracing-subscriber = { version = "0.3.23", default-features = false, features = ["fmt", "std", "ansi"] }
 wgpu = "30.0.1"
+uuid = { version = "1.29.0", features = ["v7"] }
+time = { version = "0.3.55", features = ["formatting"] }
 
 [target.'cfg(target_vendor = "apple")'.dependencies]
 objc2-core-foundation = "0.3.2"

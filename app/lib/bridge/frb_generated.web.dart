@@ -7,6 +7,7 @@
 // ignore_for_file: argument_type_not_assignable
 
 import 'api.dart';
+import 'api/projects.dart';
 
 import 'dart:async';
 import 'dart:convert';
@@ -30,6 +31,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AnyhowException dco_decode_AnyhowException(dynamic raw);
 
   @protected
+  RustStreamSink<SaveStateView> dco_decode_StreamSink_save_state_view_Sse(
+    dynamic raw,
+  );
+
+  @protected
   RustStreamSink<TaskEvent> dco_decode_StreamSink_task_event_Sse(dynamic raw);
 
   @protected
@@ -37,6 +43,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   String dco_decode_String(dynamic raw);
+
+  @protected
+  bool dco_decode_bool(dynamic raw);
 
   @protected
   EngineFailure dco_decode_engine_failure(dynamic raw);
@@ -57,7 +66,37 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
   @protected
+  List<ProjectSummary> dco_decode_list_project_summary(dynamic raw);
+
+  @protected
+  List<TrackItemView> dco_decode_list_track_item_view(dynamic raw);
+
+  @protected
+  List<TrackView> dco_decode_list_track_view(dynamic raw);
+
+  @protected
+  String? dco_decode_opt_String(dynamic raw);
+
+  @protected
+  ProjectSummary dco_decode_project_summary(dynamic raw);
+
+  @protected
+  ProjectView dco_decode_project_view(dynamic raw);
+
+  @protected
+  SaveStateView dco_decode_save_state_view(dynamic raw);
+
+  @protected
   TaskEvent dco_decode_task_event(dynamic raw);
+
+  @protected
+  TrackItemView dco_decode_track_item_view(dynamic raw);
+
+  @protected
+  TrackKindView dco_decode_track_kind_view(dynamic raw);
+
+  @protected
+  TrackView dco_decode_track_view(dynamic raw);
 
   @protected
   int dco_decode_u_32(dynamic raw);
@@ -75,6 +114,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
 
   @protected
+  RustStreamSink<SaveStateView> sse_decode_StreamSink_save_state_view_Sse(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   RustStreamSink<TaskEvent> sse_decode_StreamSink_task_event_Sse(
     SseDeserializer deserializer,
   );
@@ -86,6 +130,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   String sse_decode_String(SseDeserializer deserializer);
+
+  @protected
+  bool sse_decode_bool(SseDeserializer deserializer);
 
   @protected
   EngineFailure sse_decode_engine_failure(SseDeserializer deserializer);
@@ -106,7 +153,41 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
 
   @protected
+  List<ProjectSummary> sse_decode_list_project_summary(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<TrackItemView> sse_decode_list_track_item_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<TrackView> sse_decode_list_track_view(SseDeserializer deserializer);
+
+  @protected
+  String? sse_decode_opt_String(SseDeserializer deserializer);
+
+  @protected
+  ProjectSummary sse_decode_project_summary(SseDeserializer deserializer);
+
+  @protected
+  ProjectView sse_decode_project_view(SseDeserializer deserializer);
+
+  @protected
+  SaveStateView sse_decode_save_state_view(SseDeserializer deserializer);
+
+  @protected
   TaskEvent sse_decode_task_event(SseDeserializer deserializer);
+
+  @protected
+  TrackItemView sse_decode_track_item_view(SseDeserializer deserializer);
+
+  @protected
+  TrackKindView sse_decode_track_kind_view(SseDeserializer deserializer);
+
+  @protected
+  TrackView sse_decode_track_view(SseDeserializer deserializer);
 
   @protected
   int sse_decode_u_32(SseDeserializer deserializer);
@@ -121,11 +202,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_decode_unit(SseDeserializer deserializer);
 
   @protected
-  bool sse_decode_bool(SseDeserializer deserializer);
-
-  @protected
   void sse_encode_AnyhowException(
     AnyhowException self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_StreamSink_save_state_view_Sse(
+    RustStreamSink<SaveStateView> self,
     SseSerializer serializer,
   );
 
@@ -143,6 +227,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_String(String self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_bool(bool self, SseSerializer serializer);
 
   @protected
   void sse_encode_engine_failure(EngineFailure self, SseSerializer serializer);
@@ -166,7 +253,49 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_project_summary(
+    List<ProjectSummary> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_track_item_view(
+    List<TrackItemView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_track_view(
+    List<TrackView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_String(String? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_project_summary(
+    ProjectSummary self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_project_view(ProjectView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_save_state_view(SaveStateView self, SseSerializer serializer);
+
+  @protected
   void sse_encode_task_event(TaskEvent self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_track_item_view(TrackItemView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_track_kind_view(TrackKindView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_track_view(TrackView self, SseSerializer serializer);
 
   @protected
   void sse_encode_u_32(int self, SseSerializer serializer);
@@ -179,9 +308,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_unit(void self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_bool(bool self, SseSerializer serializer);
 }
 
 // Section: wire_class

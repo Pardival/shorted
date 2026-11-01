@@ -82,6 +82,14 @@ pub(crate) fn spans(timeline: &Timeline) -> Vec<Span<'_>> {
     result
 }
 
+/// Timeline position of each clip: id, start, end.
+pub fn clip_positions(project: &Project) -> Vec<(Id, i64, i64)> {
+    spans(&project.timeline)
+        .iter()
+        .map(|span| (span.clip.id, span.start_us, span.end_us))
+        .collect()
+}
+
 pub fn ease(easing: Easing, t: f32) -> f32 {
     let t = t.clamp(0.0, 1.0);
     match easing {

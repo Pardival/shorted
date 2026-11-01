@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../bridge/api/projects.dart';
 import '../../design_system/components.dart';
 import '../../design_system/tokens.g.dart';
 import '../../l10n/generated/app_localizations.dart';
@@ -10,10 +11,16 @@ import 'editor_section.dart';
 class EditorTopBar extends StatelessWidget {
   const EditorTopBar({
     super.key,
+    required this.title,
+    required this.save,
+    required this.onRename,
     required this.onClose,
     required this.onExport,
   });
 
+  final String title;
+  final SaveStateView save;
+  final VoidCallback onRename;
   final VoidCallback onClose;
   final VoidCallback onExport;
 
@@ -31,17 +38,24 @@ class EditorTopBar extends StatelessWidget {
             onPressed: onClose,
           ),
           Expanded(
-            child: Text(
-              l10n.untitledProject,
-              overflow: TextOverflow.ellipsis,
-              style: text.titleMedium,
+            child: InkWell(
+              onTap: onRename,
+              child: Text(
+                title,
+                overflow: TextOverflow.ellipsis,
+                style: text.titleMedium,
+              ),
             ),
           ),
-          const _SavedDot(),
+          _SavedDot(save),
           const SizedBox(width: ShortedSpace.xs),
           Flexible(
             child: Text(
-              l10n.saved,
+              switch (save) {
+                SaveStateView.saving => l10n.saving,
+                SaveStateView.saved => l10n.saved,
+                SaveStateView.failed => l10n.saveFailed,
+              },
               overflow: TextOverflow.ellipsis,
               style: text.labelMedium?.copyWith(color: ShortedColors.textMuted),
             ),
@@ -60,15 +74,21 @@ class EditorTopBar extends StatelessWidget {
 }
 
 class _SavedDot extends StatelessWidget {
-  const _SavedDot();
+  const _SavedDot(this.save);
+
+  final SaveStateView save;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: 6,
       height: 6,
-      decoration: const BoxDecoration(
-        color: ShortedColors.accent,
+      decoration: BoxDecoration(
+        color: switch (save) {
+          SaveStateView.saving => ShortedColors.attention,
+          SaveStateView.saved => ShortedColors.accent,
+          SaveStateView.failed => ShortedColors.danger,
+        },
         shape: BoxShape.circle,
       ),
     );
@@ -102,7 +122,16 @@ class PreviewArea extends StatelessWidget {
 }
 
 class TransportBar extends StatelessWidget {
-  const TransportBar({super.key});
+  const TransportBar({
+    super.key,
+    required this.durationUs,
+    required this.onUndo,
+    required this.onRedo,
+  });
+
+  final int durationUs;
+  final VoidCallback? onUndo;
+  final VoidCallback? onRedo;
 
   @override
   Widget build(BuildContext context) {
@@ -117,18 +146,21 @@ class TransportBar extends StatelessWidget {
             onPressed: null,
           ),
           const SizedBox(width: ShortedSpace.s),
-          const Expanded(
-            child: Text('0:00 / 0:00', overflow: TextOverflow.ellipsis),
+          Expanded(
+            child: Text(
+              '0:00 / ${formatTimecode(durationUs)}',
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
           ShortedIconButton(
             icon: Icons.undo,
             tooltip: l10n.undo,
-            onPressed: null,
+            onPressed: onUndo,
           ),
           ShortedIconButton(
             icon: Icons.redo,
             tooltip: l10n.redo,
-            onPressed: null,
+            onPressed: onRedo,
           ),
         ],
       ),
@@ -137,9 +169,10 @@ class TransportBar extends StatelessWidget {
 }
 
 class TimelineArea extends StatefulWidget {
-  const TimelineArea({super.key, required this.height});
+  const TimelineArea({super.key, required this.height, required this.view});
 
   final double height;
+  final ProjectView view;
 
   @override
   State<TimelineArea> createState() => _TimelineAreaState();
@@ -157,34 +190,39 @@ class _TimelineAreaState extends State<TimelineArea> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    // Empty until the editor is connected to the engine.
     final tracks = [
-      TimelineTrack(
-        kind: TrackKind.widgets,
-        label: l10n.trackWidgets,
-        items: const [],
-      ),
-      TimelineTrack(
-        kind: TrackKind.video,
-        label: l10n.trackVideo,
-        items: const [],
-      ),
-      TimelineTrack(
-        kind: TrackKind.captions,
-        label: l10n.trackCaptions,
-        items: const [],
-      ),
-      TimelineTrack(
-        kind: TrackKind.voiceOver,
-        label: l10n.trackVoiceOver,
-        items: const [],
-      ),
+      for (final track in widget.view.tracks)
+        TimelineTrack(
+          kind: switch (track.kind) {
+            TrackKindView.widgets => TrackKind.widgets,
+            TrackKindView.video => TrackKind.video,
+            TrackKindView.captions => TrackKind.captions,
+            TrackKindView.voiceOver => TrackKind.voiceOver,
+            TrackKindView.audio => TrackKind.audio,
+          },
+          label:
+              track.name ??
+              switch (track.kind) {
+                TrackKindView.widgets => l10n.trackWidgets,
+                TrackKindView.video => l10n.trackVideo,
+                TrackKindView.captions => l10n.trackCaptions,
+                _ => l10n.trackVoiceOver,
+              },
+          items: [
+            for (final item in track.items)
+              TimelineItem(
+                id: item.id,
+                startUs: item.startUs.toInt(),
+                endUs: item.endUs.toInt(),
+              ),
+          ],
+        ),
     ];
     return SizedBox(
       height: widget.height,
       child: TimelineView(
         tracks: tracks,
-        durationUs: 0,
+        durationUs: widget.view.durationUs.toInt(),
         playheadUs: _playheadUs,
       ),
     );

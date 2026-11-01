@@ -61,5 +61,38 @@
   "trackWidgets": "Widgets",
   "trackVideo": "Video",
   "trackCaptions": "Captions",
-  "trackVoiceOver": "Voice-over"
+  "trackVoiceOver": "Voice-over",
+  "rename": "Rename",
+  "duplicate": "Duplicate",
+  "delete": "Delete",
+  "cancel": "Cancel",
+  "restore": "Restore",
+  "trash": "Trash",
+  "trashEmpty": "The trash is empty.",
+  "movedToTrash": "Moved to the trash for 7 days.",
+  "deleteConfirmTitle": "Delete “{title}”?",
+  "deleteConfirmBody": "It stays in the trash for 7 days.",
+  "projectTitleLabel": "Title",
+  "projectActions": "Project actions",
+  "copyOf": "{title} (copy)",
+  "saving": "Saving…",
+  "saveFailed": "Not saved",
+  "errorGeneric": "Something went wrong. Try again.",
+  "errorStorage": "The project could not be saved or read. Check the free space on your device.",
+  "errorNewerProject": "This project was made with a newer version of Shorted. Update the app to open it.",
+  "errorDamagedProject": "This project file is damaged and cannot be opened.",
+  "@deleteConfirmTitle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "@copyOf": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  }
 }

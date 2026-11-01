@@ -1,12 +1,15 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'app/shorted_app.dart';
 import 'bridge/api.dart' as engine;
 import 'bridge/error.dart';
 import 'bridge/frb_generated.dart';
+import 'features/project/project_gateway.dart';
+import 'features/project/project_providers.dart';
 import 'features/spike/spike_screen.dart';
 
 const _runSpike = bool.fromEnvironment('SHORTED_SPIKE');
@@ -15,12 +18,18 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await RustLib.init();
   await _startLogging();
+  final support = await getApplicationSupportDirectory();
   runApp(
-    ShortedApp(
-      engineVersion: engine.engineVersion(),
-      measurementScreen: _runSpike
-          ? SpikeScreen(exitWhenDone: Platform.isMacOS)
-          : null,
+    ProviderScope(
+      overrides: [
+        projectGatewayProvider.overrideWithValue(EngineGateway(support.path)),
+      ],
+      child: ShortedApp(
+        engineVersion: engine.engineVersion(),
+        measurementScreen: _runSpike
+            ? SpikeScreen(exitWhenDone: Platform.isMacOS)
+            : null,
+      ),
     ),
   );
 }

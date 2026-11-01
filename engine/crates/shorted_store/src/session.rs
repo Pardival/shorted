@@ -83,7 +83,7 @@ fn now_ms() -> u64 {
         .map_or(0, |time| time.as_millis() as u64)
 }
 
-fn snapshot_bytes(project: &Project, revision: u64) -> Result<Vec<u8>, StoreError> {
+pub(crate) fn snapshot_bytes(project: &Project, revision: u64) -> Result<Vec<u8>, StoreError> {
     let snapshot = Snapshot { revision, project };
     serde_json::to_vec(&snapshot).map_err(|_| StoreError::Malformed)
 }
@@ -173,7 +173,7 @@ fn writer_loop(
 
 /// Restores a project: the snapshot, then journal lines newer than it. A torn last line, left by
 /// a crash mid-write, is ignored.
-fn load(folder: &Path) -> Result<(Project, u64), StoreError> {
+pub(crate) fn load(folder: &Path) -> Result<(Project, u64), StoreError> {
     let mut json = String::new();
     File::open(folder.join(PROJECT_FILE))?
         .take(MAX_DOCUMENT_BYTES as u64 + 1)
@@ -297,6 +297,14 @@ impl ProjectSession {
 
     pub fn revision(&self) -> u64 {
         self.revision
+    }
+
+    pub fn can_undo(&self) -> bool {
+        self.editor.can_undo()
+    }
+
+    pub fn can_redo(&self) -> bool {
+        self.editor.can_redo()
     }
 
     pub fn execute(&mut self, command: &Command) -> Result<ChangeEvent, StoreError> {
