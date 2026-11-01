@@ -30,5 +30,6 @@ flutter:
         ffiPlugin: true
       macos:
         ffiPlugin: true
+        pluginClass: SpikeTexturePlugin
       windows:
         ffiPlugin: true

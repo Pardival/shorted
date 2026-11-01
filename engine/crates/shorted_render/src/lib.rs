@@ -2,6 +2,10 @@
 
 #![deny(unsafe_op_in_unsafe_fn)]
 
+#[cfg(target_vendor = "apple")]
+pub mod apple;
+pub mod spike;
+
 /// Name of this crate, used by the workspace smoke tests.
 pub const CRATE_NAME: &str = "shorted_render";
 

@@ -67,6 +67,7 @@ pub fn init(dir: &Path) -> Result<(), EngineError> {
     if LOG_GUARD.get().is_some() {
         return Ok(());
     }
+    std::fs::create_dir_all(dir)?;
     let appender = RollingFileAppender::builder()
         .rotation(Rotation::DAILY)
         .filename_prefix("shorted")

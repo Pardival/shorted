@@ -5,8 +5,10 @@ import 'app/shorted_app.dart';
 import 'bridge/api.dart' as engine;
 import 'bridge/error.dart';
 import 'bridge/frb_generated.dart';
+import 'features/spike/spike_screen.dart';
 
 const _counterIntervalMs = 1000;
+const _runSpike = bool.fromEnvironment('SHORTED_SPIKE');
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,6 +20,7 @@ Future<void> main() async {
       counter: engine
           .counterStream(intervalMs: _counterIntervalMs)
           .map((value) => value.toInt()),
+      home: _runSpike ? const SpikeScreen(exitWhenDone: true) : null,
     ),
   );
 }

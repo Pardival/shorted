@@ -3,5 +3,10 @@
   "appTitle": "Shorted",
   "placeholderTagline": "Vos clips, un short soigné.",
   "engineVersion": "Moteur {version}",
-  "engineCounter": "Compteur du moteur : {value}"
+  "engineCounter": "Compteur du moteur : {value}",
+  "spikeTitle": "Spike texture",
+  "spikeZeroCopy": "Zéro copie",
+  "spikePixelCopy": "Copie de pixels",
+  "spikeMeasuring": "Mesure en cours : {mode}",
+  "spikeReportSaved": "Rapport enregistré : {path}"
 }
