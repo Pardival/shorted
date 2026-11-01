@@ -196,8 +196,10 @@ fn killing_the_process_loses_at_most_2_s_of_commands() {
         .unwrap();
     let mut reader = BufReader::new(child.stdout.take().unwrap());
     let mut line = String::new();
+    // Timed from the first edit: a freshly built binary can be slow to start on macOS.
+    reader.read_line(&mut line).unwrap();
     let start = Instant::now();
-    let mut acknowledged: Vec<(u64, Instant)> = Vec::new();
+    let mut acknowledged: Vec<(u64, Instant)> = vec![(line.trim().parse().unwrap(), start)];
     while start.elapsed() < Duration::from_millis(1500) {
         line.clear();
         reader.read_line(&mut line).unwrap();
