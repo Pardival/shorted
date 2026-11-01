@@ -1,0 +1,31 @@
+.DS_Store
+*.log
+
+# Rust
+engine/target/
+
+# Flutter / Dart
+.dart_tool/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.iml
+.idea/
+.vscode/
+
+# Benchmarks and local measurements
+docs/perf/raw/
+
+# Secrets and signing material: never commit
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.mobileprovision
+key.properties
+GoogleService-Info.plist
+google-services.json
