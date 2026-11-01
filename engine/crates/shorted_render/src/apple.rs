@@ -9,7 +9,7 @@ use wgpu::hal::api::Metal;
 
 use crate::spike::{RenderError, target_descriptor};
 
-/// Wraps `surface` in a wgpu render target.
+/// Wraps `surface` in a wgpu texture with the given usage.
 ///
 /// # Safety
 ///
@@ -20,6 +20,7 @@ pub unsafe fn texture_from_iosurface(
     surface: &IOSurfaceRef,
     width: u32,
     height: u32,
+    usage: wgpu::TextureUsages,
 ) -> Result<wgpu::Texture, RenderError> {
     // SAFETY: this device was created by wgpu on the Metal backend, the only one on Apple here.
     let hal_device = unsafe { device.as_hal::<Metal>() }.ok_or(RenderError::NotMetal)?;
@@ -59,7 +60,10 @@ pub unsafe fn texture_from_iosurface(
     Ok(unsafe {
         device.create_texture_from_hal::<Metal>(
             hal_texture,
-            &target_descriptor(width, height),
+            &wgpu::TextureDescriptor {
+                usage,
+                ..target_descriptor(width, height)
+            },
             wgpu::TextureUses::UNINITIALIZED,
         )
     })

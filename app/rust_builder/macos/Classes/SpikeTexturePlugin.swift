@@ -9,6 +9,10 @@ private func spikeCreate(_ width: UInt32, _ height: UInt32) -> OpaquePointer?
 private func spikeDestroy(_ session: OpaquePointer)
 @_silgen_name("shorted_spike_attach_surface")
 private func spikeAttachSurface(_ session: OpaquePointer, _ surface: UnsafeRawPointer) -> Int32
+@_silgen_name("shorted_spike_open_video")
+private func spikeOpenVideo(
+  _ session: OpaquePointer, _ path: UnsafePointer<UInt8>, _ length: Int
+) -> Bool
 @_silgen_name("shorted_spike_render_surface")
 private func spikeRenderSurface(_ session: OpaquePointer, _ index: UInt32, _ time: Float) -> Bool
 @_silgen_name("shorted_spike_render_bytes")
@@ -38,7 +42,7 @@ private final class SpikeSession: NSObject, FlutterTexture {
   private let startedAt = CACurrentMediaTime()
   var onFrame: (() -> Void)?
 
-  init?(width: Int, height: Int, zeroCopy: Bool) {
+  init?(width: Int, height: Int, zeroCopy: Bool, clip: String?) {
     guard let session = spikeCreate(UInt32(width), UInt32(height)) else { return nil }
     self.session = session
     self.zeroCopy = zeroCopy
@@ -65,6 +69,10 @@ private final class SpikeSession: NSObject, FlutterTexture {
       buffers.append(buffer)
     }
     self.buffers = buffers
+    if let clip {
+      let bytes = Array(clip.utf8)
+      guard spikeOpenVideo(session, bytes, bytes.count) else { return nil }
+    }
   }
 
   func start() {
@@ -169,7 +177,8 @@ public final class SpikeTexturePlugin: NSObject, FlutterPlugin {
       guard
         let width = arguments["width"] as? Int, let height = arguments["height"] as? Int,
         let zeroCopy = arguments["zeroCopy"] as? Bool,
-        let session = SpikeSession(width: width, height: height, zeroCopy: zeroCopy)
+        let session = SpikeSession(
+          width: width, height: height, zeroCopy: zeroCopy, clip: arguments["clip"] as? String)
       else {
         result(FlutterError(code: "unavailable", message: nil, details: nil))
         return

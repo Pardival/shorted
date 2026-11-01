@@ -37,6 +37,9 @@ pub enum RenderError {
 struct Globals {
     time: f32,
     aspect: f32,
+    uv_scale: [f32; 2],
+    rotated: f32,
+    padding: [f32; 3],
 }
 
 #[repr(C)]
@@ -100,6 +103,12 @@ pub struct SpikeRenderer {
     pub width: u32,
     pub height: u32,
     background: wgpu::RenderPipeline,
+    video_background: wgpu::RenderPipeline,
+    video_layout: wgpu::BindGroupLayout,
+    video_sampler: wgpu::Sampler,
+    video: Option<wgpu::BindGroup>,
+    uv_scale: [f32; 2],
+    rotated: bool,
     quads: wgpu::RenderPipeline,
     bind_group: wgpu::BindGroup,
     globals: wgpu::Buffer,
@@ -131,7 +140,7 @@ impl SpikeRenderer {
 
         let globals = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("spike globals"),
-            size: size_of::<Globals>().max(16) as u64,
+            size: size_of::<Globals>() as u64,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
@@ -210,6 +219,33 @@ impl SpikeRenderer {
                 },
             ],
         });
+        let video_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: None,
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Texture {
+                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        multisampled: false,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                    count: None,
+                },
+            ],
+        });
+        let video_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: None,
+                bind_group_layouts: &[Some(&layout), Some(&video_layout)],
+                immediate_size: 0,
+            });
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: None,
             bind_group_layouts: &[Some(&layout)],
@@ -223,37 +259,47 @@ impl SpikeRenderer {
             step_mode: wgpu::VertexStepMode::Instance,
             attributes: &attributes,
         })];
-        let pipeline = |vs: &str, fs: &str, buffers, blend, topology| {
-            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                label: None,
-                layout: Some(&pipeline_layout),
-                vertex: wgpu::VertexState {
-                    module: &shader,
-                    entry_point: Some(vs),
-                    compilation_options: Default::default(),
-                    buffers,
-                },
-                primitive: wgpu::PrimitiveState {
-                    topology,
-                    ..Default::default()
-                },
-                depth_stencil: None,
-                multisample: wgpu::MultisampleState::default(),
-                fragment: Some(wgpu::FragmentState {
-                    module: &shader,
-                    entry_point: Some(fs),
-                    compilation_options: Default::default(),
-                    targets: &[Some(wgpu::ColorTargetState {
-                        format: TARGET_FORMAT,
-                        blend,
-                        write_mask: wgpu::ColorWrites::ALL,
-                    })],
-                }),
-                multiview_mask: None,
-                cache: None,
-            })
-        };
+        let pipeline =
+            |layout: &wgpu::PipelineLayout, vs: &str, fs: &str, buffers, blend, topology| {
+                device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                    label: None,
+                    layout: Some(layout),
+                    vertex: wgpu::VertexState {
+                        module: &shader,
+                        entry_point: Some(vs),
+                        compilation_options: Default::default(),
+                        buffers,
+                    },
+                    primitive: wgpu::PrimitiveState {
+                        topology,
+                        ..Default::default()
+                    },
+                    depth_stencil: None,
+                    multisample: wgpu::MultisampleState::default(),
+                    fragment: Some(wgpu::FragmentState {
+                        module: &shader,
+                        entry_point: Some(fs),
+                        compilation_options: Default::default(),
+                        targets: &[Some(wgpu::ColorTargetState {
+                            format: TARGET_FORMAT,
+                            blend,
+                            write_mask: wgpu::ColorWrites::ALL,
+                        })],
+                    }),
+                    multiview_mask: None,
+                    cache: None,
+                })
+            };
+        let video_background = pipeline(
+            &video_pipeline_layout,
+            "background_vs",
+            "video_fs",
+            &[],
+            None,
+            wgpu::PrimitiveTopology::TriangleList,
+        );
         let background = pipeline(
+            &pipeline_layout,
             "background_vs",
             "background_fs",
             &[],
@@ -261,6 +307,7 @@ impl SpikeRenderer {
             wgpu::PrimitiveTopology::TriangleList,
         );
         let quads = pipeline(
+            &pipeline_layout,
             "quad_vs",
             "quad_fs",
             &quad_layouts,
@@ -280,6 +327,12 @@ impl SpikeRenderer {
             width,
             height,
             background,
+            video_background,
+            video_layout,
+            video_sampler: sampler,
+            video: None,
+            uv_scale: [1.0, 1.0],
+            rotated: false,
             quads,
             bind_group,
             globals,
@@ -290,6 +343,46 @@ impl SpikeRenderer {
             offscreen,
             readback,
         })
+    }
+
+    /// Uses a decoded frame as the background of the next renders. `display_width` and
+    /// `display_height` include rotation.
+    pub fn set_video_frame(
+        &mut self,
+        texture: &wgpu::Texture,
+        display_width: u32,
+        display_height: u32,
+        rotated: bool,
+    ) {
+        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+        self.video = Some(self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: None,
+            layout: &self.video_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&self.video_sampler),
+                },
+            ],
+        }));
+        self.rotated = rotated;
+        let clip = display_width as f32 / display_height as f32;
+        let frame = self.width as f32 / self.height as f32;
+        // In the sample's own axes: a wide clip is cropped along its width.
+        let (cross, along) = if clip > frame {
+            (frame / clip, 1.0)
+        } else {
+            (1.0, clip / frame)
+        };
+        self.uv_scale = if rotated {
+            [along, cross]
+        } else {
+            [cross, along]
+        };
     }
 
     fn update_scene(&mut self, time: f32) {
@@ -316,7 +409,13 @@ impl SpikeRenderer {
         self.queue.write_buffer(
             &self.globals,
             0,
-            bytemuck::bytes_of(&Globals { time, aspect }),
+            bytemuck::bytes_of(&Globals {
+                time,
+                aspect,
+                uv_scale: self.uv_scale,
+                rotated: if self.rotated { 1.0 } else { 0.0 },
+                padding: [0.0; 3],
+            }),
         );
         self.queue
             .write_buffer(&self.instances, 0, bytemuck::cast_slice(&scene_quads(time)));
@@ -341,7 +440,13 @@ impl SpikeRenderer {
             multiview_mask: None,
         });
         pass.set_bind_group(0, &self.bind_group, &[]);
-        pass.set_pipeline(&self.background);
+        match &self.video {
+            Some(video) => {
+                pass.set_bind_group(1, video, &[]);
+                pass.set_pipeline(&self.video_background);
+            }
+            None => pass.set_pipeline(&self.background),
+        }
         pass.draw(0..3, 0..1);
         pass.set_pipeline(&self.quads);
         pass.set_vertex_buffer(0, self.instances.slice(..));
