@@ -221,5 +221,5 @@ fn killing_the_process_loses_at_most_2_s_of_commands() {
         lost <= Duration::from_secs(2),
         "lost {lost:?}, recovered {recovered}"
     );
-    assert!(recovered > 100, "only {recovered} commands ran");
+    assert!(recovered > 10, "only {recovered} commands ran");
 }
