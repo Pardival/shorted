@@ -1,0 +1,3 @@
+tags:
+  golden:
+    description: Pixel comparisons; fonts differ between systems, so they run on macOS only.
