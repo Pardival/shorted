@@ -1,0 +1,15 @@
+[package]
+name = "shorted_playback"
+description = "Audio-driven master clock, frame scheduling, prefetch and scrubbing."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+shorted_core = { path = "../shorted_core" }
+shorted_render = { path = "../shorted_render" }
+shorted_audio = { path = "../shorted_audio" }

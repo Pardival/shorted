@@ -1,0 +1,13 @@
+[package]
+name = "shorted_transcribe"
+description = "Speech model management and whisper inference with word timestamps."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+shorted_audio = { path = "../shorted_audio" }

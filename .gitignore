@@ -29,3 +29,4 @@ docs/perf/raw/
 key.properties
 GoogleService-Info.plist
 google-services.json
+app/lib/l10n/generated/

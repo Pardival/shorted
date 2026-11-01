@@ -1,0 +1,21 @@
+[package]
+name = "shorted_ffi"
+description = "The only crate exposed to Dart: coarse-grained API, async functions, event streams."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+shorted_core = { path = "../shorted_core" }
+shorted_store = { path = "../shorted_store" }
+shorted_media = { path = "../shorted_media" }
+shorted_render = { path = "../shorted_render" }
+shorted_audio = { path = "../shorted_audio" }
+shorted_playback = { path = "../shorted_playback" }
+shorted_transcribe = { path = "../shorted_transcribe" }
+shorted_analysis = { path = "../shorted_analysis" }
+shorted_ai = { path = "../shorted_ai" }

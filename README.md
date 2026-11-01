@@ -18,15 +18,32 @@ Local-first: your videos never leave your device. No account. AI assistance is o
 ## Repository layout
 
 ```
-app/       Flutter app (all platforms)            ← created in T-0001
-engine/    Rust workspace (engine crates)         ← created in T-0001
+app/       Flutter app (all platforms)
+engine/    Rust workspace (engine crates)
 assets/    Fonts, library stickers, sounds (+ licences manifest)
 scripts/   Tooling
 ```
 
 ## Build from source
 
-Instructions are added by ticket T-0001 (toolchain versions for Rust, Flutter, Android NDK, Xcode).
+| Tool | Version |
+| --- | --- |
+| Rust | 1.99.1 (pinned in `rust-toolchain.toml`) |
+| Flutter | 3.47.9 stable, Dart 3.13.7 (pinned in `.flutter-version`) |
+| Xcode (iOS, macOS) | 26.3, with CocoaPods 1.17 |
+| Android | Android SDK and NDK, minimum API 29 |
+| Windows | Visual Studio 2022 with the "Desktop development with C++" workload |
+| Linux | `clang cmake ninja-build pkg-config libgtk-3-dev` |
+
+```bash
+cd engine && cargo build && cargo test
+```
+
+```bash
+cd app && flutter pub get && flutter run -d macos
+```
+
+Replace `macos` with `windows`, `linux`, or the id of a connected device (`flutter devices`).
 
 ## Contributing and security
 
