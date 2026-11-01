@@ -13,6 +13,10 @@ crate-type = ["cdylib", "staticlib", "rlib"]
 unsafe_op_in_unsafe_fn = "deny"
 unexpected_cfgs = { level = "warn", check-cfg = ["cfg(frb_expand)"] }
 
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+
 [dependencies]
 flutter_rust_bridge = "=2.13.0"
 shorted_core = { path = "../shorted_core" }
@@ -24,3 +28,8 @@ shorted_playback = { path = "../shorted_playback" }
 shorted_transcribe = { path = "../shorted_transcribe" }
 shorted_analysis = { path = "../shorted_analysis" }
 shorted_ai = { path = "../shorted_ai" }
+thiserror = "2.0.21"
+tracing = "0.1.44"
+tracing-appender = "0.2.5"
+regex = "1.13.1"
+tracing-subscriber = { version = "0.3.23", default-features = false, features = ["fmt", "std", "ansi"] }
