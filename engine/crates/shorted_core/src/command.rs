@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::ModelError;
 use crate::model::*;
+use crate::range;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", content = "id", rename_all = "snake_case")]
@@ -227,12 +228,31 @@ pub enum Command {
     DeleteOverlay {
         id: Id,
     },
+    // Timeline ranges. `id_seed` names the parts created by cuts: this crate generates no ids.
+    DeleteRange {
+        start_us: i64,
+        end_us: i64,
+        id_seed: Id,
+    },
+    SplitAllAt {
+        t_us: i64,
+        id_seed: Id,
+    },
+    MuteRange {
+        start_us: i64,
+        end_us: i64,
+        id_seed: Id,
+    },
     // Grouping
     Group {
         label: String,
         commands: Vec<Command>,
     },
     // Inverses: whole values put back. Also valid journal entries.
+    RestoreTimeline {
+        timeline: Box<Timeline>,
+        captions: Box<CaptionSettings>,
+    },
     ReplaceClip {
         clip: Box<ClipItem>,
     },
@@ -334,6 +354,13 @@ fn restore_clips(project: &Project) -> Command {
     Command::RestoreClips {
         clips: project.timeline.clips.clone(),
         transitions: project.timeline.transitions.clone(),
+    }
+}
+
+fn restore_timeline(project: &Project) -> Command {
+    Command::RestoreTimeline {
+        timeline: Box::new(project.timeline.clone()),
+        captions: Box::new(project.captions.clone()),
     }
 }
 
@@ -756,6 +783,30 @@ fn mutate(command: &Command, project: &mut Project) -> Result<Command, ModelErro
             inverse
         }
 
+        DeleteRange {
+            start_us,
+            end_us,
+            id_seed,
+        } => {
+            let inverse = restore_timeline(project);
+            range::delete_range(project, start_us, end_us, id_seed)?;
+            inverse
+        }
+        SplitAllAt { t_us, id_seed } => {
+            let inverse = restore_timeline(project);
+            range::split_all_at(project, t_us, id_seed);
+            inverse
+        }
+        MuteRange {
+            start_us,
+            end_us,
+            id_seed,
+        } => {
+            let inverse = restore_timeline(project);
+            range::mute_range(project, start_us, end_us, id_seed)?;
+            inverse
+        }
+
         Group { label, commands } => {
             let mut inverses = Vec::with_capacity(commands.len());
             for command in &commands {
@@ -768,6 +819,12 @@ fn mutate(command: &Command, project: &mut Project) -> Result<Command, ModelErro
             }
         }
 
+        RestoreTimeline { timeline, captions } => {
+            let inverse = restore_timeline(project);
+            project.timeline = *timeline;
+            project.captions = *captions;
+            inverse
+        }
         ReplaceClip { clip } => {
             let target = clip_mut(project, clip.id)?;
             ReplaceClip {

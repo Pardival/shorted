@@ -50,14 +50,14 @@ pub struct FrameDescription {
 
 /// Where each clip sits on the timeline. Entering a transition overlaps the next clip with the
 /// previous one, so `Project::duration_us` equals the last end.
-struct Span<'a> {
-    clip: &'a ClipItem,
-    start_us: i64,
-    end_us: i64,
-    incoming: Option<&'a Transition>,
+pub(crate) struct Span<'a> {
+    pub clip: &'a ClipItem,
+    pub start_us: i64,
+    pub end_us: i64,
+    pub incoming: Option<&'a Transition>,
 }
 
-fn spans(timeline: &Timeline) -> Vec<Span<'_>> {
+pub(crate) fn spans(timeline: &Timeline) -> Vec<Span<'_>> {
     let mut result = Vec::with_capacity(timeline.clips.len());
     let mut cursor = 0;
     let mut previous: Option<Id> = None;
@@ -133,7 +133,7 @@ fn clip_layer(span: &Span<'_>, t: i64) -> ClipLayer {
 }
 
 /// The value of a key track at `t`, held before the first key and after the last.
-fn key_value(keys: &[Key], t: i64) -> Option<f32> {
+pub(crate) fn key_value(keys: &[Key], t: i64) -> Option<f32> {
     let next = keys.partition_point(|key| key.t_us <= t);
     match (
         next.checked_sub(1).map(|i| keys[i]),
@@ -149,7 +149,7 @@ fn key_value(keys: &[Key], t: i64) -> Option<f32> {
 }
 
 /// Position along a recorded path. Smoothing is applied by T-0708.
-fn path_position(path: &MotionPath, t: i64) -> Option<(Vec2, f32)> {
+pub(crate) fn path_position(path: &MotionPath, t: i64) -> Option<(Vec2, f32)> {
     let samples = &path.samples;
     let first = samples.first()?;
     let next = samples.partition_point(|s| s.t_us <= t);
@@ -318,7 +318,10 @@ fn overlay_layer(item: &OverlayItem, t: i64) -> OverlayLayer {
 
     OverlayLayer {
         overlay_id: item.id,
-        source_time_us: matches!(item.kind, OverlayKind::Video { .. }).then_some(local),
+        source_time_us: match item.kind {
+            OverlayKind::Video { source_in_us, .. } => Some(source_in_us + local),
+            _ => None,
+        },
         position,
         scale,
         rotation,

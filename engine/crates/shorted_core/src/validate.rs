@@ -177,7 +177,13 @@ fn overlay(item: &OverlayItem, media: &HashSet<Id>) -> Result<(), ModelError> {
         OverlayKind::Image { asset } | OverlayKind::AnimatedImage { asset } => {
             known(media, *asset)?
         }
-        OverlayKind::Video { media: id } => known(media, *id)?,
+        OverlayKind::Video {
+            media: id,
+            source_in_us,
+        } => {
+            known(media, *id)?;
+            time(*source_in_us, "video element start")?;
+        }
         OverlayKind::Text {
             content,
             style: value,

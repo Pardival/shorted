@@ -7,6 +7,7 @@ pub mod editor;
 pub mod error;
 pub mod evaluate;
 pub mod model;
+mod range;
 pub mod validate;
 
 /// Name of this crate, used by the workspace smoke tests.

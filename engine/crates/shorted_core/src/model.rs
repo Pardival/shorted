@@ -402,11 +402,25 @@ pub struct OverlayItem {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum OverlayKind {
-    Image { asset: Id },
-    AnimatedImage { asset: Id },
-    Video { media: Id },
-    Text { content: String, style: TextStyle },
-    Shape { shape: ShapeKind, fill: Color },
+    Image {
+        asset: Id,
+    },
+    AnimatedImage {
+        asset: Id,
+    },
+    Video {
+        media: Id,
+        #[serde(default)]
+        source_in_us: i64,
+    },
+    Text {
+        content: String,
+        style: TextStyle,
+    },
+    Shape {
+        shape: ShapeKind,
+        fill: Color,
+    },
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
