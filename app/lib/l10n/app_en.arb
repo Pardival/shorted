@@ -39,7 +39,6 @@
   "allTracks": "All tracks",
   "untitledProject": "Untitled short",
   "previewPlaceholder": "Preview",
-  "timelinePlaceholder": "Timeline",
   "inspectorTitle": "Properties",
   "nothingSelected": "Nothing selected",
   "toolsPlaceholder": "{section} tools arrive with their tickets.",
@@ -58,5 +57,9 @@
         "type": "String"
       }
     }
-  }
+  },
+  "trackWidgets": "Widgets",
+  "trackVideo": "Video",
+  "trackCaptions": "Captions",
+  "trackVoiceOver": "Voice-over"
 }
