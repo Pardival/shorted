@@ -142,10 +142,26 @@ class _SpikeScreenState extends State<SpikeScreen>
         .writeAsBytes(bytes.buffer.asUint8List());
   }
 
+  /// Clips placed in `assets/spike/` before the build, for devices with no way to copy files.
+  Future<void> _installBundledClips(String support) async {
+    final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
+    for (final asset in manifest.listAssets()) {
+      if (!asset.startsWith('assets/spike/') || !asset.endsWith('.mov')) {
+        continue;
+      }
+      final target = File('$support/${asset.split('/').last}');
+      if (target.existsSync()) continue;
+      final bytes = await rootBundle.load(asset);
+      await target.create(recursive: true);
+      await target.writeAsBytes(bytes.buffer.asUint8List());
+    }
+  }
+
   Future<void> _run() async {
     SchedulerBinding.instance.addTimingsCallback(_onTimings);
     final results = <Map<String, Object>>[];
     final support = await getApplicationSupportDirectory();
+    await _installBundledClips(support.path);
     for (final mode in SpikeMode.values) {
       final clip = _clipFor(mode, support.path);
       if (clip != null && !File(clip).existsSync()) continue;
@@ -171,6 +187,13 @@ class _SpikeScreenState extends State<SpikeScreen>
       const JsonEncoder.withIndent('  ').convert(report),
     );
     debugPrint('SPIKE_REPORT ${file.path}');
+    // Phones keep the file out of reach: the same data goes to the log, line by line.
+    debugPrint(
+      'SPIKE_ENV ${jsonEncode({...report, 'results': results.length})}',
+    );
+    for (final result in results) {
+      debugPrint('SPIKE_RESULT ${jsonEncode(result)}');
+    }
     if (widget.exitWhenDone) exit(0);
     if (mounted) setState(() => _reportPath = file.path);
   }

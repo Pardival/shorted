@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -20,7 +22,7 @@ Future<void> main() async {
       counter: engine
           .counterStream(intervalMs: _counterIntervalMs)
           .map((value) => value.toInt()),
-      home: _runSpike ? const SpikeScreen(exitWhenDone: true) : null,
+      home: _runSpike ? SpikeScreen(exitWhenDone: Platform.isMacOS) : null,
     ),
   );
 }

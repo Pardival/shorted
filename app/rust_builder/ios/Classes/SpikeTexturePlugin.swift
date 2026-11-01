@@ -1,0 +1,1 @@
+../../macos/Classes/SpikeTexturePlugin.swift
