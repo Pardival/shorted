@@ -152,10 +152,11 @@ class _ExportPanelState extends ConsumerState<ExportPanel> {
             selected: _fps,
             onSelected: (value) => setState(() => _fps = value),
           ),
-          Text(
-            blocked ?? l10n.exportSilentNote,
-            style: const TextStyle(color: ShortedColors.attention),
-          ),
+          if (blocked != null)
+            Text(
+              blocked,
+              style: const TextStyle(color: ShortedColors.attention),
+            ),
           PrimaryButton(
             label: l10n.exportStart,
             onPressed: blocked == null ? _start : null,

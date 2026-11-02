@@ -68,7 +68,6 @@
   "exportCancel": "Cancelar exportación",
   "exportDone": "Vídeo guardado.",
   "exportProgress": "Exportando {percent} %",
-  "exportSilentNote": "El sonido aún no se exporta.",
   "exportEmpty": "Primero añade clips a la línea de tiempo.",
   "exportTooLong": "Este short supera el límite de 2:00.",
   "errorExportFailed": "No se pudo escribir el vídeo. Comprueba el espacio libre y la carpeta elegida."

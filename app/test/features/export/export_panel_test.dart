@@ -47,11 +47,6 @@ void main() {
     expect(find.text('This short is over the 2:00 limit.'), findsOneWidget);
   });
 
-  testWidgets('the panel says sound is not exported', (tester) async {
-    await pump(tester, 4000000);
-    expect(find.text('Sound is not exported yet.'), findsOneWidget);
-  });
-
   testWidgets('settings reach the engine, progress shows, cancel works', (
     tester,
   ) async {

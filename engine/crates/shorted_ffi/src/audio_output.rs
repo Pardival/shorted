@@ -26,7 +26,7 @@ const IDLE: Duration = Duration::from_millis(5);
 static STARTED: Once = Once::new();
 
 /// Decodes what the project needs, once per media.
-fn load_sources(project: &Project, folder: &Path, sources: &mut HashMap<Id, Samples>) {
+pub(crate) fn load_sources(project: &Project, folder: &Path, sources: &mut HashMap<Id, Samples>) {
     let used = project
         .timeline
         .clips

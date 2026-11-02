@@ -2347,6 +2347,7 @@ dependencies = [
  "imagesize",
  "objc2",
  "objc2-av-foundation",
+ "objc2-core-audio-types",
  "objc2-core-foundation",
  "objc2-core-media",
  "objc2-core-video",
