@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../bridge/api/projects.dart';
 import '../../design_system/components.dart';
+import '../../design_system/motion.dart';
 import '../../design_system/tokens.g.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../audio/audio_panel.dart';
@@ -578,8 +579,10 @@ class SectionPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    // Only the panel animates: the preview and timeline sit outside it and never move.
     return AnimatedSwitcher(
-      duration: ShortedMotion.section,
+      duration: motionDuration(context, ShortedMotion.section),
+      transitionBuilder: fadeThrough,
       child: switch (section) {
         EditorSection.clips => ClipsPanel(
           key: const ValueKey(EditorSection.clips),

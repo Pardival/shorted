@@ -253,6 +253,14 @@ class FakeGateway implements ProjectGateway {
   @override
   Future<ProjectView> splitAllAt(int timeUs) => _range('split $timeUs');
 
+  var collected = 0;
+
+  @override
+  Future<ProjectView> collectMedia() async {
+    collected++;
+    return view();
+  }
+
   @override
   Future<int> cacheBytes() async => 3 * 1024 * 1024;
 

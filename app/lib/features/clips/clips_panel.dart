@@ -1,5 +1,6 @@
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_selector/file_selector.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -28,6 +29,12 @@ const _mediaTypes = XTypeGroup(
 );
 
 /// Import and manual order (S10, S10b). Smart arrange joins it in M4.
+/// On phones media is always copied in, so there is nothing to collect.
+bool get isDesktop =>
+    defaultTargetPlatform == TargetPlatform.macOS ||
+    defaultTargetPlatform == TargetPlatform.windows ||
+    defaultTargetPlatform == TargetPlatform.linux;
+
 class ClipsPanel extends ConsumerStatefulWidget {
   const ClipsPanel({super.key, required this.projectId, required this.media});
 
@@ -108,6 +115,18 @@ class _ClipsPanelState extends ConsumerState<ClipsPanel> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               SecondaryButton(label: l10n.addMedia, onPressed: _pickFiles),
+              if (isDesktop && media.isNotEmpty) ...[
+                const SizedBox(height: ShortedSpace.s),
+                SecondaryButton(
+                  label: l10n.collectMedia,
+                  onPressed: () => _guard(() async {
+                    await _editor.apply((gateway) => gateway.collectMedia());
+                    if (context.mounted) {
+                      showToast(context, l10n.mediaCollected);
+                    }
+                  }),
+                ),
+              ],
               const SizedBox(height: ShortedSpace.s),
               Expanded(
                 child: media.isEmpty

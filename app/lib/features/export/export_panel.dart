@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../bridge/error.dart';
 import '../../bridge/runtime.dart';
 import '../../design_system/components.dart';
+import '../../design_system/task_progress.dart';
 import '../../design_system/tokens.g.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../project/project_dialogs.dart';
@@ -118,16 +119,11 @@ class _ExportPanelState extends ConsumerState<ExportPanel> {
       _ => null,
     };
     if (progress != null) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ProgressRing(value: progress),
-            const SizedBox(height: ShortedSpace.m),
-            Text(l10n.exportProgress((progress * 100).round())),
-            TextButton(onPressed: _cancel, child: Text(l10n.exportCancel)),
-          ],
-        ),
+      return TaskProgress(
+        label: l10n.exportProgress((progress * 100).round()),
+        fraction: progress,
+        cancelLabel: l10n.exportCancel,
+        onCancel: _cancel,
       );
     }
     return SingleChildScrollView(

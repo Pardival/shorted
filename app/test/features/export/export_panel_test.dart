@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shorted/bridge/error.dart';
 import 'package:shorted/bridge/runtime.dart';
 import 'package:shorted/design_system/theme.dart';
+import 'package:shorted/design_system/task_progress.dart';
 import 'package:shorted/features/export/export_panel.dart';
 import 'package:shorted/features/project/project_providers.dart';
 import 'package:shorted/l10n/generated/app_localizations.dart';
@@ -62,6 +63,7 @@ void main() {
     gateway.exportEvents.add(const TaskEvent.progress(fraction: 0.5));
     await tester.pump();
     await tester.pump();
+    await tester.pump(taskInlineAfter);
     expect(find.text('Exporting 50 %'), findsOneWidget);
 
     await tester.tap(find.text('Cancel export'));

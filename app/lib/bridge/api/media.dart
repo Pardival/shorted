@@ -27,6 +27,11 @@ Future<ProjectView> placeClips({required List<String> mediaIds}) =>
 Future<ProjectView> relinkMedia({required String id, required String path}) =>
     RustLib.instance.api.crateApiMediaRelinkMedia(id: id, path: path);
 
+/// Copies every referenced file into the project, as one undo step (T-0106). Files that cannot
+/// be reached stay referenced.
+Future<ProjectView> collectMedia() =>
+    RustLib.instance.api.crateApiMediaCollectMedia();
+
 /// Bytes used by thumbnails and waveforms, which can all be made again.
 Future<BigInt> cacheBytes({required String root}) =>
     RustLib.instance.api.crateApiMediaCacheBytes(root: root);

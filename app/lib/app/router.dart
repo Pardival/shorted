@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../design_system/motion.dart';
+import '../design_system/tokens.g.dart';
 import '../features/editor/editor_section.dart';
 import '../features/editor/editor_shell.dart';
 import '../features/home/home_screen.dart';
@@ -31,8 +33,12 @@ GoRouter createRouter({
         pageBuilder: (context, state) {
           final projectId = state.pathParameters['projectId'] ?? '';
           // One page key per project: changing section must not rebuild the page.
-          return NoTransitionPage(
+          return CustomTransitionPage(
             key: ValueKey('editor-$projectId'),
+            transitionDuration: ShortedMotion.screen,
+            reverseTransitionDuration: ShortedMotion.screen,
+            transitionsBuilder: (context, animation, secondary, child) =>
+                screenTransition(child, animation),
             child: EditorShell(
               projectId: projectId,
               section: EditorSection.parse(state.pathParameters['section']),

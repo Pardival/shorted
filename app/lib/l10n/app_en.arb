@@ -189,6 +189,9 @@
       }
     }
   },
+  "collectMedia": "Collect media into project",
+  "mediaCollected": "Media copied into the project.",
+  "taskProcessing": "Working…",
   "split": "Split",
   "exportTitle": "Export your short",
   "exportResolution": "Resolution",

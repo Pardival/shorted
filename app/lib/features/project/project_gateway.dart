@@ -75,6 +75,7 @@ abstract interface class ProjectGateway {
   Future<ProjectView> deleteRange(int startUs, int endUs);
   Future<ProjectView> muteRange(int startUs, int endUs);
   Future<ProjectView> splitAllAt(int timeUs);
+  Future<ProjectView> collectMedia();
   Future<int> cacheBytes();
   Future<void> clearCaches();
   Future<ProjectView> setClipSpeed(String id, double speed);
@@ -293,6 +294,9 @@ class EngineGateway implements ProjectGateway {
   @override
   Future<ProjectView> splitAllAt(int timeUs) =>
       clips.splitAllAt(timeUs: timeUs);
+
+  @override
+  Future<ProjectView> collectMedia() => media.collectMedia();
 
   @override
   Future<int> cacheBytes() async =>

@@ -321,6 +321,44 @@ pub async fn relink_media(id: String, path: String) -> Result<ProjectView, Engin
     })
 }
 
+/// Copies every referenced file into the project, as one undo step (T-0106). Files that cannot
+/// be reached stay referenced.
+pub async fn collect_media() -> Result<ProjectView, EngineFailure> {
+    let (project, folder) = {
+        let state = transport();
+        (state.project.clone(), state.folder.clone())
+    };
+    let project = project.ok_or_else(|| EngineError::Internal("no project is open".into()))?;
+    // Copied before touching the session: large files must not hold up the command thread.
+    let mut commands = Vec::new();
+    for media in &project.media {
+        if !matches!(media.location, MediaLocation::External { .. }) {
+            continue;
+        }
+        let Some(path) = resolve(media, &folder) else {
+            continue;
+        };
+        let rel_path = copy_into_project(&folder, &path, media.id)
+            .map_err(shorted_store::session::StoreError::from)
+            .map_err(EngineError::from)?;
+        commands.push(Command::RelinkMedia {
+            id: media.id,
+            location: MediaLocation::ProjectCopy { rel_path },
+        });
+    }
+    on_command_thread(move || {
+        with_active(|session| {
+            if !commands.is_empty() {
+                session.execute(&Command::Group {
+                    label: "collect_media".into(),
+                    commands,
+                })?;
+            }
+            Ok(view_of(session))
+        })
+    })
+}
+
 /// The cache folder of every project under `root`.
 fn cache_folders(root: &Path) -> Vec<PathBuf> {
     let projects = std::fs::read_dir(root.join("projects"));
