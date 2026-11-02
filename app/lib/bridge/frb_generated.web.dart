@@ -8,6 +8,7 @@
 
 import 'api.dart';
 import 'api/audio.dart';
+import 'api/brand_kit.dart';
 import 'api/clips.dart';
 import 'api/export.dart';
 import 'api/library.dart';
@@ -95,6 +96,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   TransitionKindView dco_decode_box_autoadd_transition_kind_view(dynamic raw);
 
   @protected
+  BrandAssetView dco_decode_brand_asset_view(dynamic raw);
+
+  @protected
+  BrandKindView dco_decode_brand_kind_view(dynamic raw);
+
+  @protected
   CaptionAnimationView dco_decode_caption_animation_view(dynamic raw);
 
   @protected
@@ -147,6 +154,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<AudioTrackView> dco_decode_list_audio_track_view(dynamic raw);
+
+  @protected
+  List<BrandAssetView> dco_decode_list_brand_asset_view(dynamic raw);
 
   @protected
   List<ClipLookView> dco_decode_list_clip_look_view(dynamic raw);
@@ -365,6 +375,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  BrandAssetView sse_decode_brand_asset_view(SseDeserializer deserializer);
+
+  @protected
+  BrandKindView sse_decode_brand_kind_view(SseDeserializer deserializer);
+
+  @protected
   CaptionAnimationView sse_decode_caption_animation_view(
     SseDeserializer deserializer,
   );
@@ -423,6 +439,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<AudioTrackView> sse_decode_list_audio_track_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<BrandAssetView> sse_decode_list_brand_asset_view(
     SseDeserializer deserializer,
   );
 
@@ -689,6 +710,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_brand_asset_view(
+    BrandAssetView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_brand_kind_view(BrandKindView self, SseSerializer serializer);
+
+  @protected
   void sse_encode_caption_animation_view(
     CaptionAnimationView self,
     SseSerializer serializer,
@@ -757,6 +787,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_audio_track_view(
     List<AudioTrackView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_brand_asset_view(
+    List<BrandAssetView> self,
     SseSerializer serializer,
   );
 

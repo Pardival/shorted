@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:shorted/bridge/api/audio.dart';
+import 'package:shorted/bridge/api/brand_kit.dart';
 import 'package:shorted/bridge/api/library.dart';
 import 'package:shorted/bridge/api/look.dart';
 import 'package:shorted/bridge/api/media.dart';
@@ -350,6 +351,57 @@ class FakeGateway implements ProjectGateway {
     );
     final at = x == null || y == null ? 'centre' : '${x.round()} ${y.round()}';
     return _overlay('library $name $atUs $at');
+  }
+
+  final brand = <BrandAssetView>[];
+
+  /// Files whose name contains this are refused as too large.
+  static const tooLarge = 'huge';
+
+  @override
+  Future<List<BrandAssetView>> brandKit() async => List.of(brand);
+
+  @override
+  Future<List<ImportOutcome>> importBrandAssets(List<String> paths) async => [
+    for (final path in paths)
+      if (path.contains(tooLarge))
+        const ImportOutcome(error: ErrorCode.tooLarge)
+      else
+        _addBrand(path),
+  ];
+
+  ImportOutcome _addBrand(String path) {
+    final name = path.split('/').last;
+    brand.insert(
+      0,
+      BrandAssetView(
+        id: 'b${_next++}',
+        name: name,
+        kind: name.endsWith('.gif')
+            ? BrandKindView.animation
+            : BrandKindView.picture,
+      ),
+    );
+    return ImportOutcome(mediaId: brand.first.id);
+  }
+
+  @override
+  Future<void> deleteBrandAsset(String id) async =>
+      brand.removeWhere((asset) => asset.id == id);
+
+  @override
+  PictureView? brandThumbnail(String id, int size) =>
+      libraryThumbnail(id, size);
+
+  @override
+  Future<ProjectView> addBrandAsset(
+    String id,
+    int atUs, {
+    double? x,
+    double? y,
+  }) {
+    final at = x == null || y == null ? 'centre' : '${x.round()} ${y.round()}';
+    return _overlay('brand $id $atUs $at');
   }
 
   final previewed = <TransformView>[];

@@ -43,3 +43,7 @@ objc2-core-foundation = "0.3.2"
 objc2-io-surface = { version = "0.3.2", default-features = false, features = ["IOSurfaceRef"] }
 rtrb = "0.4.1"
 ureq = { version = "3.1.2", default-features = false, features = ["native-tls"] }
+
+[dev-dependencies]
+image = { version = "0.25.10", default-features = false, features = ["png", "gif"] }
+tempfile = "3.27.0"

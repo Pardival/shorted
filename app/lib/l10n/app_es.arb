@@ -202,5 +202,12 @@
   "categoryLabels": "Etiquetas",
   "nothingFound": "No se encontró nada.",
   "clipTab": "Clip",
-  "transitionsTab": "Transiciones"
+  "transitionsTab": "Transiciones",
+  "myAssets": "Mis recursos",
+  "addToBrandKit": "Añadir archivos",
+  "brandKitEmpty": "Los logotipos, imágenes, GIF y vídeos cortos que añadas aquí se guardan para todos tus proyectos.",
+  "manageAssets": "Gestionar",
+  "doneManaging": "Listo",
+  "removeAsset": "Quitar de Mis recursos",
+  "errorTooLarge": "Este archivo es demasiado grande. Las imágenes admiten hasta 16 384 píxeles por lado y 100 megapíxeles, las animaciones hasta 500 fotogramas y los vídeos hasta 2 minutos y 4K."
 }

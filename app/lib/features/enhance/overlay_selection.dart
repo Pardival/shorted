@@ -291,7 +291,7 @@ class _OverlaySelectionState extends ConsumerState<OverlaySelection> {
               ref,
               context,
               widget.projectId,
-              details.data.name,
+              details.data,
               x: point.dx,
               y: point.dy,
             );

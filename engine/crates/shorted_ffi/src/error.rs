@@ -20,6 +20,8 @@ pub enum EngineError {
     DifferentMedia,
     #[error("the video could not be written")]
     ExportFailed,
+    #[error("the file is beyond the size limits")]
+    TooLarge,
     #[error("project storage failed")]
     Store(#[from] shorted_store::session::StoreError),
 }
@@ -42,6 +44,8 @@ pub enum ErrorCode {
     DifferentMedia,
     /// The video could not be written.
     ExportFailed,
+    /// The file is larger than the app accepts (docs/08).
+    TooLarge,
 }
 
 impl EngineError {
@@ -53,6 +57,7 @@ impl EngineError {
             Self::UnsupportedMedia => ErrorCode::UnsupportedMedia,
             Self::DifferentMedia => ErrorCode::DifferentMedia,
             Self::ExportFailed => ErrorCode::ExportFailed,
+            Self::TooLarge => ErrorCode::TooLarge,
             Self::Store(error) => match error {
                 StoreError::Io(_) | StoreError::WriterStopped => ErrorCode::Storage,
                 StoreError::NewerVersion { .. } => ErrorCode::NewerProject,

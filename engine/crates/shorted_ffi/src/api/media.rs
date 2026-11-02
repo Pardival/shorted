@@ -119,7 +119,7 @@ fn image_probe(path: &Path) -> Result<MediaProbe, EngineError> {
 }
 
 #[cfg(target_vendor = "apple")]
-fn video_probe(path: &Path) -> Result<MediaProbe, EngineError> {
+pub(crate) fn video_probe(path: &Path) -> Result<MediaProbe, EngineError> {
     use shorted_media::MediaBackend;
     let info = shorted_media::apple::AppleBackend
         .probe(path)
@@ -161,7 +161,7 @@ fn audio_probe(_path: &Path) -> Result<MediaProbe, EngineError> {
 
 /// No decoder on this platform yet (T-0401).
 #[cfg(not(target_vendor = "apple"))]
-fn video_probe(_path: &Path) -> Result<MediaProbe, EngineError> {
+pub(crate) fn video_probe(_path: &Path) -> Result<MediaProbe, EngineError> {
     Err(EngineError::UnsupportedMedia)
 }
 

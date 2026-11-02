@@ -21,6 +21,7 @@ use shorted_render::apple::texture_from_iosurface;
 use shorted_render::captions::{parse_color, CaptionLook, CaptionPainter, CaptionWord};
 use shorted_render::compositor::{load_image, Compositor, LayerEffect, LayerPlacement, Sprite};
 use shorted_render::overlays::{shape_pixels, CANVAS_HEIGHT, CANVAS_WIDTH};
+use shorted_render::pictures::{decode_animation, Animation};
 use shorted_render::spike::RenderError;
 
 use crate::api::media::resolve;
@@ -124,7 +125,18 @@ pub struct FrameComposer {
     /// The last caption drawn, reused for as long as the words stay.
     caption: Option<(String, wgpu::Texture)>,
     /// Each overlay's picture, with the look it was drawn from.
-    overlays: HashMap<Id, (OverlayKind, wgpu::Texture)>,
+    overlays: HashMap<Id, (OverlayKind, OverlayPicture)>,
+}
+
+/// What an overlay draws from. Animations and videos change with time; stills do not.
+enum OverlayPicture {
+    Still(wgpu::Texture),
+    Moving {
+        animation: Animation,
+        shown: usize,
+        texture: wgpu::Texture,
+    },
+    Video(Box<VideoSource>),
 }
 
 const POP_US: i64 = 120_000;
@@ -294,7 +306,8 @@ impl FrameComposer {
         }
     }
 
-    /// Draws each overlay's picture when its look changes; pictures of removed overlays go.
+    /// Draws each overlay's picture when its look changes, then moves animations and videos to
+    /// this frame's time. Pictures of removed overlays go.
     fn prepare_overlays(&mut self, project: &Project, folder: &Path, frame: &FrameDescription) {
         self.overlays
             .retain(|id, _| project.timeline.overlays.iter().any(|item| item.id == *id));
@@ -307,28 +320,82 @@ impl FrameComposer {
             else {
                 continue;
             };
-            if self
+            let current = self
                 .overlays
                 .get(&item.id)
-                .is_some_and(|(kind, _)| *kind == item.kind)
-            {
-                continue;
+                .is_some_and(|(kind, _)| *kind == item.kind);
+            if !current {
+                if let Some(picture) = self.load_overlay(project, folder, &item.kind) {
+                    self.overlays.insert(item.id, (item.kind.clone(), picture));
+                }
             }
-            let pixels = match &item.kind {
-                OverlayKind::Shape { shape, fill } => Some(shape_pixels(*shape, parse_color(fill))),
-                OverlayKind::Image { asset } => project
-                    .media
-                    .iter()
-                    .find(|media| media.id == *asset)
-                    .and_then(|media| resolve(media, folder))
-                    .and_then(|path| load_image(&path)),
-                // Animations, text and video come with T-0704 and T-0705.
-                _ => None,
-            };
-            if let Some((width, height, rgba)) = pixels {
-                let texture = self.compositor.texture_from_rgba(width, height, &rgba);
-                self.overlays.insert(item.id, (item.kind.clone(), texture));
+            match self.overlays.get_mut(&item.id) {
+                Some((
+                    _,
+                    OverlayPicture::Moving {
+                        animation,
+                        shown,
+                        texture,
+                    },
+                )) => {
+                    let index = animation.frame_at(frame.time_us - item.start_us);
+                    if index != *shown {
+                        let (width, height) = (animation.width, animation.height);
+                        self.compositor.write_rgba(
+                            texture,
+                            width,
+                            height,
+                            &animation.frames[index].1,
+                        );
+                        *shown = index;
+                    }
+                }
+                Some((_, OverlayPicture::Video(source))) => {
+                    source.seek_to(layer.source_time_us.unwrap_or(0), &self.compositor);
+                }
+                _ => {}
             }
+        }
+    }
+
+    fn load_overlay(
+        &self,
+        project: &Project,
+        folder: &Path,
+        kind: &OverlayKind,
+    ) -> Option<OverlayPicture> {
+        let file = |id: &Id| {
+            project
+                .media
+                .iter()
+                .find(|media| media.id == *id)
+                .and_then(|media| resolve(media, folder))
+        };
+        let still = |(width, height, rgba): (u32, u32, Vec<u8>)| {
+            OverlayPicture::Still(self.compositor.texture_from_rgba(width, height, &rgba))
+        };
+        match kind {
+            OverlayKind::Shape { shape, fill } => {
+                Some(still(shape_pixels(*shape, parse_color(fill))))
+            }
+            OverlayKind::Image { asset } => file(asset).and_then(|p| load_image(&p)).map(still),
+            OverlayKind::AnimatedImage { asset } => {
+                let animation = decode_animation(&file(asset)?).ok()?;
+                let texture = self.compositor.texture_from_rgba(
+                    animation.width,
+                    animation.height,
+                    &animation.frames[0].1,
+                );
+                Some(OverlayPicture::Moving {
+                    animation,
+                    shown: 0,
+                    texture,
+                })
+            }
+            OverlayKind::Video { media, .. } => VideoSource::open(&file(media)?)
+                .map(|source| OverlayPicture::Video(Box::new(source))),
+            // Text comes with T-0705.
+            OverlayKind::Text { .. } => None,
         }
     }
 
@@ -337,7 +404,11 @@ impl FrameComposer {
         project: &Project,
         layer: &OverlayLayer,
     ) -> Option<(&wgpu::Texture, LayerPlacement)> {
-        let (kind, texture) = self.overlays.get(&layer.overlay_id)?;
+        let (kind, picture) = self.overlays.get(&layer.overlay_id)?;
+        let texture = match picture {
+            OverlayPicture::Still(texture) | OverlayPicture::Moving { texture, .. } => texture,
+            OverlayPicture::Video(source) => &source.shown.as_ref()?.texture,
+        };
         let (width, height) = natural_size(kind, project);
         let sprite = Sprite {
             center: [

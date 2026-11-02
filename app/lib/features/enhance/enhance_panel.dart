@@ -8,6 +8,7 @@ import '../../design_system/components.dart';
 import '../../design_system/tokens.g.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../project/project_dialogs.dart';
+import 'brand_kit_section.dart';
 import 'library_section.dart';
 import '../project/project_gateway.dart';
 import '../project/project_providers.dart';
@@ -76,7 +77,8 @@ class EnhancePanel extends ConsumerWidget {
 
     final library = page([
       LibrarySection(
-        onPlace: (name) => placeLibraryItem(ref, context, view.id, name),
+        onPlace: (name) =>
+            placeLibraryItem(ref, context, view.id, LibraryDrag(name)),
       ),
       const SizedBox(height: ShortedSpace.m),
       Text(l10n.shapes, style: const TextStyle(fontWeight: FontWeight.w600)),
@@ -91,6 +93,16 @@ class EnhancePanel extends ConsumerWidget {
           ])
             ShortedChip(label: label, onTap: () => addShape(shape)),
         ],
+      ),
+    ]);
+    final myAssets = page([
+      BrandKitSection(
+        onPlace: (id) => placeLibraryItem(
+          ref,
+          context,
+          view.id,
+          LibraryDrag(id, fromBrandKit: true),
+        ),
       ),
     ]);
     final clipPage = page([
@@ -124,7 +136,7 @@ class EnhancePanel extends ConsumerWidget {
 
     // S40: tabs, with the selected element's own settings above them.
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -142,12 +154,15 @@ class EnhancePanel extends ConsumerWidget {
             tabAlignment: TabAlignment.start,
             tabs: [
               Tab(text: l10n.library),
+              Tab(text: l10n.myAssets),
               Tab(text: l10n.clipTab),
               Tab(text: l10n.transitionsTab),
             ],
           ),
           Expanded(
-            child: TabBarView(children: [library, clipPage, transitions]),
+            child: TabBarView(
+              children: [library, myAssets, clipPage, transitions],
+            ),
           ),
         ],
       ),

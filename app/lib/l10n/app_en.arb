@@ -307,5 +307,12 @@
   "categoryLabels": "Label chips",
   "nothingFound": "Nothing found.",
   "clipTab": "Clip",
-  "transitionsTab": "Transitions"
+  "transitionsTab": "Transitions",
+  "myAssets": "My assets",
+  "addToBrandKit": "Add files",
+  "brandKitEmpty": "Logos, pictures, GIFs and short videos you add here are kept for every project.",
+  "manageAssets": "Manage",
+  "doneManaging": "Done",
+  "removeAsset": "Remove from My assets",
+  "errorTooLarge": "This file is too large. Pictures can be up to 16,384 pixels a side and 100 megapixels, animations up to 500 frames, videos up to 2 minutes and 4K."
 }

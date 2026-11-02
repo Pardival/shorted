@@ -1,6 +1,7 @@
 //! Public API exposed to Dart. Generated bindings live in `app/lib/bridge/`.
 
 pub mod audio;
+pub mod brand_kit;
 pub mod clips;
 pub mod export;
 pub mod library;

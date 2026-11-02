@@ -2702,6 +2702,7 @@ version = "0.0.1"
 dependencies = [
  "cpal",
  "flutter_rust_bridge",
+ "image",
  "objc2-core-foundation",
  "objc2-io-surface",
  "regex",
@@ -2715,6 +2716,7 @@ dependencies = [
  "shorted_render",
  "shorted_store",
  "shorted_transcribe",
+ "tempfile",
  "thiserror 2.0.21",
  "time",
  "tracing",
@@ -2765,6 +2767,7 @@ dependencies = [
  "resvg",
  "shorted_core",
  "shorted_media",
+ "tempfile",
  "thiserror 2.0.21",
  "wgpu",
 ]

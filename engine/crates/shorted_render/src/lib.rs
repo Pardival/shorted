@@ -9,6 +9,7 @@ pub mod compositor;
 pub mod library;
 mod library_index;
 pub mod overlays;
+pub mod pictures;
 pub mod spike;
 
 /// Name of this crate, used by the workspace smoke tests.

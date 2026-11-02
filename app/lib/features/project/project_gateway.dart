@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../bridge/api.dart' as tasks;
 import '../../bridge/api/audio.dart' as audio;
+import '../../bridge/api/brand_kit.dart' as brand;
 import '../../bridge/api/clips.dart' as clips;
 import '../../bridge/api/export.dart' as exporter;
 import '../../bridge/api/library.dart' as catalog;
@@ -161,6 +162,17 @@ abstract interface class ProjectGateway {
   catalog.PictureView? libraryThumbnail(String name, int size);
   Future<ProjectView> addLibraryItem(
     String name,
+    int atUs, {
+    double? x,
+    double? y,
+  });
+
+  Future<List<brand.BrandAssetView>> brandKit();
+  Future<List<media.ImportOutcome>> importBrandAssets(List<String> paths);
+  Future<void> deleteBrandAsset(String id);
+  catalog.PictureView? brandThumbnail(String id, int size);
+  Future<ProjectView> addBrandAsset(
+    String id,
     int atUs, {
     double? x,
     double? y,
@@ -453,6 +465,29 @@ class EngineGateway implements ProjectGateway {
     double? x,
     double? y,
   }) => catalog.addLibraryItem(name: name, atUs: atUs, x: x, y: y);
+
+  @override
+  Future<List<brand.BrandAssetView>> brandKit() => brand.brandKit(root: root);
+
+  @override
+  Future<List<media.ImportOutcome>> importBrandAssets(List<String> paths) =>
+      brand.importBrandAssets(root: root, paths: paths);
+
+  @override
+  Future<void> deleteBrandAsset(String id) =>
+      brand.deleteBrandAsset(root: root, id: id);
+
+  @override
+  catalog.PictureView? brandThumbnail(String id, int size) =>
+      brand.brandThumbnail(root: root, id: id, size: size);
+
+  @override
+  Future<ProjectView> addBrandAsset(
+    String id,
+    int atUs, {
+    double? x,
+    double? y,
+  }) => brand.addBrandAsset(root: root, id: id, atUs: atUs, x: x, y: y);
 
   @override
   void previewOverlayTransform(String id, overlays.TransformView transform) =>

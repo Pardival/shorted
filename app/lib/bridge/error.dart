@@ -47,4 +47,7 @@ enum ErrorCode {
 
   /// The video could not be written.
   exportFailed,
+
+  /// The file is larger than the app accepts (docs/08).
+  tooLarge,
 }

@@ -14,11 +14,13 @@ import '../project/project_providers.dart';
 const _tileSize = 64.0;
 const _thumbnailPixels = 128;
 
-/// What is carried while a library item is dragged onto the preview.
+/// What is carried while an item is dragged onto the preview: a library item, or one of My
+/// assets when `fromBrandKit`.
 class LibraryDrag {
-  const LibraryDrag(this.name);
+  const LibraryDrag(this.name, {this.fromBrandKit = false});
 
   final String name;
+  final bool fromBrandKit;
 }
 
 const libraryCategories = [
@@ -43,6 +45,55 @@ String categoryName(AppLocalizations l10n, String category) =>
       'highlights' => l10n.categoryHighlights,
       _ => l10n.categoryLabels,
     };
+
+/// A square picture to tap, or drag onto the preview.
+Widget libraryTile({
+  required LibraryDrag drag,
+  required ui.Image? picture,
+  required VoidCallback onTap,
+  Widget? badge,
+}) {
+  final tile = SizedBox.square(
+    dimension: _tileSize,
+    child: DecoratedBox(
+      decoration: BoxDecoration(
+        color: ShortedColors.surfaceRaised,
+        borderRadius: BorderRadius.circular(ShortedRadius.s),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(ShortedSpace.xs),
+        child: picture == null ? null : RawImage(image: picture),
+      ),
+    ),
+  );
+  final feedback = Opacity(opacity: 0.8, child: tile);
+  final draggable = _touchFirst
+      ? LongPressDraggable<LibraryDrag>(
+          data: drag,
+          dragAnchorStrategy: pointerDragAnchorStrategy,
+          feedback: feedback,
+          child: tile,
+        )
+      : Draggable<LibraryDrag>(
+          data: drag,
+          dragAnchorStrategy: pointerDragAnchorStrategy,
+          feedback: feedback,
+          child: tile,
+        );
+  return Semantics(
+    button: true,
+    label: drag.name,
+    child: GestureDetector(
+      key: ValueKey(
+        drag.fromBrandKit ? 'brand-${drag.name}' : 'library-${drag.name}',
+      ),
+      onTap: onTap,
+      child: badge == null
+          ? draggable
+          : Stack(clipBehavior: Clip.none, children: [draggable, badge]),
+    ),
+  );
+}
 
 /// Phones lift an item with a long press, so the panel still scrolls; desktops drag at once.
 bool get _touchFirst =>
@@ -92,46 +143,11 @@ class _LibrarySectionState extends ConsumerState<LibrarySection> {
     );
   }
 
-  Widget _tile(String name) {
-    final picture = _pictures[name];
-    final tile = SizedBox.square(
-      dimension: _tileSize,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: ShortedColors.surfaceRaised,
-          borderRadius: BorderRadius.circular(ShortedRadius.s),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(ShortedSpace.xs),
-          child: picture == null ? null : RawImage(image: picture),
-        ),
-      ),
-    );
-    final feedback = Opacity(opacity: 0.8, child: tile);
-    final drag = LibraryDrag(name);
-    final draggable = _touchFirst
-        ? LongPressDraggable<LibraryDrag>(
-            data: drag,
-            dragAnchorStrategy: pointerDragAnchorStrategy,
-            feedback: feedback,
-            child: tile,
-          )
-        : Draggable<LibraryDrag>(
-            data: drag,
-            dragAnchorStrategy: pointerDragAnchorStrategy,
-            feedback: feedback,
-            child: tile,
-          );
-    return Semantics(
-      button: true,
-      label: name,
-      child: GestureDetector(
-        key: ValueKey('library-$name'),
-        onTap: () => widget.onPlace(name),
-        child: draggable,
-      ),
-    );
-  }
+  Widget _tile(String name) => libraryTile(
+    drag: LibraryDrag(name),
+    picture: _pictures[name],
+    onTap: () => widget.onPlace(name),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -189,12 +205,12 @@ class _LibrarySectionState extends ConsumerState<LibrarySection> {
   }
 }
 
-/// Places a library item and selects it.
+/// Places a library item, or one of My assets, and selects it.
 Future<void> placeLibraryItem(
   WidgetRef ref,
   BuildContext context,
   String projectId,
-  String name, {
+  LibraryDrag item, {
   double? x,
   double? y,
 }) async {
@@ -203,7 +219,11 @@ Future<void> placeLibraryItem(
   try {
     await ref
         .read(editorProvider(projectId).notifier)
-        .apply((gateway) => gateway.addLibraryItem(name, atUs, x: x, y: y));
+        .apply(
+          (gateway) => item.fromBrandKit
+              ? gateway.addBrandAsset(item.name, atUs, x: x, y: y)
+              : gateway.addLibraryItem(item.name, atUs, x: x, y: y),
+        );
     if (!context.mounted) return;
     final overlays = ref.read(editorProvider(projectId)).value?.view.overlays;
     if (overlays != null && overlays.isNotEmpty) {

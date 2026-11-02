@@ -297,6 +297,25 @@ impl Compositor {
         texture
     }
 
+    /// Replaces the pixels of a texture made by `texture_from_rgba`, for the next frame of an
+    /// animation.
+    pub fn write_rgba(&self, texture: &wgpu::Texture, width: u32, height: u32, rgba: &[u8]) {
+        self.queue.write_texture(
+            texture.as_image_copy(),
+            rgba,
+            wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(width * BYTES_PER_PIXEL),
+                rows_per_image: None,
+            },
+            wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
+        );
+    }
+
     fn encode(
         &self,
         layers: &[(&wgpu::Texture, LayerPlacement)],

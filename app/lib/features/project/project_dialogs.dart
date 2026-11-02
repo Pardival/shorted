@@ -13,6 +13,7 @@ String errorMessage(AppLocalizations l10n, Object error) {
     ErrorCode.damagedProject => l10n.errorDamagedProject,
     ErrorCode.differentMedia => l10n.errorDifferentMedia,
     ErrorCode.exportFailed => l10n.errorExportFailed,
+    ErrorCode.tooLarge => l10n.errorTooLarge,
     _ => l10n.errorGeneric,
   };
 }
