@@ -368,5 +368,13 @@
   "smoothing": "Smoothing",
   "orientToPath": "Turn along the path",
   "fitPath": "Stretch over the element",
-  "clearPath": "Clear path"
+  "clearPath": "Clear path",
+  "versionHistory": "Version history",
+  "noVersions": "A version is kept after every ten minutes of editing and before each AI change.",
+  "versionAuto": "While editing",
+  "versionBeforeAi": "Before an AI change",
+  "versionBeforeRestore": "Before a restore",
+  "restoreVersion": "Restore this version",
+  "restoreVersionBody": "The project goes back to this version. The present one is kept in the history, and Undo brings it back.",
+  "versionRestored": "Version restored."
 }

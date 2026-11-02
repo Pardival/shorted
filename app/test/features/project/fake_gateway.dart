@@ -215,6 +215,18 @@ class FakeGateway implements ProjectGateway {
     );
   }
 
+  final versions = <VersionView>[];
+  final restored = <String>[];
+
+  @override
+  Future<List<VersionView>> versionHistory() async => List.of(versions);
+
+  @override
+  Future<ProjectView> restoreVersion(String name) {
+    restored.add(name);
+    return view();
+  }
+
   @override
   Future<ProjectView> undo() async {
     final project = opened!;

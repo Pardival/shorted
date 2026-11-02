@@ -256,5 +256,13 @@
   "smoothing": "Suavizado",
   "orientToPath": "Girar con la trayectoria",
   "fitPath": "Estirar a toda la duración",
-  "clearPath": "Borrar trayectoria"
+  "clearPath": "Borrar trayectoria",
+  "versionHistory": "Historial de versiones",
+  "noVersions": "Se guarda una versión cada diez minutos de edición y antes de cada cambio de la IA.",
+  "versionAuto": "Durante la edición",
+  "versionBeforeAi": "Antes de un cambio de la IA",
+  "versionBeforeRestore": "Antes de una restauración",
+  "restoreVersion": "Restaurar esta versión",
+  "restoreVersionBody": "El proyecto vuelve a esta versión. La actual se guarda en el historial y Deshacer la recupera.",
+  "versionRestored": "Versión restaurada."
 }

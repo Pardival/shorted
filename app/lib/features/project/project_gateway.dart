@@ -28,6 +28,8 @@ abstract interface class ProjectGateway {
   Future<void> rename(String id, String title);
   Future<ProjectView> view();
   Future<ProjectView> undo();
+  Future<List<VersionView>> versionHistory();
+  Future<ProjectView> restoreVersion(String name);
   Future<ProjectView> redo();
   Stream<SaveStateView> saveEvents();
 
@@ -269,6 +271,13 @@ class EngineGateway implements ProjectGateway {
 
   @override
   Future<ProjectView> view() => engine.projectView();
+
+  @override
+  Future<List<VersionView>> versionHistory() => engine.versionHistory();
+
+  @override
+  Future<ProjectView> restoreVersion(String name) =>
+      engine.restoreVersion(name: name);
 
   @override
   Future<ProjectView> undo() => engine.undo();

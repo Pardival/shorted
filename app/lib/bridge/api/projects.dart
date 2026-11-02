@@ -15,7 +15,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'transcribe.dart';
 
 // These functions are ignored because they are not marked as `pub`: `active_folder`, `close_active`, `lock`, `now`, `on_command_thread`, `parse_id`, `save_channel`, `summary`, `track_view`, `view_of`, `with_active`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `clone`, `eq`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `eq`, `eq`
 
 /// The save state of the open project, for "Saved / Saving…". One listener at a time.
 Stream<SaveStateView> saveEvents() =>
@@ -69,6 +69,14 @@ Future<void> renameProject({
 
 Future<ProjectView> projectView() =>
     RustLib.instance.api.crateApiProjectsProjectView();
+
+/// The open project's version history, newest first (FR-PRJ-04).
+Future<List<VersionView>> versionHistory() =>
+    RustLib.instance.api.crateApiProjectsVersionHistory();
+
+/// Puts a version back as one undoable edit; the present is kept as a version first.
+Future<ProjectView> restoreVersion({required String name}) =>
+    RustLib.instance.api.crateApiProjectsRestoreVersion(name: name);
 
 Future<ProjectView> undo() => RustLib.instance.api.crateApiProjectsUndo();
 
@@ -263,4 +271,31 @@ class TrackView {
           locked == other.locked &&
           hidden == other.hidden &&
           items == other.items;
+}
+
+enum VersionReasonView { activity, beforeAi, beforeRestore }
+
+class VersionView {
+  /// What `restore_version` takes.
+  final String name;
+  final PlatformInt64 savedAtMs;
+  final VersionReasonView reason;
+
+  const VersionView({
+    required this.name,
+    required this.savedAtMs,
+    required this.reason,
+  });
+
+  @override
+  int get hashCode => name.hashCode ^ savedAtMs.hashCode ^ reason.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is VersionView &&
+          runtimeType == other.runtimeType &&
+          name == other.name &&
+          savedAtMs == other.savedAtMs &&
+          reason == other.reason;
 }

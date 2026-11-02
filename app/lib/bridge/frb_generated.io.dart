@@ -223,6 +223,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<TranscriptView> dco_decode_list_transcript_view(dynamic raw);
 
   @protected
+  List<VersionView> dco_decode_list_version_view(dynamic raw);
+
+  @protected
   List<WordView> dco_decode_list_word_view(dynamic raw);
 
   @protected
@@ -361,6 +364,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void dco_decode_unit(dynamic raw);
+
+  @protected
+  VersionReasonView dco_decode_version_reason_view(dynamic raw);
+
+  @protected
+  VersionView dco_decode_version_view(dynamic raw);
 
   @protected
   WordView dco_decode_word_view(dynamic raw);
@@ -601,6 +610,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<VersionView> sse_decode_list_version_view(SseDeserializer deserializer);
+
+  @protected
   List<WordView> sse_decode_list_word_view(SseDeserializer deserializer);
 
   @protected
@@ -757,6 +769,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_decode_unit(SseDeserializer deserializer);
+
+  @protected
+  VersionReasonView sse_decode_version_reason_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  VersionView sse_decode_version_view(SseDeserializer deserializer);
 
   @protected
   WordView sse_decode_word_view(SseDeserializer deserializer);
@@ -1062,6 +1082,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_version_view(
+    List<VersionView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_word_view(List<WordView> self, SseSerializer serializer);
 
   @protected
@@ -1252,6 +1278,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_unit(void self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_version_reason_view(
+    VersionReasonView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_version_view(VersionView self, SseSerializer serializer);
 
   @protected
   void sse_encode_word_view(WordView self, SseSerializer serializer);

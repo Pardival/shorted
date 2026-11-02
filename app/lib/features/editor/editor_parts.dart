@@ -36,6 +36,7 @@ class EditorTopBar extends StatelessWidget {
     required this.onRename,
     required this.onClose,
     required this.onExport,
+    this.onHistory,
   });
 
   final String title;
@@ -43,6 +44,7 @@ class EditorTopBar extends StatelessWidget {
   final VoidCallback onRename;
   final VoidCallback onClose;
   final VoidCallback onExport;
+  final VoidCallback? onHistory;
 
   @override
   Widget build(BuildContext context) {
@@ -80,6 +82,12 @@ class EditorTopBar extends StatelessWidget {
               style: text.labelMedium?.copyWith(color: ShortedColors.textMuted),
             ),
           ),
+          if (onHistory != null)
+            ShortedIconButton(
+              icon: Icons.history,
+              tooltip: l10n.versionHistory,
+              onPressed: onHistory,
+            ),
           const SizedBox(width: ShortedSpace.m),
           PrimaryButton(
             label: l10n.sectionExport,

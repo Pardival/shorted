@@ -256,5 +256,13 @@
   "smoothing": "Lissage",
   "orientToPath": "Suivre la direction",
   "fitPath": "Étirer sur toute la durée",
-  "clearPath": "Effacer la trajectoire"
+  "clearPath": "Effacer la trajectoire",
+  "versionHistory": "Historique des versions",
+  "noVersions": "Une version est gardée toutes les dix minutes d'édition et avant chaque modification par l'IA.",
+  "versionAuto": "Pendant l'édition",
+  "versionBeforeAi": "Avant une modification par l'IA",
+  "versionBeforeRestore": "Avant une restauration",
+  "restoreVersion": "Restaurer cette version",
+  "restoreVersionBody": "Le projet revient à cette version. La version actuelle est gardée dans l'historique, et Annuler la remet.",
+  "versionRestored": "Version restaurée."
 }

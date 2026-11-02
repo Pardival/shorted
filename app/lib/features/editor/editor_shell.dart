@@ -10,6 +10,7 @@ import '../../design_system/components.dart';
 import '../../design_system/tokens.g.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../project/project_dialogs.dart';
+import '../project/version_history.dart';
 import '../project/project_providers.dart';
 import 'editor_parts.dart';
 import 'editor_section.dart';
@@ -204,6 +205,7 @@ class _EditorShellState extends ConsumerState<EditorShell> {
               title: state.view.title,
               save: state.save,
               onRename: () => _rename(context, state.view.title),
+              onHistory: () => showVersionHistory(context, ref, projectId),
               onClose: () => _close(context),
               onExport: () => _select(context, EditorSection.export),
             ),

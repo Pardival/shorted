@@ -39,7 +39,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1896605779;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -2083204089;
 
 // Section: executor
 
@@ -2838,6 +2838,42 @@ fn wire__crate__api__projects__restore_project_impl(
         },
     )
 }
+fn wire__crate__api__projects__restore_version_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "restore_version",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_name = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, crate::error::EngineFailure>(
+                    (move || async move {
+                        let output_ok = crate::api::projects::restore_version(api_name).await?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
 fn wire__crate__api__projects__save_events_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -4335,6 +4371,41 @@ fn wire__crate__api__projects__undo_impl(
         },
     )
 }
+fn wire__crate__api__projects__version_history_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "version_history",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, crate::error::EngineFailure>(
+                    (move || async move {
+                        let output_ok = crate::api::projects::version_history().await?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
 fn wire__crate__api__audio__voice_level_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -5030,6 +5101,20 @@ impl SseDecode for Vec<crate::api::transcribe::TranscriptView> {
         let mut ans_ = Vec::with_capacity(len_ as usize);
         for idx_ in 0..len_ {
             ans_.push(<crate::api::transcribe::TranscriptView>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::projects::VersionView> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::projects::VersionView>::sse_decode(
                 deserializer,
             ));
         }
@@ -5744,6 +5829,33 @@ impl SseDecode for () {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {}
 }
 
+impl SseDecode for crate::api::projects::VersionReasonView {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::projects::VersionReasonView::Activity,
+            1 => crate::api::projects::VersionReasonView::BeforeAi,
+            2 => crate::api::projects::VersionReasonView::BeforeRestore,
+            _ => unreachable!("Invalid variant for VersionReasonView: {}", inner),
+        };
+    }
+}
+
+impl SseDecode for crate::api::projects::VersionView {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_name = <String>::sse_decode(deserializer);
+        let mut var_savedAtMs = <i64>::sse_decode(deserializer);
+        let mut var_reason = <crate::api::projects::VersionReasonView>::sse_decode(deserializer);
+        return crate::api::projects::VersionView {
+            name: var_name,
+            saved_at_ms: var_savedAtMs,
+            reason: var_reason,
+        };
+    }
+}
+
 impl SseDecode for crate::api::transcribe::WordView {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -5849,75 +5961,77 @@ fn pde_ffi_dispatcher_primary_impl(
         75 => wire__crate__api__audio__reorder_audio_track_impl(port, ptr, rust_vec_len, data_len),
         76 => wire__crate__api__clips__reset_crop_impl(port, ptr, rust_vec_len, data_len),
         77 => wire__crate__api__projects__restore_project_impl(port, ptr, rust_vec_len, data_len),
-        78 => wire__crate__api__projects__save_events_impl(port, ptr, rust_vec_len, data_len),
-        79 => wire__crate__api__audio__set_audio_loop_impl(port, ptr, rust_vec_len, data_len),
-        80 => wire__crate__api__audio__set_audio_role_impl(port, ptr, rust_vec_len, data_len),
-        81 => wire__crate__api__audio__set_audio_sound_impl(port, ptr, rust_vec_len, data_len),
-        82 => wire__crate__api__transcribe__set_caption_animation_impl(
+        78 => wire__crate__api__projects__restore_version_impl(port, ptr, rust_vec_len, data_len),
+        79 => wire__crate__api__projects__save_events_impl(port, ptr, rust_vec_len, data_len),
+        80 => wire__crate__api__audio__set_audio_loop_impl(port, ptr, rust_vec_len, data_len),
+        81 => wire__crate__api__audio__set_audio_role_impl(port, ptr, rust_vec_len, data_len),
+        82 => wire__crate__api__audio__set_audio_sound_impl(port, ptr, rust_vec_len, data_len),
+        83 => wire__crate__api__transcribe__set_caption_animation_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        83 => {
+        84 => {
             wire__crate__api__transcribe__set_caption_preset_impl(port, ptr, rust_vec_len, data_len)
         }
-        84 => {
+        85 => {
             wire__crate__api__transcribe__set_caption_style_impl(port, ptr, rust_vec_len, data_len)
         }
-        85 => wire__crate__api__transcribe__set_captions_enabled_impl(
+        86 => wire__crate__api__transcribe__set_captions_enabled_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        86 => wire__crate__api__look__set_clip_color_impl(port, ptr, rust_vec_len, data_len),
-        87 => wire__crate__api__audio__set_clip_sound_impl(port, ptr, rust_vec_len, data_len),
-        88 => wire__crate__api__look__set_clip_speed_impl(port, ptr, rust_vec_len, data_len),
-        89 => wire__crate__api__audio__set_ducking_impl(port, ptr, rust_vec_len, data_len),
-        90 => {
+        87 => wire__crate__api__look__set_clip_color_impl(port, ptr, rust_vec_len, data_len),
+        88 => wire__crate__api__audio__set_clip_sound_impl(port, ptr, rust_vec_len, data_len),
+        89 => wire__crate__api__look__set_clip_speed_impl(port, ptr, rust_vec_len, data_len),
+        90 => wire__crate__api__audio__set_ducking_impl(port, ptr, rust_vec_len, data_len),
+        91 => {
             wire__crate__api__overlays__set_keyframe_easing_impl(port, ptr, rust_vec_len, data_len)
         }
-        91 => wire__crate__api__overlays__set_overlay_flags_impl(port, ptr, rust_vec_len, data_len),
-        92 => {
+        92 => wire__crate__api__overlays__set_overlay_flags_impl(port, ptr, rust_vec_len, data_len),
+        93 => {
             wire__crate__api__overlays__set_overlay_timing_impl(port, ptr, rust_vec_len, data_len)
         }
-        93 => wire__crate__api__overlays__set_overlay_transform_impl(
+        94 => wire__crate__api__overlays__set_overlay_transform_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        94 => wire__crate__api__overlays__set_path_options_impl(port, ptr, rust_vec_len, data_len),
-        95 => wire__crate__api__overlays__set_preset_anim_impl(port, ptr, rust_vec_len, data_len),
-        96 => wire__crate__api__overlays__set_recorded_path_impl(port, ptr, rust_vec_len, data_len),
-        97 => wire__crate__api__overlays__set_text_impl(port, ptr, rust_vec_len, data_len),
-        98 => wire__crate__api__audio__set_track_flags_impl(port, ptr, rust_vec_len, data_len),
-        99 => {
+        95 => wire__crate__api__overlays__set_path_options_impl(port, ptr, rust_vec_len, data_len),
+        96 => wire__crate__api__overlays__set_preset_anim_impl(port, ptr, rust_vec_len, data_len),
+        97 => wire__crate__api__overlays__set_recorded_path_impl(port, ptr, rust_vec_len, data_len),
+        98 => wire__crate__api__overlays__set_text_impl(port, ptr, rust_vec_len, data_len),
+        99 => wire__crate__api__audio__set_track_flags_impl(port, ptr, rust_vec_len, data_len),
+        100 => {
             wire__crate__api__look__set_transition_for_all_impl(port, ptr, rust_vec_len, data_len)
         }
-        100 => {
+        101 => {
             wire__crate__api__overlays__shift_overlay_layer_impl(port, ptr, rust_vec_len, data_len)
         }
-        102 => wire__crate__api__clips__split_all_at_impl(port, ptr, rust_vec_len, data_len),
-        103 => wire__crate__api__clips__split_clip_impl(port, ptr, rust_vec_len, data_len),
-        104 => wire__crate__api__start_demo_task_impl(port, ptr, rust_vec_len, data_len),
-        105 => wire__crate__api__export__start_export_impl(port, ptr, rust_vec_len, data_len),
-        106 => wire__crate__api__audio__start_voice_over_impl(port, ptr, rust_vec_len, data_len),
-        107 => wire__crate__api__audio__stop_voice_over_impl(port, ptr, rust_vec_len, data_len),
-        108 => wire__crate__api__overlays__stretch_path_impl(port, ptr, rust_vec_len, data_len),
-        109 => {
+        103 => wire__crate__api__clips__split_all_at_impl(port, ptr, rust_vec_len, data_len),
+        104 => wire__crate__api__clips__split_clip_impl(port, ptr, rust_vec_len, data_len),
+        105 => wire__crate__api__start_demo_task_impl(port, ptr, rust_vec_len, data_len),
+        106 => wire__crate__api__export__start_export_impl(port, ptr, rust_vec_len, data_len),
+        107 => wire__crate__api__audio__start_voice_over_impl(port, ptr, rust_vec_len, data_len),
+        108 => wire__crate__api__audio__stop_voice_over_impl(port, ptr, rust_vec_len, data_len),
+        109 => wire__crate__api__overlays__stretch_path_impl(port, ptr, rust_vec_len, data_len),
+        110 => {
             wire__crate__api__transcribe__toggle_emphasis_impl(port, ptr, rust_vec_len, data_len)
         }
-        110 => wire__crate__api__clips__toggle_slow_zoom_impl(port, ptr, rust_vec_len, data_len),
-        111 => {
+        111 => wire__crate__api__clips__toggle_slow_zoom_impl(port, ptr, rust_vec_len, data_len),
+        112 => {
             wire__crate__api__transcribe__transcribe_project_impl(port, ptr, rust_vec_len, data_len)
         }
-        112 => wire__crate__api__projects__trash_project_impl(port, ptr, rust_vec_len, data_len),
-        113 => wire__crate__api__audio__trim_audio_impl(port, ptr, rust_vec_len, data_len),
-        114 => wire__crate__api__clips__trim_clip_impl(port, ptr, rust_vec_len, data_len),
-        115 => wire__crate__api__projects__undo_impl(port, ptr, rust_vec_len, data_len),
-        117 => wire__crate__api__transcribe__write_srt_impl(port, ptr, rust_vec_len, data_len),
+        113 => wire__crate__api__projects__trash_project_impl(port, ptr, rust_vec_len, data_len),
+        114 => wire__crate__api__audio__trim_audio_impl(port, ptr, rust_vec_len, data_len),
+        115 => wire__crate__api__clips__trim_clip_impl(port, ptr, rust_vec_len, data_len),
+        116 => wire__crate__api__projects__undo_impl(port, ptr, rust_vec_len, data_len),
+        117 => wire__crate__api__projects__version_history_impl(port, ptr, rust_vec_len, data_len),
+        119 => wire__crate__api__transcribe__write_srt_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -5952,8 +6066,8 @@ fn pde_ffi_dispatcher_sync_impl(
         64 => wire__crate__api__preview__preview_play_at_impl(ptr, rust_vec_len, data_len),
         65 => wire__crate__api__preview__preview_position_us_impl(ptr, rust_vec_len, data_len),
         66 => wire__crate__api__preview__preview_seek_impl(ptr, rust_vec_len, data_len),
-        101 => wire__crate__api__transcribe__speech_model_impl(ptr, rust_vec_len, data_len),
-        116 => wire__crate__api__audio__voice_level_impl(ptr, rust_vec_len, data_len),
+        102 => wire__crate__api__transcribe__speech_model_impl(ptr, rust_vec_len, data_len),
+        118 => wire__crate__api__audio__voice_level_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -7091,6 +7205,50 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::look::TransitionKindView>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::projects::VersionReasonView {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::Activity => 0.into_dart(),
+            Self::BeforeAi => 1.into_dart(),
+            Self::BeforeRestore => 2.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::projects::VersionReasonView
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::projects::VersionReasonView>
+    for crate::api::projects::VersionReasonView
+{
+    fn into_into_dart(self) -> crate::api::projects::VersionReasonView {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::projects::VersionView {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.name.into_into_dart().into_dart(),
+            self.saved_at_ms.into_into_dart().into_dart(),
+            self.reason.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::projects::VersionView
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::projects::VersionView>
+    for crate::api::projects::VersionView
+{
+    fn into_into_dart(self) -> crate::api::projects::VersionView {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::transcribe::WordView {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -7647,6 +7805,16 @@ impl SseEncode for Vec<crate::api::transcribe::TranscriptView> {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <crate::api::transcribe::TranscriptView>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::projects::VersionView> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::projects::VersionView>::sse_encode(item, serializer);
         }
     }
 }
@@ -8216,6 +8384,32 @@ impl SseEncode for u8 {
 impl SseEncode for () {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {}
+}
+
+impl SseEncode for crate::api::projects::VersionReasonView {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::projects::VersionReasonView::Activity => 0,
+                crate::api::projects::VersionReasonView::BeforeAi => 1,
+                crate::api::projects::VersionReasonView::BeforeRestore => 2,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
+    }
+}
+
+impl SseEncode for crate::api::projects::VersionView {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.name, serializer);
+        <i64>::sse_encode(self.saved_at_ms, serializer);
+        <crate::api::projects::VersionReasonView>::sse_encode(self.reason, serializer);
+    }
 }
 
 impl SseEncode for crate::api::transcribe::WordView {

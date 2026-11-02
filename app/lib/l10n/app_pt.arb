@@ -256,5 +256,13 @@
   "smoothing": "Suavização",
   "orientToPath": "Girar com a trajetória",
   "fitPath": "Esticar por toda a duração",
-  "clearPath": "Apagar trajetória"
+  "clearPath": "Apagar trajetória",
+  "versionHistory": "Histórico de versões",
+  "noVersions": "Uma versão é guardada a cada dez minutos de edição e antes de cada mudança da IA.",
+  "versionAuto": "Durante a edição",
+  "versionBeforeAi": "Antes de uma mudança da IA",
+  "versionBeforeRestore": "Antes de uma restauração",
+  "restoreVersion": "Restaurar esta versão",
+  "restoreVersionBody": "O projeto volta a esta versão. A atual fica no histórico, e Desfazer a traz de volta.",
+  "versionRestored": "Versão restaurada."
 }

@@ -16,6 +16,8 @@ use time::format_description::well_known::Rfc3339;
 use time::OffsetDateTime;
 use uuid::Uuid;
 
+use shorted_store::versions::VersionReason;
+
 use crate::api::audio::{sound_view, SoundView};
 use crate::api::look::{look_view, LookView};
 use crate::api::media::{media_views, MediaItemView};
@@ -398,6 +400,50 @@ pub(crate) fn view_of(session: &ProjectSession) -> ProjectView {
 
 pub async fn project_view() -> Result<ProjectView, EngineFailure> {
     on_command_thread(|| with_active(|session| Ok(view_of(session))))
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum VersionReasonView {
+    Activity,
+    BeforeAi,
+    BeforeRestore,
+}
+
+pub struct VersionView {
+    /// What `restore_version` takes.
+    pub name: String,
+    pub saved_at_ms: i64,
+    pub reason: VersionReasonView,
+}
+
+/// The open project's version history, newest first (FR-PRJ-04).
+pub async fn version_history() -> Result<Vec<VersionView>, EngineFailure> {
+    on_command_thread(|| {
+        with_active(|session| {
+            Ok(shorted_store::versions::list_versions(session.folder())
+                .into_iter()
+                .map(|version| VersionView {
+                    name: version.name,
+                    saved_at_ms: version.saved_at_ms as i64,
+                    reason: match version.reason {
+                        VersionReason::Activity => VersionReasonView::Activity,
+                        VersionReason::BeforeAi => VersionReasonView::BeforeAi,
+                        VersionReason::BeforeRestore => VersionReasonView::BeforeRestore,
+                    },
+                })
+                .collect())
+        })
+    })
+}
+
+/// Puts a version back as one undoable edit; the present is kept as a version first.
+pub async fn restore_version(name: String) -> Result<ProjectView, EngineFailure> {
+    on_command_thread(move || {
+        with_active(|session| {
+            session.restore_version(&name)?;
+            Ok(view_of(session))
+        })
+    })
 }
 
 pub async fn undo() -> Result<ProjectView, EngineFailure> {
