@@ -1,5 +1,8 @@
 //! Export (T-0901): a deterministic loop over the frames of a project snapshot.
 
+// Size and timing helpers only serve the Apple encoder until other platforms have one.
+#![cfg_attr(not(target_vendor = "apple"), allow(dead_code))]
+
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
