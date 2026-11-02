@@ -11,6 +11,7 @@ use shorted_ai::providers::{
 use crate::error::EngineError;
 
 /// The keychain entry's service; the account is the provider's id.
+#[cfg_attr(not(target_vendor = "apple"), allow(dead_code))]
 const KEYCHAIN_SERVICE: &str = "app.shorted.ai";
 const SETTINGS_FILE: &str = "ai.json";
 

@@ -216,90 +216,98 @@ class _ClipsPanelState extends ConsumerState<ClipsPanel> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Side by side: on a phone the panel has little height to spare.
-              Row(
-                children: [
-                  Expanded(
-                    child: SecondaryButton(
+              // Buttons and media scroll together: a phone panel is short, and a squeezed row
+              // of buttons wrapped their labels into ovals.
+              Expanded(
+                child: ListView(
+                  children: [
+                    SecondaryButton(
                       label: l10n.addMedia,
                       onPressed: _pickFiles,
                     ),
-                  ),
-                  const SizedBox(width: ShortedSpace.s),
-                  Expanded(
-                    child: switch (_arranging) {
-                      final progress? => TaskProgress(
-                        label: l10n.arranging((progress * 100).round()),
-                        fraction: progress,
-                        cancelLabel: l10n.cancel,
-                        onCancel: () {
-                          final task = _arrangeTask;
-                          if (task != null) {
-                            ref.read(projectGatewayProvider).cancelTask(task);
-                          }
-                        },
-                      ),
-                      null => PrimaryButton(
-                        label: l10n.smartArrange,
-                        onPressed: _arrange,
-                      ),
-                    },
-                  ),
-                  // One menu for the AI: a phone has no width for two more buttons.
-                  if (_arranging == null)
-                    PopupMenuButton<bool>(
-                      icon: const Icon(Icons.auto_awesome),
-                      tooltip: l10n.aiMenu,
-                      onSelected: (ask) => ask ? _ask() : _arrangeWithAi(),
-                      itemBuilder: (context) => [
-                        PopupMenuItem(
-                          value: false,
-                          child: Text(l10n.arrangeWithAi),
+                    const SizedBox(height: ShortedSpace.s),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: switch (_arranging) {
+                            final progress? => TaskProgress(
+                              label: l10n.arranging((progress * 100).round()),
+                              fraction: progress,
+                              cancelLabel: l10n.cancel,
+                              onCancel: () {
+                                final task = _arrangeTask;
+                                if (task != null) {
+                                  ref
+                                      .read(projectGatewayProvider)
+                                      .cancelTask(task);
+                                }
+                              },
+                            ),
+                            null => PrimaryButton(
+                              label: l10n.smartArrange,
+                              icon: Icons.auto_fix_high,
+                              onPressed: _arrange,
+                            ),
+                          },
                         ),
-                        PopupMenuItem(
-                          value: true,
-                          child: Text(l10n.askShorted),
-                        ),
+                        if (_arranging == null)
+                          PopupMenuButton<bool>(
+                            icon: const Icon(Icons.auto_awesome),
+                            tooltip: l10n.aiMenu,
+                            onSelected: (ask) =>
+                                ask ? _ask() : _arrangeWithAi(),
+                            itemBuilder: (context) => [
+                              PopupMenuItem(
+                                value: false,
+                                child: Text(l10n.arrangeWithAi),
+                              ),
+                              PopupMenuItem(
+                                value: true,
+                                child: Text(l10n.askShorted),
+                              ),
+                            ],
+                          ),
                       ],
                     ),
-                ],
-              ),
-              if (isDesktop && media.isNotEmpty) ...[
-                const SizedBox(height: ShortedSpace.s),
-                SecondaryButton(
-                  label: l10n.collectMedia,
-                  onPressed: () => _guard(() async {
-                    await _editor.apply((gateway) => gateway.collectMedia());
-                    if (context.mounted) {
-                      showToast(context, l10n.mediaCollected);
-                    }
-                  }),
-                ),
-              ],
-              const SizedBox(height: ShortedSpace.s),
-              Expanded(
-                child: media.isEmpty
-                    ? Center(
+                    if (isDesktop && media.isNotEmpty)
+                      Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: TextButton.icon(
+                          icon: const Icon(Icons.drive_folder_upload_outlined),
+                          label: Text(l10n.collectMedia),
+                          onPressed: () => _guard(() async {
+                            await _editor.apply(
+                              (gateway) => gateway.collectMedia(),
+                            );
+                            if (context.mounted) {
+                              showToast(context, l10n.mediaCollected);
+                            }
+                          }),
+                        ),
+                      ),
+                    const SizedBox(height: ShortedSpace.s),
+                    if (media.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.all(ShortedSpace.l),
                         child: Text(
                           l10n.dropMedia,
+                          textAlign: TextAlign.center,
                           style: const TextStyle(
                             color: ShortedColors.textMuted,
                           ),
                         ),
-                      )
-                    : ListView.builder(
-                        itemCount: media.length,
-                        itemBuilder: (context, index) {
-                          final item = media[index];
-                          final order = _picked.indexOf(item.id);
-                          return _MediaRow(
-                            item: item,
-                            order: order < 0 ? null : order + 1,
-                            onTap: item.offline ? null : () => _toggle(item),
-                            onRelink: () => _relink(item),
-                          );
-                        },
                       ),
+                    for (final item in media)
+                      _MediaRow(
+                        item: item,
+                        order: _picked.contains(item.id)
+                            ? _picked.indexOf(item.id) + 1
+                            : null,
+                        onTap: item.offline ? null : () => _toggle(item),
+                        onRelink: () => _relink(item),
+                      ),
+                  ],
+                ),
               ),
               if (_picked.isNotEmpty)
                 PrimaryButton(

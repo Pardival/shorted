@@ -207,7 +207,6 @@ class _EditorShellState extends ConsumerState<EditorShell> {
               onRename: () => _rename(context, state.view.title),
               onHistory: () => showVersionHistory(context, ref, projectId),
               onClose: () => _close(context),
-              onExport: () => _select(context, EditorSection.export),
             ),
             Expanded(
               child: CallbackShortcuts(

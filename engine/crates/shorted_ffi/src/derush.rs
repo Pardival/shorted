@@ -9,7 +9,7 @@ use shorted_ai::plan::{validate, Aliases, ValidPlan};
 use shorted_analysis::frames::{FrameConfig, FrameMetrics};
 use shorted_analysis::local::{add_duplicate_takes, analyse_clip, local_plan, ClipAnalysis};
 use shorted_analysis::speech::{Range, SpeechConfig};
-use shorted_core::model::{Id, MediaKind, MediaRef, Project};
+use shorted_core::model::{Id, MediaRef, Project};
 use uuid::Uuid;
 
 use crate::api::media::resolve;
@@ -20,8 +20,10 @@ use crate::runtime::TaskContext;
 const FRAMES_PER_SECOND: i64 = 5;
 const FRAME_STEP_US: i64 = 1_000_000 / FRAMES_PER_SECOND;
 /// Small frames are enough for blur, exposure and motion, and keep the analysis quick.
+#[cfg_attr(not(target_vendor = "apple"), allow(dead_code))]
 const FRAME_SIZE: (usize, usize) = (72, 128);
 /// Long sources are analysed for this long at most.
+#[cfg_attr(not(target_vendor = "apple"), allow(dead_code))]
 const MAX_ANALYSED_US: i64 = 10 * 60 * 1_000_000;
 /// Bump when the signals change, so old caches are not reused.
 const CACHE_VERSION: u32 = 1;
@@ -89,7 +91,7 @@ fn measure_media(media: &MediaRef, path: &Path) -> Signals {
         .speech(&SpeechConfig::default())
     });
     let mut frames = Vec::new();
-    if media.kind == MediaKind::Video {
+    if media.kind == shorted_core::model::MediaKind::Video {
         let length = media.probe.duration_us.min(MAX_ANALYSED_US);
         let times = (0..length).step_by(FRAME_STEP_US as usize);
         let mut previous: Option<Vec<f32>> = None;
@@ -185,7 +187,7 @@ pub(crate) fn plan_locally(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use shorted_core::model::{ColorRange, MediaLocation, MediaProbe};
+    use shorted_core::model::{ColorRange, MediaKind, MediaLocation, MediaProbe};
 
     fn media(hash: &str) -> MediaRef {
         MediaRef {

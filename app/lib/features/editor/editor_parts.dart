@@ -35,7 +35,6 @@ class EditorTopBar extends StatelessWidget {
     required this.save,
     required this.onRename,
     required this.onClose,
-    required this.onExport,
     this.onHistory,
   });
 
@@ -43,7 +42,6 @@ class EditorTopBar extends StatelessWidget {
   final SaveStateView save;
   final VoidCallback onRename;
   final VoidCallback onClose;
-  final VoidCallback onExport;
   final VoidCallback? onHistory;
 
   @override
@@ -88,12 +86,6 @@ class EditorTopBar extends StatelessWidget {
               tooltip: l10n.versionHistory,
               onPressed: onHistory,
             ),
-          const SizedBox(width: ShortedSpace.m),
-          PrimaryButton(
-            label: l10n.sectionExport,
-            onPressed: onExport,
-            height: 40,
-          ),
           const SizedBox(width: ShortedSpace.s),
         ],
       ),

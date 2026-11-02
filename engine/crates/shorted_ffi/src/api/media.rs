@@ -77,7 +77,9 @@ pub(crate) fn resolve(media: &MediaRef, folder: &Path) -> Option<PathBuf> {
             }
             #[cfg(not(target_vendor = "apple"))]
             let _ = bookmark;
-            Some(PathBuf::from(abs_path)).filter(|path| path.exists())
+            // Readable, not merely there: a sandboxed app can see a file it may no longer open,
+            // which used to show an orange frame instead of an "offline" mark.
+            Some(PathBuf::from(abs_path)).filter(|path| std::fs::File::open(path).is_ok())
         }
     }
 }
@@ -176,6 +178,13 @@ fn location_for(path: &Path, folder: &Path, id: Id) -> Result<MediaLocation, Eng
     let bookmark = shorted_media::apple::create_bookmark(path);
     #[cfg(not(target_vendor = "apple"))]
     let bookmark = None;
+    // Without a bookmark a sandboxed Mac loses the file at the next launch (a dropped file, for
+    // one): the project keeps its own copy instead.
+    if cfg!(target_os = "macos") && bookmark.is_none() {
+        let rel_path = copy_into_project(folder, path, id)
+            .map_err(shorted_store::session::StoreError::from)?;
+        return Ok(MediaLocation::ProjectCopy { rel_path });
+    }
     Ok(MediaLocation::External {
         abs_path: path.to_string_lossy().into_owned(),
         bookmark,
