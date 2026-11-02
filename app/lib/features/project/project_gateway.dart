@@ -41,6 +41,7 @@ abstract interface class ProjectGateway {
   void moveCrop(String id, double dx, double dy, double zoomBy);
   Future<ProjectView> commitCrop(String id);
   Future<ProjectView> resetCrop(String id);
+  Future<ProjectView> toggleSlowZoom(String id);
   void cancelTask(BigInt id);
 }
 
@@ -150,6 +151,9 @@ class EngineGateway implements ProjectGateway {
 
   @override
   Future<ProjectView> resetCrop(String id) => clips.resetCrop(id: id);
+
+  @override
+  Future<ProjectView> toggleSlowZoom(String id) => clips.toggleSlowZoom(id: id);
 
   @override
   Stream<media.ThumbnailView> filmstrip(String mediaId) =>

@@ -118,6 +118,7 @@
   },
   "crop": "Crop",
   "resetCrop": "Reset crop",
+  "slowZoom": "Slow zoom",
   "split": "Split",
   "exportTitle": "Export your short",
   "exportResolution": "Resolution",

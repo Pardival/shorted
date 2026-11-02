@@ -150,6 +150,9 @@ class EditorController extends AsyncNotifier<EditorState> {
   Future<void> resetCrop(String id) async =>
       _show(await _gateway.resetCrop(id));
 
+  Future<void> toggleSlowZoom(String id) async =>
+      _show(await _gateway.toggleSlowZoom(id));
+
   Future<void> moveClip(String id, int to) async =>
       _show(await _gateway.moveClip(id, to));
 

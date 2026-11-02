@@ -39,7 +39,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1127714533;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1184917849;
 
 // Section: executor
 
@@ -1322,6 +1322,42 @@ fn wire__crate__api__export__start_export_impl(
         },
     )
 }
+fn wire__crate__api__clips__toggle_slow_zoom_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "toggle_slow_zoom",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, crate::error::EngineFailure>(
+                    (move || async move {
+                        let output_ok = crate::api::clips::toggle_slow_zoom(api_id).await?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
 fn wire__crate__api__projects__trash_project_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -1723,6 +1759,17 @@ impl SseDecode for Option<String> {
     }
 }
 
+impl SseDecode for Option<bool> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<bool>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
 impl SseDecode for Option<crate::error::ErrorCode> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1844,6 +1891,7 @@ impl SseDecode for crate::api::projects::TrackItemView {
         let mut var_mediaId = <Option<String>>::sse_decode(deserializer);
         let mut var_sourceInUs = <i64>::sse_decode(deserializer);
         let mut var_speed = <f32>::sse_decode(deserializer);
+        let mut var_slowZoom = <Option<bool>>::sse_decode(deserializer);
         return crate::api::projects::TrackItemView {
             id: var_id,
             start_us: var_startUs,
@@ -1851,6 +1899,7 @@ impl SseDecode for crate::api::projects::TrackItemView {
             media_id: var_mediaId,
             source_in_us: var_sourceInUs,
             speed: var_speed,
+            slow_zoom: var_slowZoom,
         };
     }
 }
@@ -1946,9 +1995,10 @@ fn pde_ffi_dispatcher_primary_impl(
         34 => wire__crate__api__clips__split_clip_impl(port, ptr, rust_vec_len, data_len),
         35 => wire__crate__api__start_demo_task_impl(port, ptr, rust_vec_len, data_len),
         36 => wire__crate__api__export__start_export_impl(port, ptr, rust_vec_len, data_len),
-        37 => wire__crate__api__projects__trash_project_impl(port, ptr, rust_vec_len, data_len),
-        38 => wire__crate__api__clips__trim_clip_impl(port, ptr, rust_vec_len, data_len),
-        39 => wire__crate__api__projects__undo_impl(port, ptr, rust_vec_len, data_len),
+        37 => wire__crate__api__clips__toggle_slow_zoom_impl(port, ptr, rust_vec_len, data_len),
+        38 => wire__crate__api__projects__trash_project_impl(port, ptr, rust_vec_len, data_len),
+        39 => wire__crate__api__clips__trim_clip_impl(port, ptr, rust_vec_len, data_len),
+        40 => wire__crate__api__projects__undo_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -2251,6 +2301,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::projects::TrackItemView {
             self.media_id.into_into_dart().into_dart(),
             self.source_in_us.into_into_dart().into_dart(),
             self.speed.into_into_dart().into_dart(),
+            self.slow_zoom.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -2570,6 +2621,16 @@ impl SseEncode for Option<String> {
     }
 }
 
+impl SseEncode for Option<bool> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <bool>::sse_encode(value, serializer);
+        }
+    }
+}
+
 impl SseEncode for Option<crate::error::ErrorCode> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -2668,6 +2729,7 @@ impl SseEncode for crate::api::projects::TrackItemView {
         <Option<String>>::sse_encode(self.media_id, serializer);
         <i64>::sse_encode(self.source_in_us, serializer);
         <f32>::sse_encode(self.speed, serializer);
+        <Option<bool>>::sse_encode(self.slow_zoom, serializer);
     }
 }
 

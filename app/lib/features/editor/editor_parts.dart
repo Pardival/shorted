@@ -365,6 +365,16 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
     ));
   }
 
+  /// Null unless the clip is a still image; otherwise whether its slow zoom is on.
+  bool? _slowZoom(TimelineItem clip) {
+    for (final track in widget.view.tracks) {
+      for (final item in track.items) {
+        if (item.id == clip.id) return item.slowZoom;
+      }
+    }
+    return null;
+  }
+
   bool _isClip(TimelineItem item) => widget.view.tracks.any(
     (track) =>
         track.kind == TrackKindView.video &&
@@ -413,6 +423,7 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
     }
     final clip = _clip;
     final cropping = ref.watch(cropTargetProvider) != null;
+    final slowZoom = clip == null ? null : _slowZoom(clip);
     return SizedBox(
       height: widget.height,
       child: Column(
@@ -433,6 +444,13 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
                   tooltip: l10n.duplicate,
                   onPressed: () => _guard(() => _editor.duplicateClip(clip.id)),
                 ),
+                if (slowZoom != null)
+                  ShortedIconButton(
+                    icon: slowZoom ? Icons.zoom_in_map : Icons.zoom_out_map,
+                    tooltip: l10n.slowZoom,
+                    onPressed: () =>
+                        _guard(() => _editor.toggleSlowZoom(clip.id)),
+                  ),
                 ShortedIconButton(
                   icon: cropping ? Icons.check : Icons.crop,
                   tooltip: l10n.crop,

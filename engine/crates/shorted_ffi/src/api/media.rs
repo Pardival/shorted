@@ -407,11 +407,39 @@ fn strip_cache(media: &MediaRef, folder: &Path) -> Option<PathBuf> {
         .then(|| folder.join("cache").join(format!("filmstrip-{hash}.bin")))
 }
 
+/// A still image is one thumbnail, repeated along its clip.
+fn send_still(path: &Path, (width, height): (u32, u32), sink: &StreamSink<ThumbnailView>) {
+    let Some((from_width, from_height, mut pixels)) = shorted_render::compositor::load_image(path)
+    else {
+        return;
+    };
+    for pixel in pixels.as_chunks_mut::<4>().0 {
+        pixel.swap(0, 2);
+    }
+    let rgba = shorted_media::thumbnail_rgba(
+        &pixels,
+        from_width as usize * 4,
+        (from_width as usize, from_height as usize),
+        0,
+        (width as usize, height as usize),
+    );
+    let _ = sink.add(ThumbnailView {
+        time_us: 0,
+        width,
+        height,
+        rgba,
+    });
+}
+
 fn send_strip(media: &MediaRef, folder: &Path, sink: &StreamSink<ThumbnailView>) {
     let Some(path) = resolve(media, folder) else {
         return;
     };
     let (width, height) = thumbnail_size(&media.probe);
+    if media.kind == MediaKind::Image {
+        send_still(&path, (width, height), sink);
+        return;
+    }
     let cache = strip_cache(media, folder);
     let cached = cache.as_ref().and_then(|file| std::fs::read(file).ok());
     if let Some(frames) = cached.and_then(|bytes| decode_strip(&bytes, width, height)) {
@@ -443,7 +471,7 @@ fn send_strip(media: &MediaRef, folder: &Path, sink: &StreamSink<ThumbnailView>)
     }
 }
 
-/// Streams the thumbnails of a video, in time order, from a thread of its own.
+/// Streams the thumbnails of a video or image, in time order, from a thread of its own.
 pub fn media_filmstrip(media_id: String, sink: StreamSink<ThumbnailView>) {
     let (project, folder) = {
         let state = transport();
@@ -453,7 +481,10 @@ pub fn media_filmstrip(media_id: String, sink: StreamSink<ThumbnailView>) {
         project
             .media
             .iter()
-            .find(|media| media.id.to_string() == media_id && media.kind == MediaKind::Video)
+            .find(|media| {
+                media.id.to_string() == media_id
+                    && matches!(media.kind, MediaKind::Video | MediaKind::Image)
+            })
             .cloned()
     });
     let Some(media) = media else {

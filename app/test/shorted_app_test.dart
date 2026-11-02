@@ -226,6 +226,30 @@ void main() {
     expect(find.byKey(PreviewArea.cropKey), findsNothing);
   });
 
+  testWidgets('only still images offer the slow zoom', (tester) async {
+    final project = FakeProject('p1', 'Mine')
+      ..clips.addAll(['video', 'still'])
+      ..stills.add('still');
+    final gateway = FakeGateway()..projects.add(project);
+    await open(
+      tester,
+      '/editor/p1/audio',
+      size: const Size(1280, 800),
+      gateway: gateway,
+    );
+    final timeline = tester.getTopLeft(find.byType(TimelineView));
+    await tester.tapAt(timeline + const Offset(100, 40));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byTooltip('Split'), findsOneWidget);
+    expect(find.byTooltip('Slow zoom'), findsNothing);
+
+    await tester.tapAt(timeline + const Offset(148.0, 40));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.byTooltip('Slow zoom'));
+    await tester.pumpAndSettle();
+    expect(gateway.slowZooms, ['still']);
+  });
+
   testWidgets('a project that cannot open shows a human message', (
     tester,
   ) async {

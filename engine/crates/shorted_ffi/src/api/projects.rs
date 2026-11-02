@@ -9,7 +9,7 @@ use std::time::SystemTime;
 
 use shorted_core::command::Command;
 use shorted_core::evaluate::clip_positions;
-use shorted_core::model::{AudioTrackRef, Id, Project};
+use shorted_core::model::{AudioTrackRef, Id, MediaKind, Project};
 use shorted_store::library::{self, ProjectEntry};
 use shorted_store::session::{project_folder, ProjectSession, SaveStatus, StoreError};
 use time::format_description::well_known::Rfc3339;
@@ -45,6 +45,8 @@ pub struct TrackItemView {
     pub media_id: Option<String>,
     pub source_in_us: i64,
     pub speed: f32,
+    /// Set for clips made from a still image.
+    pub slow_zoom: Option<bool>,
 }
 
 pub struct TrackView {
@@ -274,6 +276,7 @@ fn track_view(session: &ProjectSession) -> Vec<TrackView> {
         media_id: None,
         source_in_us: 0,
         speed: 1.0,
+        slow_zoom: None,
     };
     let mut overlays: Vec<TrackItemView> = timeline
         .overlays
@@ -307,6 +310,11 @@ fn track_view(session: &ProjectSession) -> Vec<TrackView> {
                     media_id: Some(clip.media_id.to_string()),
                     source_in_us: clip.source_in_us,
                     speed: clip.speed,
+                    slow_zoom: project
+                        .media
+                        .iter()
+                        .any(|m| m.id == clip.media_id && m.kind == MediaKind::Image)
+                        .then_some(clip.image_motion.is_some()),
                     ..item(id, start, end)
                 })
                 .collect(),

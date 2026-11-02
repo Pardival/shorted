@@ -274,6 +274,54 @@ fn a_cancelled_gesture_leaves_no_trace() {
 }
 
 #[test]
+fn an_image_motion_is_refused_on_video_and_undone_on_images() {
+    let original = project();
+    let video = original
+        .timeline
+        .clips
+        .iter()
+        .find(|clip| {
+            let media = original.media.iter().find(|m| m.id == clip.media_id);
+            media.is_some_and(|m| m.kind == MediaKind::Video)
+        })
+        .unwrap()
+        .id;
+    let image = original
+        .timeline
+        .clips
+        .iter()
+        .find(|clip| {
+            let media = original.media.iter().find(|m| m.id == clip.media_id);
+            media.is_some_and(|m| m.kind == MediaKind::Image)
+        })
+        .unwrap();
+    let id = image.id;
+    let motion = Some(KenBurns {
+        start_scale: 1.0,
+        end_scale: 1.15,
+        start_center: image.crop.center,
+        end_center: image.crop.center,
+    });
+    let mut editor = Editor::new(original.clone());
+    assert!(
+        editor
+            .execute(&Command::SetImageMotion { id: video, motion })
+            .is_err()
+    );
+    assert_eq!(editor.project(), &original);
+
+    let off = Command::SetImageMotion { id, motion: None };
+    let on = Command::SetImageMotion { id, motion };
+    editor.execute(&off).unwrap();
+    editor.execute(&on).unwrap();
+    editor.undo().unwrap();
+    let cleared = editor.project().timeline.clips.iter().find(|c| c.id == id);
+    assert_eq!(cleared.unwrap().image_motion, None);
+    editor.undo().unwrap();
+    assert_eq!(editor.project(), &original);
+}
+
+#[test]
 fn undo_during_a_gesture_drops_the_gesture_first() {
     let mut editor = Editor::new(project());
     editor

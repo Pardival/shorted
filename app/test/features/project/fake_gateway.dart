@@ -16,6 +16,7 @@ class FakeProject {
   String title;
   final media = <MediaItemView>[];
   final clips = <String>[];
+  final stills = <String>{};
   final titles = <String>[];
   final redone = <String>[];
 }
@@ -108,6 +109,7 @@ class FakeGateway implements ProjectGateway {
               TrackItemView(
                 sourceInUs: big(0),
                 speed: 1,
+                slowZoom: project.stills.contains(clip) ? false : null,
                 id: clip,
                 startUs: big(index * 1000000),
                 endUs: big((index + 1) * 1000000),
@@ -144,6 +146,13 @@ class FakeGateway implements ProjectGateway {
   final cropMoves = <(String, double, double, double)>[];
   final cropCommits = <String>[];
   final cropResets = <String>[];
+  final slowZooms = <String>[];
+
+  @override
+  Future<ProjectView> toggleSlowZoom(String id) async {
+    slowZooms.add(id);
+    return view();
+  }
 
   @override
   void moveCrop(String id, double dx, double dy, double zoomBy) =>

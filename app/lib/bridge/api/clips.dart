@@ -11,7 +11,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 import 'projects.dart';
 
-// These functions are ignored because they are not marked as `pub`: `edit`, `locate`, `moved_crop`, `parse`, `picture_aspect`, `snap_to_frame`, `visible_fraction`
+// These functions are ignored because they are not marked as `pub`: `edit`, `locate`, `moved_crop`, `parse`, `picture_aspect`, `slow_zoom`, `snap_to_frame`, `visible_fraction`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `eq`
 
 /// Follows a gesture on the preview. Nothing is recorded until `commit_crop`, so that one gesture
@@ -31,6 +31,10 @@ void moveCrop({
 /// Records the crop the gesture left on the preview, as one undo step.
 Future<ProjectView> commitCrop({required String id}) =>
     RustLib.instance.api.crateApiClipsCommitCrop(id: id);
+
+/// Turns the slow zoom of an image clip on or off (FR-CLIP-03).
+Future<ProjectView> toggleSlowZoom({required String id}) =>
+    RustLib.instance.api.crateApiClipsToggleSlowZoom(id: id);
 
 /// Back to the centred picture.
 Future<ProjectView> resetCrop({required String id}) =>

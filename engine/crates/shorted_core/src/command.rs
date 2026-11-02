@@ -86,6 +86,10 @@ pub enum Command {
         id: Id,
         crop: Crop,
     },
+    SetImageMotion {
+        id: Id,
+        motion: Option<KenBurns>,
+    },
     SetColor {
         id: Id,
         color: ColorAdjust,
@@ -543,6 +547,7 @@ fn mutate(command: &Command, project: &mut Project) -> Result<Command, ModelErro
         }
         SetSpeed { id, speed } => edit_clip(project, id, |clip| clip.speed = speed)?,
         SetCrop { id, crop } => edit_clip(project, id, |clip| clip.crop = crop)?,
+        SetImageMotion { id, motion } => edit_clip(project, id, |clip| clip.image_motion = motion)?,
         SetColor { id, color } => edit_clip(project, id, |clip| clip.color = color)?,
 
         SetTransition {

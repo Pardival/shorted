@@ -152,6 +152,9 @@ class TrackItemView {
   final PlatformInt64 sourceInUs;
   final double speed;
 
+  /// Set for clips made from a still image.
+  final bool? slowZoom;
+
   const TrackItemView({
     required this.id,
     required this.startUs,
@@ -159,6 +162,7 @@ class TrackItemView {
     this.mediaId,
     required this.sourceInUs,
     required this.speed,
+    this.slowZoom,
   });
 
   @override
@@ -168,7 +172,8 @@ class TrackItemView {
       endUs.hashCode ^
       mediaId.hashCode ^
       sourceInUs.hashCode ^
-      speed.hashCode;
+      speed.hashCode ^
+      slowZoom.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -180,7 +185,8 @@ class TrackItemView {
           endUs == other.endUs &&
           mediaId == other.mediaId &&
           sourceInUs == other.sourceInUs &&
-          speed == other.speed;
+          speed == other.speed &&
+          slowZoom == other.slowZoom;
 }
 
 enum TrackKindView { widgets, video, captions, voiceOver, audio }

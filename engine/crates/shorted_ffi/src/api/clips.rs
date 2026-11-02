@@ -3,7 +3,7 @@
 
 use shorted_core::command::Command;
 use shorted_core::evaluate::clip_positions;
-use shorted_core::model::{ClipItem, Crop, Id, MediaProbe, Project, Vec2};
+use shorted_core::model::{ClipItem, Crop, Id, KenBurns, MediaProbe, Project, Vec2};
 use uuid::Uuid;
 
 use crate::api::projects::{on_command_thread, view_of, with_active, ProjectView};
@@ -13,6 +13,7 @@ use crate::transport::{publish_crop, transport};
 const FRAME_US: f64 = 1_000_000.0 / 30.0;
 const FRAME_ASPECT: f32 = 9.0 / 16.0;
 const MAX_CROP_ZOOM: f32 = 4.0;
+const SLOW_ZOOM_END: f32 = 1.15;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum ClipEdge {
@@ -146,6 +147,31 @@ pub async fn commit_crop(id: String) -> Result<ProjectView, EngineFailure> {
     })
 }
 
+/// A slow zoom on the picture as it is framed.
+fn slow_zoom(crop: &Crop) -> KenBurns {
+    KenBurns {
+        start_scale: 1.0,
+        end_scale: SLOW_ZOOM_END,
+        start_center: crop.center,
+        end_center: crop.center,
+    }
+}
+
+/// Turns the slow zoom of an image clip on or off (FR-CLIP-03).
+pub async fn toggle_slow_zoom(id: String) -> Result<ProjectView, EngineFailure> {
+    edit(move |project| {
+        let id = parse(&id)?;
+        let (_, clip, _) = locate(project, id)?;
+        Ok(Command::SetImageMotion {
+            id,
+            motion: match clip.image_motion {
+                Some(_) => None,
+                None => Some(slow_zoom(&clip.crop)),
+            },
+        })
+    })
+}
+
 /// Back to the centred picture.
 pub async fn reset_crop(id: String) -> Result<ProjectView, EngineFailure> {
     edit(move |project| {
@@ -243,6 +269,16 @@ mod tests {
             scale: 1.0,
             rotation: 0.0,
         }
+    }
+
+    #[test]
+    fn a_slow_zoom_keeps_the_framing() {
+        let mut crop = centred();
+        crop.center.x = 0.3;
+        let motion = slow_zoom(&crop);
+        assert_eq!(motion.start_center, crop.center);
+        assert_eq!(motion.end_center, crop.center);
+        assert!(motion.end_scale > motion.start_scale);
     }
 
     #[test]

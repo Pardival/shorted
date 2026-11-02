@@ -62,6 +62,7 @@
   "errorDifferentMedia": "Este no es el archivo que falta.",
   "crop": "Encuadrar",
   "resetCrop": "Restablecer encuadre",
+  "slowZoom": "Zoom lento",
   "split": "Dividir",
   "exportTitle": "Exporta tu short",
   "exportResolution": "Resolución",
