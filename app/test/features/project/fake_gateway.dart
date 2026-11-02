@@ -141,6 +141,26 @@ class FakeGateway implements ProjectGateway {
   @override
   Stream<ThumbnailView> filmstrip(String mediaId) => const Stream.empty();
 
+  final cropMoves = <(String, double, double, double)>[];
+  final cropCommits = <String>[];
+  final cropResets = <String>[];
+
+  @override
+  void moveCrop(String id, double dx, double dy, double zoomBy) =>
+      cropMoves.add((id, dx, dy, zoomBy));
+
+  @override
+  Future<ProjectView> commitCrop(String id) async {
+    cropCommits.add(id);
+    return view();
+  }
+
+  @override
+  Future<ProjectView> resetCrop(String id) async {
+    cropResets.add(id);
+    return view();
+  }
+
   /// Paths containing `bad` fail, like a corrupt file.
   @override
   Future<int> importFiles(List<String> paths) async {

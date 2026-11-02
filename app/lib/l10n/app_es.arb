@@ -60,6 +60,8 @@
   "relink": "Volver a vincular",
   "importFailed": "{count, plural, =1{No se pudo importar 1 archivo.} other{No se pudieron importar {count} archivos.}}",
   "errorDifferentMedia": "Este no es el archivo que falta.",
+  "crop": "Encuadrar",
+  "resetCrop": "Restablecer encuadre",
   "split": "Dividir",
   "exportTitle": "Exporta tu short",
   "exportResolution": "Resolución",

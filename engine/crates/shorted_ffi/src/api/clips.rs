@@ -3,13 +3,16 @@
 
 use shorted_core::command::Command;
 use shorted_core::evaluate::clip_positions;
-use shorted_core::model::{ClipItem, Id, Project};
+use shorted_core::model::{ClipItem, Crop, Id, MediaProbe, Project, Vec2};
 use uuid::Uuid;
 
 use crate::api::projects::{on_command_thread, view_of, with_active, ProjectView};
 use crate::error::{EngineError, EngineFailure};
+use crate::transport::{publish_crop, transport};
 
 const FRAME_US: f64 = 1_000_000.0 / 30.0;
+const FRAME_ASPECT: f32 = 9.0 / 16.0;
+const MAX_CROP_ZOOM: f32 = 4.0;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum ClipEdge {
@@ -53,6 +56,108 @@ fn edit(
         with_active(|session| {
             session.execute(&command)?;
             Ok(view_of(session))
+        })
+    })
+}
+
+/// How much of the picture the frame shows, from 0 to 1 on each axis.
+fn visible_fraction(picture_aspect: f32, zoom: f32) -> (f32, f32) {
+    if picture_aspect > FRAME_ASPECT {
+        (FRAME_ASPECT / picture_aspect / zoom, 1.0 / zoom)
+    } else {
+        (1.0 / zoom, picture_aspect / FRAME_ASPECT / zoom)
+    }
+}
+
+/// A drag of (`dx`, `dy`) fractions of the frame, and a pinch by `zoom_by`. The picture follows
+/// the finger, so its centre moves the other way, and it always covers the frame.
+fn moved_crop(crop: Crop, picture_aspect: f32, dx: f32, dy: f32, zoom_by: f32) -> Crop {
+    let scale = (crop.scale * zoom_by).clamp(1.0, MAX_CROP_ZOOM);
+    let (x, y) = visible_fraction(picture_aspect, scale);
+    Crop {
+        center: Vec2 {
+            x: (crop.center.x - dx * x).clamp(x / 2.0, 1.0 - x / 2.0),
+            y: (crop.center.y - dy * y).clamp(y / 2.0, 1.0 - y / 2.0),
+        },
+        scale,
+        rotation: crop.rotation,
+    }
+}
+
+fn picture_aspect(probe: &MediaProbe) -> f32 {
+    let (width, height) = if probe.rotation.rem_euclid(180) == 90 {
+        (probe.height, probe.width)
+    } else {
+        (probe.width, probe.height)
+    };
+    width as f32 / height.max(1) as f32
+}
+
+/// Follows a gesture on the preview. Nothing is recorded until `commit_crop`, so that one gesture
+/// is one undo step.
+#[flutter_rust_bridge::frb(sync)]
+pub fn move_crop(id: String, dx: f32, dy: f32, zoom_by: f32) {
+    let Ok(id) = parse(&id) else {
+        return;
+    };
+    let moved = {
+        let state = transport();
+        state.project.as_ref().and_then(|project| {
+            let clip = project.timeline.clips.iter().find(|clip| clip.id == id)?;
+            let media = project.media.iter().find(|m| m.id == clip.media_id)?;
+            Some(moved_crop(
+                clip.crop,
+                picture_aspect(&media.probe),
+                dx,
+                dy,
+                zoom_by,
+            ))
+        })
+    };
+    if let Some(crop) = moved {
+        publish_crop(id, crop);
+    }
+}
+
+/// Records the crop the gesture left on the preview, as one undo step.
+pub async fn commit_crop(id: String) -> Result<ProjectView, EngineFailure> {
+    on_command_thread(move || {
+        let id = parse(&id)?;
+        let shown = {
+            let state = transport();
+            state.project.as_ref().and_then(|project| {
+                let clip = project.timeline.clips.iter().find(|clip| clip.id == id);
+                clip.map(|clip| clip.crop)
+            })
+        };
+        with_active(|session| {
+            let saved = session
+                .project()
+                .timeline
+                .clips
+                .iter()
+                .find(|clip| clip.id == id)
+                .map(|clip| clip.crop);
+            if let Some(crop) = shown.filter(|crop| Some(*crop) != saved) {
+                session.execute(&Command::SetCrop { id, crop })?;
+            }
+            Ok(view_of(session))
+        })
+    })
+}
+
+/// Back to the centred picture.
+pub async fn reset_crop(id: String) -> Result<ProjectView, EngineFailure> {
+    edit(move |project| {
+        let id = parse(&id)?;
+        let (_, clip, _) = locate(project, id)?;
+        Ok(Command::SetCrop {
+            id,
+            crop: Crop {
+                center: Vec2 { x: 0.5, y: 0.5 },
+                scale: 1.0,
+                rotation: clip.crop.rotation,
+            },
         })
     })
 }
@@ -131,6 +236,47 @@ pub async fn trim_clip(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn centred() -> Crop {
+        Crop {
+            center: Vec2 { x: 0.5, y: 0.5 },
+            scale: 1.0,
+            rotation: 0.0,
+        }
+    }
+
+    #[test]
+    fn a_landscape_picture_slides_sideways_only() {
+        let crop = moved_crop(centred(), 16.0 / 9.0, 0.5, 0.5, 1.0);
+        assert!(crop.center.x < 0.5);
+        assert_eq!(crop.center.y, 0.5);
+    }
+
+    #[test]
+    fn a_crop_always_covers_the_frame() {
+        let crop = moved_crop(centred(), 16.0 / 9.0, 100.0, 0.0, 1.0);
+        let (x, _) = visible_fraction(16.0 / 9.0, 1.0);
+        assert_eq!(crop.center.x, x / 2.0);
+        let crop = moved_crop(centred(), 16.0 / 9.0, -100.0, 0.0, 1.0);
+        assert_eq!(crop.center.x, 1.0 - x / 2.0);
+    }
+
+    #[test]
+    fn zoom_stays_in_range_and_widens_the_room_to_move() {
+        assert_eq!(moved_crop(centred(), 1.0, 0.0, 0.0, 0.1).scale, 1.0);
+        assert_eq!(moved_crop(centred(), 1.0, 0.0, 0.0, 99.0).scale, 4.0);
+        let zoomed = moved_crop(centred(), 9.0 / 16.0, 0.0, 0.0, 2.0);
+        assert_eq!(zoomed.center.y, 0.5);
+        assert!(moved_crop(zoomed, 9.0 / 16.0, 0.0, 0.2, 1.0).center.y < 0.5);
+    }
+
+    #[test]
+    fn rotated_pictures_use_their_shown_shape() {
+        let json = include_str!("../../../../fixtures/projects/v1_full.json");
+        let mut probe = Project::from_json(json).unwrap().media.remove(0).probe;
+        (probe.width, probe.height, probe.rotation) = (1920, 1080, 90);
+        assert_eq!(picture_aspect(&probe), 1080.0 / 1920.0);
+    }
 
     #[test]
     fn times_snap_to_the_30_fps_grid() {

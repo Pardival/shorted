@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::Instant;
 
 use shorted_audio::mixer::SAMPLE_RATE;
-use shorted_core::model::Project;
+use shorted_core::model::{Crop, Id, Project};
 
 pub(crate) struct Transport {
     pub project: Option<Arc<Project>>,
@@ -100,6 +100,19 @@ impl Transport {
             self.playing_since = Some(Instant::now());
             self.reset_audio_clock();
         }
+    }
+}
+
+/// Shows a crop on the preview only, while a gesture is under way.
+pub(crate) fn publish_crop(id: Id, crop: Crop) {
+    let mut state = transport();
+    let Some(project) = state.project.as_mut() else {
+        return;
+    };
+    let project = Arc::make_mut(project);
+    if let Some(clip) = project.timeline.clips.iter_mut().find(|clip| clip.id == id) {
+        clip.crop = crop;
+        state.revision += 1;
     }
 }
 

@@ -110,6 +110,9 @@ class _SavedDot extends StatelessWidget {
 class PreviewArea extends ConsumerStatefulWidget {
   const PreviewArea({super.key});
 
+  @visibleForTesting
+  static const cropKey = ValueKey('preview-crop');
+
   @override
   ConsumerState<PreviewArea> createState() => _PreviewAreaState();
 }
@@ -117,6 +120,7 @@ class PreviewArea extends ConsumerStatefulWidget {
 class _PreviewAreaState extends ConsumerState<PreviewArea> {
   int? _textureId;
   late final PreviewTransport _transport = ref.read(previewTransportProvider);
+  double _pinch = 1;
 
   @override
   void initState() {
@@ -137,21 +141,64 @@ class _PreviewAreaState extends ConsumerState<PreviewArea> {
   @override
   Widget build(BuildContext context) {
     final id = _textureId;
+    final crop = ref.watch(cropTargetProvider);
+    final picture = ClipRRect(
+      borderRadius: BorderRadius.circular(ShortedRadius.m),
+      child: ColoredBox(
+        color: ShortedColors.bg,
+        child: id == null ? null : Texture(textureId: id),
+      ),
+    );
     return Padding(
       padding: const EdgeInsets.all(ShortedSpace.s),
       child: Center(
         child: AspectRatio(
           aspectRatio: 9 / 16,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(ShortedRadius.m),
-            child: ColoredBox(
-              color: ShortedColors.bg,
-              child: id == null ? null : Texture(textureId: id),
-            ),
-          ),
+          child: crop == null
+              ? picture
+              : LayoutBuilder(
+                  builder: (context, box) => GestureDetector(
+                    key: PreviewArea.cropKey,
+                    onScaleStart: (_) => _pinch = 1,
+                    onScaleUpdate: (details) {
+                      ref
+                          .read(projectGatewayProvider)
+                          .moveCrop(
+                            crop.clipId,
+                            details.focalPointDelta.dx / box.maxWidth,
+                            details.focalPointDelta.dy / box.maxHeight,
+                            details.scale / _pinch,
+                          );
+                      _pinch = details.scale;
+                    },
+                    onScaleEnd: (_) => _commit(crop),
+                    child: DecoratedBox(
+                      position: DecorationPosition.foreground,
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: ShortedColors.accent,
+                          width: 2,
+                        ),
+                        borderRadius: BorderRadius.circular(ShortedRadius.m),
+                      ),
+                      child: picture,
+                    ),
+                  ),
+                ),
         ),
       ),
     );
+  }
+
+  Future<void> _commit(({String projectId, String clipId}) crop) async {
+    final l10n = AppLocalizations.of(context);
+    try {
+      await ref
+          .read(editorProvider(crop.projectId).notifier)
+          .commitCrop(crop.clipId);
+    } on Object catch (error) {
+      if (mounted) showToast(context, errorMessage(l10n, error));
+    }
   }
 }
 
@@ -298,6 +345,26 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
     }
   }
 
+  bool get _cropping => ref.read(cropTargetProvider) != null;
+
+  void _stopCropping() => ref.read(cropTargetProvider.notifier).set(null);
+
+  /// Reframing happens on the picture of the clip, so the playhead goes there.
+  void _toggleCrop(TimelineItem clip) {
+    if (_cropping) {
+      _stopCropping();
+      return;
+    }
+    final playhead = widget.playheadUs.value;
+    if (playhead < clip.startUs || playhead >= clip.endUs) {
+      widget.playheadUs.value = clip.startUs;
+    }
+    ref.read(cropTargetProvider.notifier).set((
+      projectId: widget.view.id,
+      clipId: clip.id,
+    ));
+  }
+
   bool _isClip(TimelineItem item) => widget.view.tracks.any(
     (track) =>
         track.kind == TrackKindView.video &&
@@ -345,6 +412,7 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
       }
     }
     final clip = _clip;
+    final cropping = ref.watch(cropTargetProvider) != null;
     return SizedBox(
       height: widget.height,
       child: Column(
@@ -366,9 +434,21 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
                   onPressed: () => _guard(() => _editor.duplicateClip(clip.id)),
                 ),
                 ShortedIconButton(
+                  icon: cropping ? Icons.check : Icons.crop,
+                  tooltip: l10n.crop,
+                  onPressed: () => _toggleCrop(clip),
+                ),
+                if (cropping)
+                  ShortedIconButton(
+                    icon: Icons.restart_alt,
+                    tooltip: l10n.resetCrop,
+                    onPressed: () => _guard(() => _editor.resetCrop(clip.id)),
+                  ),
+                ShortedIconButton(
                   icon: Icons.delete_outline,
                   tooltip: l10n.delete,
                   onPressed: () {
+                    _stopCropping();
                     setState(() => _clip = null);
                     _guard(() => _editor.deleteClip(clip.id));
                   },
@@ -381,9 +461,12 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
               durationUs: widget.view.durationUs.toInt(),
               playheadUs: widget.playheadUs,
               filmstrips: _filmstrips,
-              onSelect: (item) => setState(() {
-                _clip = item != null && _isClip(item) ? item : null;
-              }),
+              onSelect: (item) {
+                _stopCropping();
+                setState(() {
+                  _clip = item != null && _isClip(item) ? item : null;
+                });
+              },
               onTrim: (item, start, deltaUs) => _guard(
                 () => _editor.trimClip(item.id, start: start, deltaUs: deltaUs),
               ),

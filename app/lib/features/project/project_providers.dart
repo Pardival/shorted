@@ -12,6 +12,20 @@ final projectGatewayProvider = Provider<ProjectGateway>(
 );
 
 /// Overridden at startup, like the gateway.
+/// The clip being reframed on the preview, if any.
+class CropTarget extends Notifier<({String projectId, String clipId})?> {
+  @override
+  ({String projectId, String clipId})? build() => null;
+
+  void set(({String projectId, String clipId})? target) => state = target;
+}
+
+final cropTargetProvider =
+    NotifierProvider.autoDispose<
+      CropTarget,
+      ({String projectId, String clipId})?
+    >(CropTarget.new);
+
 final previewTransportProvider = Provider<PreviewTransport>(
   (ref) => throw UnimplementedError('previewTransportProvider is not set'),
 );
@@ -129,6 +143,12 @@ class EditorController extends AsyncNotifier<EditorState> {
 
   Future<void> duplicateClip(String id) async =>
       _show(await _gateway.duplicateClip(id));
+
+  Future<void> commitCrop(String id) async =>
+      _show(await _gateway.commitCrop(id));
+
+  Future<void> resetCrop(String id) async =>
+      _show(await _gateway.resetCrop(id));
 
   Future<void> moveClip(String id, int to) async =>
       _show(await _gateway.moveClip(id, to));

@@ -38,6 +38,9 @@ abstract interface class ProjectGateway {
   });
   Stream<TaskEvent> export(String path, {required int width, required int fps});
   Stream<media.ThumbnailView> filmstrip(String mediaId);
+  void moveCrop(String id, double dx, double dy, double zoomBy);
+  Future<ProjectView> commitCrop(String id);
+  Future<ProjectView> resetCrop(String id);
   void cancelTask(BigInt id);
 }
 
@@ -137,6 +140,16 @@ class EngineGateway implements ProjectGateway {
     path: path,
     settings: exporter.ExportSettings(width: width, fps: fps),
   );
+
+  @override
+  void moveCrop(String id, double dx, double dy, double zoomBy) =>
+      clips.moveCrop(id: id, dx: dx, dy: dy, zoomBy: zoomBy);
+
+  @override
+  Future<ProjectView> commitCrop(String id) => clips.commitCrop(id: id);
+
+  @override
+  Future<ProjectView> resetCrop(String id) => clips.resetCrop(id: id);
 
   @override
   Stream<media.ThumbnailView> filmstrip(String mediaId) =>

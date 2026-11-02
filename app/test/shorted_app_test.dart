@@ -191,6 +191,41 @@ void main() {
     expect(find.byTooltip('Split'), findsNothing);
   });
 
+  testWidgets('a crop gesture follows the finger and records one step', (
+    tester,
+  ) async {
+    final project = FakeProject('p1', 'Mine')..clips.add('c1');
+    final gateway = FakeGateway()..projects.add(project);
+    await open(
+      tester,
+      '/editor/p1/audio',
+      size: const Size(1280, 800),
+      gateway: gateway,
+    );
+    final timeline = tester.getTopLeft(find.byType(TimelineView));
+    await tester.tapAt(timeline + const Offset(100, 40));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byKey(PreviewArea.cropKey), findsNothing);
+
+    await tester.tap(find.byTooltip('Crop'));
+    await tester.pump();
+    await tester.drag(find.byKey(PreviewArea.cropKey), const Offset(60, 0));
+    await tester.pumpAndSettle();
+    expect(gateway.cropMoves, isNotEmpty);
+    expect(gateway.cropMoves.first.$1, 'c1');
+    final moved = gateway.cropMoves.fold(0.0, (sum, move) => sum + move.$2);
+    expect(moved, greaterThan(0));
+    expect(gateway.cropCommits, ['c1']);
+
+    await tester.tap(find.byTooltip('Reset crop'));
+    await tester.pumpAndSettle();
+    expect(gateway.cropResets, ['c1']);
+
+    await tester.tap(find.byTooltip('Crop'));
+    await tester.pump();
+    expect(find.byKey(PreviewArea.cropKey), findsNothing);
+  });
+
   testWidgets('a project that cannot open shows a human message', (
     tester,
   ) async {
