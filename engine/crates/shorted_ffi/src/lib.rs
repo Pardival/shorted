@@ -3,7 +3,11 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 
 pub mod api;
+pub mod error;
+#[allow(clippy::unwrap_used, clippy::expect_used)] // Generated code.
 mod frb_generated;
+pub mod logging;
+pub mod runtime;
 
 /// Name of this crate, used by the workspace smoke tests.
 pub const CRATE_NAME: &str = "shorted_ffi";

@@ -3,9 +3,12 @@
 
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
+import 'error.dart';
 import 'frb_generated.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
+
+import 'runtime.dart';
 
 /// Version of the engine.
 String engineVersion() => RustLib.instance.api.crateApiEngineVersion();
@@ -19,3 +22,17 @@ Future<PlatformInt64> add({
 /// Streams 0, 1, 2… every `interval_ms`, until Dart cancels the subscription.
 Stream<BigInt> counterStream({required int intervalMs}) =>
     RustLib.instance.api.crateApiCounterStream(intervalMs: intervalMs);
+
+/// Starts file logging in `log_dir`. Calling it again has no effect.
+Future<void> initEngine({required String logDir}) =>
+    RustLib.instance.api.crateApiInitEngine(logDir: logDir);
+
+/// Runs a cancellable background task that sleeps through `duration_ms` in steps, emitting
+/// progress. Stands in for real long tasks (analysis, export) until they exist. The first event
+/// carries the id to pass to [`cancel_task`].
+Stream<TaskEvent> startDemoTask({required int durationMs}) =>
+    RustLib.instance.api.crateApiStartDemoTask(durationMs: durationMs);
+
+/// Requests cancellation of a background task. Unknown ids are ignored: the task may have ended.
+void cancelTask({required BigInt taskId}) =>
+    RustLib.instance.api.crateApiCancelTask(taskId: taskId);
