@@ -25,10 +25,13 @@
   "allTracks": "Todas las pistas",
   "untitledProject": "Short sin título",
   "previewPlaceholder": "Vista previa",
-  "timelinePlaceholder": "Línea de tiempo",
   "inspectorTitle": "Propiedades",
   "nothingSelected": "Nada seleccionado",
   "toolsPlaceholder": "Las herramientas de {section} llegan con sus tickets.",
   "onboardingTitle": "Te damos la bienvenida a Shorted",
-  "skip": "Omitir"
+  "skip": "Omitir",
+  "trackWidgets": "Widgets",
+  "trackVideo": "Vídeo",
+  "trackCaptions": "Subtítulos",
+  "trackVoiceOver": "Voz en off"
 }

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../design_system/components.dart';
 import '../../design_system/tokens.g.dart';
 import '../../l10n/generated/app_localizations.dart';
+import '../timeline/timeline_layout.dart';
+import '../timeline/timeline_view.dart';
 import 'editor_section.dart';
 
 class EditorTopBar extends StatelessWidget {
@@ -134,20 +136,56 @@ class TransportBar extends StatelessWidget {
   }
 }
 
-class TimelineArea extends StatelessWidget {
+class TimelineArea extends StatefulWidget {
   const TimelineArea({super.key, required this.height});
 
   final double height;
 
   @override
+  State<TimelineArea> createState() => _TimelineAreaState();
+}
+
+class _TimelineAreaState extends State<TimelineArea> {
+  final _playheadUs = ValueNotifier<int>(0);
+
+  @override
+  void dispose() {
+    _playheadUs.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      height: height,
-      color: ShortedColors.surface,
-      alignment: Alignment.center,
-      child: Text(
-        AppLocalizations.of(context).timelinePlaceholder,
-        style: const TextStyle(color: ShortedColors.textMuted),
+    final l10n = AppLocalizations.of(context);
+    // Empty until the editor is connected to the engine.
+    final tracks = [
+      TimelineTrack(
+        kind: TrackKind.widgets,
+        label: l10n.trackWidgets,
+        items: const [],
+      ),
+      TimelineTrack(
+        kind: TrackKind.video,
+        label: l10n.trackVideo,
+        items: const [],
+      ),
+      TimelineTrack(
+        kind: TrackKind.captions,
+        label: l10n.trackCaptions,
+        items: const [],
+      ),
+      TimelineTrack(
+        kind: TrackKind.voiceOver,
+        label: l10n.trackVoiceOver,
+        items: const [],
+      ),
+    ];
+    return SizedBox(
+      height: widget.height,
+      child: TimelineView(
+        tracks: tracks,
+        durationUs: 0,
+        playheadUs: _playheadUs,
       ),
     );
   }
