@@ -1,5 +1,8 @@
 //! The Audio section: original sound of clips, audio items and audio tracks.
 
+// Peaks only serve the Apple decoder until other platforms have one.
+#![cfg_attr(not(target_vendor = "apple"), allow(dead_code))]
+
 use std::path::Path;
 
 use shorted_audio::mixer::{CHANNELS, SAMPLE_RATE};
