@@ -497,3 +497,33 @@ fn toggling_emphasis_becomes_a_user_choice() {
         .words[0];
     assert_eq!(word.emphasis, EmphasisState::User(false));
 }
+
+#[test]
+fn a_colour_tints_a_picture_fills_a_shape_and_undoes() {
+    let original = project();
+    let mut edited = original.clone();
+    for overlay in OVERLAYS.map(id) {
+        let inverse = Command::SetOverlayColor {
+            id: overlay,
+            color: Some("#4DD2FFFF".into()),
+        }
+        .apply(&mut edited)
+        .unwrap();
+        let item = edited
+            .timeline
+            .overlays
+            .iter()
+            .find(|o| o.id == overlay)
+            .unwrap();
+        match &item.kind {
+            OverlayKind::Shape { fill, .. } => assert_eq!(fill, "#4DD2FFFF"),
+            OverlayKind::Image { .. } | OverlayKind::AnimatedImage { .. } => {
+                assert_eq!(item.tint.as_deref(), Some("#4DD2FFFF"));
+            }
+            _ => assert_eq!(item.tint, None, "only pictures take a tint"),
+        }
+        edited.validate().unwrap();
+        inverse.apply(&mut edited).unwrap();
+    }
+    assert_eq!(edited, original);
+}

@@ -114,6 +114,8 @@ void main() {
       ];
     project.overlays.add(
       OverlayView(
+        colorable: true,
+        color: null,
         path: null,
         keyframes: const [],
         animIn: null,

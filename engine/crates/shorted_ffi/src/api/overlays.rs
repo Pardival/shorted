@@ -282,6 +282,10 @@ pub struct OverlayView {
     pub anim_out: Option<PresetView>,
     pub keyframes: Vec<KeyframeView>,
     pub path: Option<PathView>,
+    /// Shapes and pictures can be recoloured (T-1205).
+    pub colorable: bool,
+    /// A shape's fill, or a picture's tint when it has one.
+    pub color: Option<String>,
 }
 
 /// An element's own placement, before animation: centre in canvas units, degrees clockwise.
@@ -381,6 +385,16 @@ pub(crate) fn overlay_views(project: &Project) -> Vec<OverlayView> {
                 OverlayKind::Text { content, style } => Some(text_view(content, style)),
                 _ => None,
             },
+            colorable: matches!(
+                item.kind,
+                OverlayKind::Shape { .. }
+                    | OverlayKind::Image { .. }
+                    | OverlayKind::AnimatedImage { .. }
+            ),
+            color: match &item.kind {
+                OverlayKind::Shape { fill, .. } => Some(fill.clone()),
+                _ => item.tint.clone(),
+            },
             anim_in: preset_view(item.anim_in),
             anim_loop: preset_view(item.anim_loop),
             anim_out: preset_view(item.anim_out),
@@ -476,6 +490,7 @@ pub(crate) fn new_overlay(kind: OverlayKind, at_us: i64, project: &Project) -> O
         anim_out: None,
         locked: false,
         hidden: false,
+        tint: None,
     }
 }
 
@@ -629,6 +644,19 @@ pub async fn set_overlay_flags(
         item.hidden = hidden;
         Ok(Command::ReplaceOverlay {
             overlay: Box::new(item),
+        })
+    })
+}
+
+/// Recolours a shape or a picture; `None` gives a picture its own colours back (T-1205).
+pub async fn set_overlay_color(
+    id: String,
+    color: Option<String>,
+) -> Result<ProjectView, EngineFailure> {
+    edit(move |_| {
+        Ok(Command::SetOverlayColor {
+            id: parse(&id)?,
+            color,
         })
     })
 }

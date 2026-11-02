@@ -408,6 +408,8 @@ class FakeGateway implements ProjectGateway {
   Future<ProjectView> addShape(ShapeKindView shape, int atUs) {
     opened!.overlays.add(
       OverlayView(
+        colorable: true,
+        color: null,
         path: null,
         keyframes: const [],
         animIn: null,
@@ -438,6 +440,8 @@ class FakeGateway implements ProjectGateway {
   Future<ProjectView> addText(String content, int atUs) {
     opened!.overlays.add(
       OverlayView(
+        colorable: false,
+        color: null,
         path: null,
         keyframes: const [],
         animIn: null,
@@ -477,6 +481,8 @@ class FakeGateway implements ProjectGateway {
     final index = overlays.indexWhere((overlay) => overlay.id == id);
     final old = overlays[index];
     overlays[index] = OverlayView(
+      colorable: old.colorable,
+      color: old.color,
       id: old.id,
       kind: old.kind,
       startUs: old.startUs,
@@ -614,6 +620,10 @@ class FakeGateway implements ProjectGateway {
   Future<ProjectView> duplicateOverlay(String id) => _overlay('duplicate $id');
 
   @override
+  Future<ProjectView> setOverlayColor(String id, String? color) =>
+      _overlay('colour $id $color');
+
+  @override
   Future<ProjectView> deleteOverlay(String id) {
     opened!.overlays.removeWhere((overlay) => overlay.id == id);
     return _overlay('delete $id');
@@ -652,6 +662,8 @@ class FakeGateway implements ProjectGateway {
   }) {
     opened!.overlays.add(
       OverlayView(
+        colorable: true,
+        color: null,
         path: null,
         keyframes: const [],
         animIn: null,

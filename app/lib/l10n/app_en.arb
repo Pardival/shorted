@@ -538,5 +538,8 @@
         "type": "String"
       }
     }
-  }
+  },
+  "elementColour": "Colour",
+  "originalColours": "Original colours",
+  "customColour": "Any colour"
 }

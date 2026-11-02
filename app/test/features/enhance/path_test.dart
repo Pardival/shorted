@@ -10,6 +10,8 @@ import '../preview/fake_transport.dart';
 import '../project/fake_gateway.dart';
 
 OverlayView _element({PathView? path}) => OverlayView(
+  colorable: true,
+  color: null,
   path: path,
   keyframes: const [],
   animIn: null,

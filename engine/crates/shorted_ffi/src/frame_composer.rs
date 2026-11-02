@@ -131,6 +131,25 @@ pub struct FrameComposer {
     overlays: HashMap<Id, (OverlayKind, OverlayPicture)>,
 }
 
+/// A picture's chosen colour, as the shader's tint: full strength, alpha kept (T-1205).
+fn overlay_tint(project: &Project, id: Id) -> [f32; 4] {
+    project
+        .timeline
+        .overlays
+        .iter()
+        .find(|item| item.id == id)
+        .and_then(|item| item.tint.as_deref())
+        .map_or([0.0; 4], |tint| {
+            let [r, g, b, _] = parse_color(tint);
+            [
+                f32::from(r) / 255.0,
+                f32::from(g) / 255.0,
+                f32::from(b) / 255.0,
+                1.0,
+            ]
+        })
+}
+
 /// What an overlay draws from. Animations and videos change with time; stills do not.
 enum OverlayPicture {
     Still(wgpu::Texture),
@@ -400,6 +419,7 @@ impl FrameComposer {
                     opacity: layer.opacity,
                     keeps_alpha: true,
                     sprite: Some(sprite),
+                    tint: overlay_tint(project, layer.overlay_id),
                     ..LayerEffect::default()
                 },
             },

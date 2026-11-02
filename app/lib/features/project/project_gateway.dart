@@ -238,6 +238,9 @@ abstract interface class ProjectGateway {
     required bool hidden,
   });
   Future<ProjectView> duplicateOverlay(String id);
+
+  /// A shape's fill or a picture's tint; null gives a picture its own colours (T-1205).
+  Future<ProjectView> setOverlayColor(String id, String? color);
   Future<ProjectView> deleteOverlay(String id);
 
   /// Where the elements on screen are drawn at `timeUs`, top first.
@@ -672,6 +675,10 @@ class EngineGateway implements ProjectGateway {
     required bool locked,
     required bool hidden,
   }) => overlays.setOverlayFlags(id: id, locked: locked, hidden: hidden);
+
+  @override
+  Future<ProjectView> setOverlayColor(String id, String? color) =>
+      overlays.setOverlayColor(id: id, color: color);
 
   @override
   Future<ProjectView> duplicateOverlay(String id) =>

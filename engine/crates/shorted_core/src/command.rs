@@ -209,6 +209,11 @@ pub enum Command {
         id: Id,
         base: Transform,
     },
+    /// A shape's fill, or a picture's tint; `None` gives a picture its own colours back.
+    SetOverlayColor {
+        id: Id,
+        color: Option<Color>,
+    },
     SetOverlayTiming {
         id: Id,
         start_us: i64,
@@ -759,6 +764,15 @@ fn mutate(command: &Command, project: &mut Project) -> Result<Command, ModelErro
             inverse
         }
         UpdateOverlayTransform { id, base } => edit_overlay(project, id, |o| o.base = base)?,
+        SetOverlayColor { id, color } => edit_overlay(project, id, |o| match &mut o.kind {
+            OverlayKind::Shape { fill, .. } => {
+                if let Some(color) = color {
+                    *fill = color;
+                }
+            }
+            OverlayKind::Image { .. } | OverlayKind::AnimatedImage { .. } => o.tint = color,
+            OverlayKind::Video { .. } | OverlayKind::Text { .. } => {}
+        })?,
         SetOverlayTiming {
             id,
             start_us,

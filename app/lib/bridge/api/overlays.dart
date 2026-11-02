@@ -93,6 +93,10 @@ Future<ProjectView> setOverlayFlags({
   hidden: hidden,
 );
 
+/// Recolours a shape or a picture; `None` gives a picture its own colours back (T-1205).
+Future<ProjectView> setOverlayColor({required String id, String? color}) =>
+    RustLib.instance.api.crateApiOverlaysSetOverlayColor(id: id, color: color);
+
 /// Shows `transform` while a finger moves the element; nothing is recorded yet.
 void previewOverlayTransform({
   required String id,
@@ -319,6 +323,12 @@ class OverlayView {
   final List<KeyframeView> keyframes;
   final PathView? path;
 
+  /// Shapes and pictures can be recoloured (T-1205).
+  final bool colorable;
+
+  /// A shape's fill, or a picture's tint when it has one.
+  final String? color;
+
   const OverlayView({
     required this.id,
     required this.kind,
@@ -334,6 +344,8 @@ class OverlayView {
     this.animOut,
     required this.keyframes,
     this.path,
+    required this.colorable,
+    this.color,
   });
 
   @override
@@ -351,7 +363,9 @@ class OverlayView {
       animLoop.hashCode ^
       animOut.hashCode ^
       keyframes.hashCode ^
-      path.hashCode;
+      path.hashCode ^
+      colorable.hashCode ^
+      color.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -371,7 +385,9 @@ class OverlayView {
           animLoop == other.animLoop &&
           animOut == other.animOut &&
           keyframes == other.keyframes &&
-          path == other.path;
+          path == other.path &&
+          colorable == other.colorable &&
+          color == other.color;
 }
 
 /// A point of a recorded path: timeline time, canvas units.

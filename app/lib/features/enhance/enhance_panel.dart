@@ -5,6 +5,7 @@ import '../../bridge/api/look.dart';
 import '../../bridge/api/overlays.dart';
 import '../../bridge/api/projects.dart';
 import '../../design_system/components.dart';
+import '../../design_system/swatches.dart';
 import '../../design_system/tokens.g.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../project/project_dialogs.dart';
@@ -225,7 +226,8 @@ class OverlayLookState extends ConsumerState<OverlayLook> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final base = widget.overlay.transform;
-    return Row(
+    final overlay = widget.overlay;
+    final opacityRow = Row(
       children: [
         SizedBox(
           width: 96,
@@ -252,6 +254,42 @@ class OverlayLookState extends ConsumerState<OverlayLook> {
               ? null
               : () => _set(flip: !base.flip),
         ),
+      ],
+    );
+    if (!overlay.colorable) return opacityRow;
+    final picture = overlay.kind != OverlayKindView.shape;
+    void recolour(String? color) =>
+        widget.run((gateway) => gateway.setOverlayColor(overlay.id, color));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        opacityRow,
+        const SizedBox(height: ShortedSpace.xs),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                l10n.elementColour,
+                style: const TextStyle(color: ShortedColors.textMuted),
+              ),
+            ),
+            if (picture && overlay.color != null)
+              TextButton(
+                onPressed: overlay.locked ? null : () => recolour(null),
+                child: Text(l10n.originalColours),
+              ),
+          ],
+        ),
+        const SizedBox(height: ShortedSpace.xs),
+        IgnorePointer(
+          ignoring: overlay.locked,
+          child: ColourSwatches(
+            selected: overlay.color ?? '',
+            onTap: recolour,
+            customLabel: l10n.customColour,
+          ),
+        ),
+        const SizedBox(height: ShortedSpace.s),
       ],
     );
   }

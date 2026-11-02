@@ -331,5 +331,8 @@
   "soundSettings": "Som",
   "inspectorElement": "Elemento",
   "projectSummary": "{clips, plural, =1{1 clip} other{{clips} clips}} · {sounds, plural, =1{1 som} other{{sounds} sons}} · {duration}",
-  "inspectorHint": "Seleciona um clip, um som ou um elemento na linha do tempo ou no vídeo: as suas definições aparecem aqui."
+  "inspectorHint": "Seleciona um clip, um som ou um elemento na linha do tempo ou no vídeo: as suas definições aparecem aqui.",
+  "elementColour": "Cor",
+  "originalColours": "Cores originais",
+  "customColour": "Outra cor"
 }

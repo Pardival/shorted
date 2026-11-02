@@ -91,6 +91,7 @@ fn clip(value: u128, media_id: u128) -> ClipItem {
 }
 
 fn overlay(value: u128, kind: OverlayKind) -> OverlayItem {
+    let tint = matches!(kind, OverlayKind::Image { .. }).then(|| "#FF5C7AFF".into());
     OverlayItem {
         id: id(value),
         kind,
@@ -145,6 +146,7 @@ fn overlay(value: u128, kind: OverlayKind) -> OverlayItem {
         anim_out: None,
         locked: false,
         hidden: false,
+        tint,
     }
 }
 

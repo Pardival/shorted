@@ -64,6 +64,8 @@ void main() {
     final project = FakeProject('p1', 'Mine')..clips.add('c1');
     project.overlays.add(
       OverlayView(
+        colorable: true,
+        color: null,
         path: null,
         id: 'o5',
         kind: OverlayKindView.shape,

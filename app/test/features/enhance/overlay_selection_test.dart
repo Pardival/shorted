@@ -20,6 +20,8 @@ Future<FakeGateway> _editor(WidgetTester tester, {bool locked = false}) async {
   final project = FakeProject('p1', 'Mine')..clips.add('c1');
   project.overlays.add(
     OverlayView(
+      colorable: true,
+      color: null,
       path: null,
       keyframes: const [],
       animIn: null,
@@ -163,5 +165,24 @@ void main() {
     await tester.tap(find.byTooltip('Flip').first);
     await tester.pumpAndSettle();
     expect(gateway.overlayCalls.last, endsWith('1.0 true'));
+  });
+
+  testWidgets('an element takes a swatch or any colour', (tester) async {
+    final gateway = await _editor(tester);
+    await tester.tapAt(_at(tester, 540, 960));
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsLabel('#4DD2FFFF').first);
+    await tester.pumpAndSettle();
+    expect(gateway.overlayCalls.last, endsWith('#4DD2FFFF'));
+
+    await tester.tap(find.byTooltip('Any colour').first);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('colour-code')),
+      '#123456',
+    );
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    expect(gateway.overlayCalls.last, endsWith('#123456FF'));
   });
 }

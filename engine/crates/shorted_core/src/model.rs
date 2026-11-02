@@ -397,6 +397,9 @@ pub struct OverlayItem {
     pub anim_out: Option<PresetAnim>,
     pub locked: bool,
     pub hidden: bool,
+    /// Pictures only: drawn in this one colour, keeping their shape (T-1205).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tint: Option<Color>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

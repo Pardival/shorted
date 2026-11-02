@@ -193,6 +193,9 @@ fn overlay(item: &OverlayItem, media: &HashSet<Id>) -> Result<(), ModelError> {
         }
         OverlayKind::Shape { fill, .. } => color(fill)?,
     }
+    if let Some(tint) = &item.tint {
+        color(tint)?;
+    }
     let mut properties = HashSet::new();
     for track in &item.keyframes {
         check(
