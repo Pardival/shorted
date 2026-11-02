@@ -1,26 +1,6 @@
 {
   "@@locale": "en",
   "appTitle": "Shorted",
-  "placeholderTagline": "Your clips, a polished short.",
-  "@placeholderTagline": {
-    "description": "Tagline on the temporary placeholder screen."
-  },
-  "engineVersion": "Engine {version}",
-  "engineCounter": "Counter from the engine: {value}",
-  "@engineVersion": {
-    "placeholders": {
-      "version": {
-        "type": "String"
-      }
-    }
-  },
-  "@engineCounter": {
-    "placeholders": {
-      "value": {
-        "type": "int"
-      }
-    }
-  },
   "spikeTitle": "Texture spike",
   "spikeZeroCopy": "Zero copy",
   "spikePixelCopy": "Pixel copy",
@@ -36,6 +16,45 @@
   "@spikeReportSaved": {
     "placeholders": {
       "path": {
+        "type": "String"
+      }
+    }
+  },
+  "sectionClips": "Clips",
+  "sectionAudio": "Audio",
+  "sectionCaptions": "Captions",
+  "sectionEnhance": "Enhance",
+  "sectionExport": "Export",
+  "saved": "Saved",
+  "newShort": "New short",
+  "yourShorts": "Your shorts",
+  "emptyHomeTitle": "Your first short starts here",
+  "emptyHomeBody": "Add clips, record your voice, get captions, decorate, export.",
+  "settingsTitle": "Settings",
+  "aboutEngine": "Engine {version}",
+  "closeProject": "Close project",
+  "undo": "Undo",
+  "redo": "Redo",
+  "playPause": "Play or pause",
+  "allTracks": "All tracks",
+  "untitledProject": "Untitled short",
+  "previewPlaceholder": "Preview",
+  "timelinePlaceholder": "Timeline",
+  "inspectorTitle": "Properties",
+  "nothingSelected": "Nothing selected",
+  "toolsPlaceholder": "{section} tools arrive with their tickets.",
+  "onboardingTitle": "Welcome to Shorted",
+  "skip": "Skip",
+  "@aboutEngine": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "@toolsPlaceholder": {
+    "placeholders": {
+      "section": {
         "type": "String"
       }
     }

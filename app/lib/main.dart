@@ -9,7 +9,6 @@ import 'bridge/error.dart';
 import 'bridge/frb_generated.dart';
 import 'features/spike/spike_screen.dart';
 
-const _counterIntervalMs = 1000;
 const _runSpike = bool.fromEnvironment('SHORTED_SPIKE');
 
 Future<void> main() async {
@@ -19,10 +18,9 @@ Future<void> main() async {
   runApp(
     ShortedApp(
       engineVersion: engine.engineVersion(),
-      counter: engine
-          .counterStream(intervalMs: _counterIntervalMs)
-          .map((value) => value.toInt()),
-      home: _runSpike ? SpikeScreen(exitWhenDone: Platform.isMacOS) : null,
+      measurementScreen: _runSpike
+          ? SpikeScreen(exitWhenDone: Platform.isMacOS)
+          : null,
     ),
   );
 }

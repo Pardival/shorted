@@ -1,70 +1,58 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
+import '../design_system/theme.dart';
 import '../l10n/generated/app_localizations.dart';
+import 'router.dart';
 
-class ShortedApp extends StatelessWidget {
+class ShortedApp extends StatefulWidget {
   const ShortedApp({
     super.key,
     required this.engineVersion,
-    required this.counter,
-    this.home,
+    this.initialLocation = '/',
+    this.measurementScreen,
   });
 
   final String engineVersion;
-  final Stream<int> counter;
+  final String initialLocation;
 
-  /// Replaces the placeholder screen; used by measurement builds.
-  final Widget? home;
+  /// Replaces the whole app in measurement builds.
+  final Widget? measurementScreen;
+
+  @override
+  State<ShortedApp> createState() => _ShortedAppState();
+}
+
+class _ShortedAppState extends State<ShortedApp> {
+  late final GoRouter _router = createRouter(
+    engineVersion: widget.engineVersion,
+    initialLocation: widget.initialLocation,
+  );
+
+  @override
+  void dispose() {
+    _router.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    final measurement = widget.measurementScreen;
+    if (measurement != null) {
+      return MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: shortedTheme(),
+        home: measurement,
+      );
+    }
+    return MaterialApp.router(
       onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      theme: ThemeData.dark(useMaterial3: true),
-      home:
-          home ??
-          PlaceholderScreen(engineVersion: engineVersion, counter: counter),
-    );
-  }
-}
-
-/// Temporary screen until the real Home lands (T-1002).
-class PlaceholderScreen extends StatelessWidget {
-  const PlaceholderScreen({
-    super.key,
-    required this.engineVersion,
-    required this.counter,
-  });
-
-  final String engineVersion;
-  final Stream<int> counter;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final text = Theme.of(context).textTheme;
-    return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(l10n.appTitle, style: text.displayMedium),
-            const SizedBox(height: 8),
-            Text(l10n.placeholderTagline, style: text.bodyLarge),
-            const SizedBox(height: 24),
-            Text(l10n.engineVersion(engineVersion), style: text.bodyMedium),
-            StreamBuilder<int>(
-              stream: counter,
-              builder: (context, snapshot) => Text(
-                l10n.engineCounter(snapshot.data ?? 0),
-                style: text.bodyMedium,
-              ),
-            ),
-          ],
-        ),
-      ),
+      theme: shortedTheme(),
+      routerConfig: _router,
+      debugShowCheckedModeBanner: false,
     );
   }
 }

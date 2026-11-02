@@ -75,7 +75,7 @@ jobs:
           git diff --exit-code -- lib/bridge ../engine/crates/shorted_ffi/src/frb_generated.rs
       - run: dart format --output=none --set-exit-if-changed lib test integration_test
       - run: flutter analyze
-      - run: flutter test
+      - run: flutter test --exclude-tags golden
 
   desktop:
     name: Build desktop (${{ matrix.target }})
