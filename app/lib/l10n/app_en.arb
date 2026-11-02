@@ -207,6 +207,8 @@
       }
     }
   },
+  "moveTrackUp": "Move up",
+  "moveTrackDown": "Move down",
   "split": "Split",
   "exportTitle": "Export your short",
   "exportResolution": "Resolution",

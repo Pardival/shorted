@@ -19,6 +19,7 @@ use crate::transport::transport;
 
 /// Peaks per second of sound: fine enough for the closest timeline zoom.
 const PEAKS_PER_SECOND: usize = 100;
+const MIN_ITEM_US: i64 = 100_000;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum AudioRoleView {
@@ -285,6 +286,65 @@ pub async fn move_audio(
     })
 }
 
+/// The commands for dragging one edge of an item by `delta_us`, within its file. Dragging the
+/// start keeps the sound where it was: the item shortens or grows from the left.
+fn trim_commands(item: &AudioItem, media_us: i64, start: bool, delta_us: i64) -> Vec<Command> {
+    let id = item.id;
+    if start {
+        let delta = delta_us
+            .max(-item.source_in_us)
+            .max(-item.start_us)
+            .min(item.source_out_us - item.source_in_us - MIN_ITEM_US);
+        return vec![
+            Command::TrimAudio {
+                id,
+                source_in_us: item.source_in_us + delta,
+                source_out_us: item.source_out_us,
+            },
+            Command::MoveAudio {
+                id,
+                start_us: item.start_us + delta,
+                track: item.track,
+            },
+        ];
+    }
+    let shortest = item.source_in_us + MIN_ITEM_US;
+    vec![Command::TrimAudio {
+        id,
+        source_in_us: item.source_in_us,
+        source_out_us: (item.source_out_us + delta_us).clamp(shortest, media_us),
+    }]
+}
+
+/// Drags one edge of an item on the timeline, as one undo step.
+pub async fn trim_audio(
+    id: String,
+    start: bool,
+    delta_us: i64,
+) -> Result<ProjectView, EngineFailure> {
+    edit(move |project| {
+        let id = parse(&id)?;
+        let item = project.timeline.audio.iter().find(|item| item.id == id);
+        let item = item.ok_or_else(|| EngineError::Internal("unknown sound".into()))?;
+        let media = project.media.iter().find(|m| m.id == item.media_id);
+        let media_us = media.map_or(item.source_out_us, |m| m.probe.duration_us);
+        Ok(Command::Group {
+            label: "trim_audio".into(),
+            commands: trim_commands(item, media_us, start, delta_us),
+        })
+    })
+}
+
+/// Moves a user track up or down the list.
+pub async fn reorder_audio_track(id: String, to: u32) -> Result<ProjectView, EngineFailure> {
+    edit(move |_| {
+        Ok(Command::ReorderAudioTrack {
+            id: parse(&id)?,
+            to: to as usize,
+        })
+    })
+}
+
 pub async fn add_audio_track() -> Result<ProjectView, EngineFailure> {
     edit(|project| {
         let count = project.timeline.audio_tracks.len();
@@ -425,6 +485,64 @@ mod tests {
         let values = decode_peaks(&clip);
         assert!(values.len().abs_diff(200) < 10, "{}", values.len());
         assert!(values[100] > 10, "{}", values[100]);
+    }
+
+    fn placed_item() -> AudioItem {
+        let json = include_str!("../../../../fixtures/projects/v1_full.json");
+        let media = Project::from_json(json).unwrap().media.remove(0);
+        let mut item = audio_item(&media, AudioRole::Music, 2_000_000, Uuid::nil());
+        item.source_in_us = 1_000_000;
+        item.source_out_us = 3_000_000;
+        item
+    }
+
+    #[test]
+    fn dragging_the_start_keeps_the_sound_in_place() {
+        let item = placed_item();
+        let commands = trim_commands(&item, 9_000_000, true, 500_000);
+        assert!(matches!(
+            commands[0],
+            Command::TrimAudio {
+                source_in_us: 1_500_000,
+                ..
+            }
+        ));
+        assert!(matches!(
+            commands[1],
+            Command::MoveAudio {
+                start_us: 2_500_000,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn trims_stop_at_the_file_and_at_a_minimum_length() {
+        let item = placed_item();
+        let early = trim_commands(&item, 9_000_000, true, -9_000_000);
+        assert!(matches!(
+            early[0],
+            Command::TrimAudio {
+                source_in_us: 0,
+                ..
+            }
+        ));
+        let late = trim_commands(&item, 9_000_000, false, 99_000_000);
+        assert!(matches!(
+            late[0],
+            Command::TrimAudio {
+                source_out_us: 9_000_000,
+                ..
+            }
+        ));
+        let short = trim_commands(&item, 9_000_000, false, -99_000_000);
+        assert!(matches!(
+            short[0],
+            Command::TrimAudio {
+                source_out_us: 1_100_000,
+                ..
+            }
+        ));
     }
 
     #[test]

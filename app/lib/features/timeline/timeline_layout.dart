@@ -30,10 +30,14 @@ class TimelineTrack {
     this.muted = false,
     this.locked = false,
     this.hidden = false,
+    this.id,
   });
 
   final TrackKind kind;
   final String label;
+
+  /// Set for user audio tracks.
+  final String? id;
   final bool muted;
   final bool locked;
   final bool hidden;

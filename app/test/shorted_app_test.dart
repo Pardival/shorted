@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shorted/app/shorted_app.dart';
+import 'package:shorted/bridge/api/audio.dart';
 import 'package:shorted/bridge/api/projects.dart';
 import 'package:shorted/bridge/error.dart';
 import 'package:shorted/features/editor/editor_parts.dart';
@@ -329,6 +330,51 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Collapse timeline'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a sound moves along the timeline and to another track', (
+    tester,
+  ) async {
+    final gateway = FakeGateway();
+    final project = FakeProject('p1', 'Mine')
+      ..audioTracks.addAll([
+        AudioTrackView(
+          id: 't1',
+          name: 'Audio 1',
+          muted: false,
+          items: const [],
+        ),
+        AudioTrackView(
+          id: 't2',
+          name: 'Audio 2',
+          muted: false,
+          items: const [],
+        ),
+      ])
+      ..sounds['t1'] = ['s1'];
+    gateway.projects.add(project);
+    await open(
+      tester,
+      '/editor/p1/clips',
+      size: const Size(1280, 800),
+      gateway: gateway,
+    );
+    final view = find.byType(TimelineView);
+    // Below Widgets, Video, Captions and Voice-over.
+    Offset at(double x, int track) =>
+        tester.getTopLeft(view) + Offset(x, 24 + 36 * track + 12);
+    await tester.tapAt(at(108, 1));
+    await tester.pump(const Duration(milliseconds: 400));
+    final moved = tester.getTopLeft(view);
+    Offset after(double x, int track) =>
+        moved + Offset(x, 24 + 36 * track + 12);
+    final gesture = await tester.startGesture(after(108, 1));
+    await tester.pump();
+    await gesture.moveTo(after(148, 2));
+    await tester.pump();
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(gateway.audioCalls.single, 'move s1 1000000 t2');
   });
 
   testWidgets('the splash hands over to Home', (tester) async {

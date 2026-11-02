@@ -20,6 +20,9 @@ class FakeProject {
   final clips = <String>[];
   final stills = <String>{};
   final audioTracks = <AudioTrackView>[];
+
+  /// Items per user audio track, as timeline items.
+  final sounds = <String, List<String>>{};
   final titles = <String>[];
   final redone = <String>[];
 }
@@ -130,7 +133,17 @@ class FakeGateway implements ProjectGateway {
             muted: track.muted,
             locked: false,
             hidden: false,
-            items: const [],
+            items: [
+              for (final (index, sound)
+                  in (project.sounds[track.id] ?? []).indexed)
+                TrackItemView(
+                  sourceInUs: big(0),
+                  speed: 1,
+                  id: sound,
+                  startUs: big(index * 2000000),
+                  endUs: big(index * 2000000 + 1000000),
+                ),
+            ],
           ),
       ],
       media: project.media,
@@ -229,6 +242,21 @@ class FakeGateway implements ProjectGateway {
 
   @override
   Future<ProjectView> deleteAudio(String id) => _audio('delete $id');
+
+  @override
+  Future<ProjectView> moveAudio(String id, int startUs, String? trackId) =>
+      _audio('move $id $startUs $trackId');
+
+  @override
+  Future<ProjectView> trimAudio(
+    String id, {
+    required bool start,
+    required int deltaUs,
+  }) => _audio('trim $id $start $deltaUs');
+
+  @override
+  Future<ProjectView> reorderAudioTrack(String id, int to) =>
+      _audio('reorder $id $to');
 
   @override
   Future<ProjectView> addAudioTrack() => _audio('add track');

@@ -348,6 +348,11 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
     final isSound =
         track.kind == TrackKindView.audio ||
         track.kind == TrackKindView.voiceOver;
+    final users = [
+      for (final other in widget.view.tracks)
+        if (other.id != null) other.id,
+    ];
+    final userIndex = users.indexOf(id);
     final area = Overlay.of(context).context.findRenderObject()! as RenderBox;
     final choice = await showMenu<String>(
       context: context,
@@ -370,6 +375,10 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
           child: Text(track.hidden ? l10n.showTrack : l10n.hideTrack),
         ),
         if (id != null) ...[
+          if (userIndex > 0)
+            PopupMenuItem(value: 'up', child: Text(l10n.moveTrackUp)),
+          if (userIndex < users.length - 1)
+            PopupMenuItem(value: 'down', child: Text(l10n.moveTrackDown)),
           PopupMenuItem(value: 'rename', child: Text(l10n.renameTrack)),
           PopupMenuItem(value: 'remove', child: Text(l10n.removeTrack)),
         ],
@@ -394,6 +403,14 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
           () => _editor.apply(
             (gateway) => gateway.setTrackFlags(track, hidden: !track.hidden),
           ),
+        );
+      case 'up' when id != null:
+        await _guard(
+          () => _editor.apply((g) => g.reorderAudioTrack(id, userIndex - 1)),
+        );
+      case 'down' when id != null:
+        await _guard(
+          () => _editor.apply((g) => g.reorderAudioTrack(id, userIndex + 1)),
         );
       case 'rename':
         final name = await askTitle(context, track.name ?? '');
@@ -530,6 +547,7 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
                 TrackKindView.captions => l10n.trackCaptions,
                 _ => l10n.trackVoiceOver,
               },
+          id: track.id,
           muted: track.muted,
           locked: track.locked,
           hidden: track.hidden,
@@ -678,6 +696,20 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
               waveforms: _waveforms,
               collapsed: widget.collapsed,
               onTrackMenu: _trackMenu,
+              onAudioMove: (item, startUs, track) => _guard(
+                () => _editor.apply(
+                  (gateway) => gateway.moveAudio(item.id, startUs, track.id),
+                ),
+              ),
+              onAudioTrim: (item, start, deltaUs) => _guard(
+                () => _editor.apply(
+                  (gateway) => gateway.trimAudio(
+                    item.id,
+                    start: start,
+                    deltaUs: deltaUs,
+                  ),
+                ),
+              ),
               rangeUs: range,
               onRange: (next) => setState(() => _range = next),
               zoomRequests: widget.zoomRequests,

@@ -39,6 +39,8 @@ class TimelineView extends StatefulWidget {
     this.zoomRequests,
     this.collapsed = false,
     this.onTrackMenu,
+    this.onAudioMove,
+    this.onAudioTrim,
   });
 
   final List<TimelineTrack> tracks;
@@ -68,6 +70,13 @@ class TimelineView extends StatefulWidget {
 
   /// A track header was tapped: its index, and where, for a menu.
   final void Function(int index, Offset globalPosition)? onTrackMenu;
+
+  /// A sound dragged to a new time, and maybe to another sound track.
+  final void Function(TimelineItem item, int startUs, TimelineTrack track)?
+  onAudioMove;
+
+  /// A dragged edge of the selected sound: true for its start, the change in time.
+  final void Function(TimelineItem item, bool start, int deltaUs)? onAudioTrim;
 
   @override
   State<TimelineView> createState() => _TimelineViewState();
@@ -180,6 +189,7 @@ class _TimelineViewState extends State<TimelineView> {
     _drag = _DragKind.scrub;
     final index = _current.trackAt(position.dy, widget.tracks.length);
     if (index == null || _selectedId == null) return;
+    if (widget.tracks[index].locked) return;
     final time = _layout.timeForX(position.dx);
     final slop = (_handleWidth / _layout.pixelsPerSecond * 1e6).round();
     for (final item in widget.tracks[index].items) {
@@ -212,9 +222,20 @@ class _TimelineViewState extends State<TimelineView> {
     return snapped;
   }
 
-  void _updateDrag(double x) {
+  bool _isSound(int index) {
+    final kind = widget.tracks[index].kind;
+    return kind == TrackKind.audio || kind == TrackKind.voiceOver;
+  }
+
+  void _updateDrag(double x, double y) {
     final item = _dragItem;
     if (item == null) return;
+    if (_drag == _DragKind.move && _isSound(_dragTrack)) {
+      final over = _current.trackAt(y, widget.tracks.length);
+      if (over != null && _isSound(over) && !widget.tracks[over].locked) {
+        _dragTrack = over;
+      }
+    }
     final deltaUs = ((x - _dragStartX) / _layout.pixelsPerSecond * 1e6).round();
     setState(() {
       _dragPreview = switch (_drag) {
@@ -243,6 +264,20 @@ class _TimelineViewState extends State<TimelineView> {
     _dragItem = null;
     if (item == null || preview == null) return;
     final (_, start, end) = preview;
+    if (_isSound(_dragTrack)) {
+      switch (_drag) {
+        case _DragKind.trimStart:
+          widget.onAudioTrim?.call(item, true, start - item.startUs);
+        case _DragKind.trimEnd:
+          widget.onAudioTrim?.call(item, false, end - item.endUs);
+        case _DragKind.move:
+          final track = widget.tracks[_dragTrack];
+          widget.onAudioMove?.call(item, start < 0 ? 0 : start, track);
+        case _DragKind.scrub:
+          break;
+      }
+      return;
+    }
     switch (_drag) {
       case _DragKind.trimStart:
         widget.onTrim?.call(item, true, start - item.startUs);
@@ -329,7 +364,7 @@ class _TimelineViewState extends State<TimelineView> {
           _scrollBy(headerY - event.localPosition.dy);
           _headerDragY = event.localPosition.dy;
         } else if (_drag != _DragKind.scrub) {
-          _updateDrag(event.localPosition.dx);
+          _updateDrag(event.localPosition.dx, event.localPosition.dy);
         }
       },
       onPointerUp: _pointerGone,

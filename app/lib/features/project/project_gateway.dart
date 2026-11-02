@@ -67,6 +67,13 @@ abstract interface class ProjectGateway {
   });
   Future<ProjectView> setAudioLoop(String id, {required bool looped});
   Future<ProjectView> deleteAudio(String id);
+  Future<ProjectView> moveAudio(String id, int startUs, String? trackId);
+  Future<ProjectView> trimAudio(
+    String id, {
+    required bool start,
+    required int deltaUs,
+  });
+  Future<ProjectView> reorderAudioTrack(String id, int to);
   Future<ProjectView> addAudioTrack();
   Future<ProjectView> removeAudioTrack(String id);
   Future<ProjectView> renameAudioTrack(String id, String name);
@@ -253,6 +260,21 @@ class EngineGateway implements ProjectGateway {
 
   @override
   Future<ProjectView> deleteAudio(String id) => audio.deleteAudio(id: id);
+
+  @override
+  Future<ProjectView> moveAudio(String id, int startUs, String? trackId) =>
+      audio.moveAudio(id: id, startUs: startUs, trackId: trackId);
+
+  @override
+  Future<ProjectView> trimAudio(
+    String id, {
+    required bool start,
+    required int deltaUs,
+  }) => audio.trimAudio(id: id, start: start, deltaUs: deltaUs);
+
+  @override
+  Future<ProjectView> reorderAudioTrack(String id, int to) =>
+      audio.reorderAudioTrack(id: id, to: to);
 
   @override
   Future<ProjectView> addAudioTrack() => audio.addAudioTrack();

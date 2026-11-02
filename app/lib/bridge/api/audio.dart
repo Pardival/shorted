@@ -12,7 +12,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 import 'projects.dart';
 
-// These functions are ignored because they are not marked as `pub`: `audio_item`, `decode_peaks`, `item_views`, `new_track`, `peaks`, `sound_view`
+// These functions are ignored because they are not marked as `pub`: `audio_item`, `decode_peaks`, `item_views`, `new_track`, `peaks`, `sound_view`, `trim_commands`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `eq`, `from`, `from`
 
 /// The original sound of a clip (FR-AUD-02).
@@ -74,6 +74,21 @@ Future<ProjectView> moveAudio({
   startUs: startUs,
   trackId: trackId,
 );
+
+/// Drags one edge of an item on the timeline, as one undo step.
+Future<ProjectView> trimAudio({
+  required String id,
+  required bool start,
+  required PlatformInt64 deltaUs,
+}) => RustLib.instance.api.crateApiAudioTrimAudio(
+  id: id,
+  start: start,
+  deltaUs: deltaUs,
+);
+
+/// Moves a user track up or down the list.
+Future<ProjectView> reorderAudioTrack({required String id, required int to}) =>
+    RustLib.instance.api.crateApiAudioReorderAudioTrack(id: id, to: to);
 
 Future<ProjectView> addAudioTrack() =>
     RustLib.instance.api.crateApiAudioAddAudioTrack();

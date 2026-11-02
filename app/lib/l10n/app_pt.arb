@@ -130,6 +130,8 @@
   "showTrack": "Mostrar",
   "unmute": "Ativar som",
   "estimatedSize": "Cerca de {size} MB",
+  "moveTrackUp": "Subir",
+  "moveTrackDown": "Descer",
   "split": "Dividir",
   "exportTitle": "Exporte seu short",
   "exportResolution": "Resolução",
