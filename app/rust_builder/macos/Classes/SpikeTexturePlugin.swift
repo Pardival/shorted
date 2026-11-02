@@ -1,6 +1,12 @@
 import CoreVideo
-import FlutterMacOS
 import QuartzCore
+
+#if os(iOS)
+  import Flutter
+  import UIKit
+#else
+  import FlutterMacOS
+#endif
 
 // T-0005 spike: feeds a Flutter texture from the Rust renderer. See docs in the PR for the paths.
 @_silgen_name("shorted_spike_create")
@@ -165,8 +171,15 @@ public final class SpikeTexturePlugin: NSObject, FlutterPlugin {
   }
 
   public static func register(with registrar: FlutterPluginRegistrar) {
-    let channel = FlutterMethodChannel(name: "shorted/spike", binaryMessenger: registrar.messenger)
-    registrar.addMethodCallDelegate(SpikeTexturePlugin(textures: registrar.textures), channel: channel)
+    #if os(iOS)
+      let messenger = registrar.messenger()
+      let textures = registrar.textures()
+    #else
+      let messenger = registrar.messenger
+      let textures = registrar.textures
+    #endif
+    let channel = FlutterMethodChannel(name: "shorted/spike", binaryMessenger: messenger)
+    registrar.addMethodCallDelegate(SpikeTexturePlugin(textures: textures), channel: channel)
   }
 
   public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -187,6 +200,10 @@ public final class SpikeTexturePlugin: NSObject, FlutterPlugin {
       session.onFrame = { [textures] in textures.textureFrameAvailable(id) }
       active = (id, session)
       session.start()
+      #if os(iOS)
+        // The measurement runs untouched: the phone must not lock during it.
+        UIApplication.shared.isIdleTimerDisabled = true
+      #endif
       result(id)
     case "stats":
       result(active?.session.takeStats())
@@ -203,5 +220,8 @@ public final class SpikeTexturePlugin: NSObject, FlutterPlugin {
     textures.unregisterTexture(active.id)
     active.session.stop()
     self.active = nil
+    #if os(iOS)
+      UIApplication.shared.isIdleTimerDisabled = false
+    #endif
   }
 }
