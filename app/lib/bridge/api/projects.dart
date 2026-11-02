@@ -206,12 +206,33 @@ class TrackView {
 
   /// Set for user audio tracks; the others get their name from the app's translations.
   final String? name;
+
+  /// Set for user audio tracks.
+  final String? id;
+  final bool muted;
+  final bool locked;
+  final bool hidden;
   final List<TrackItemView> items;
 
-  const TrackView({required this.kind, this.name, required this.items});
+  const TrackView({
+    required this.kind,
+    this.name,
+    this.id,
+    required this.muted,
+    required this.locked,
+    required this.hidden,
+    required this.items,
+  });
 
   @override
-  int get hashCode => kind.hashCode ^ name.hashCode ^ items.hashCode;
+  int get hashCode =>
+      kind.hashCode ^
+      name.hashCode ^
+      id.hashCode ^
+      muted.hashCode ^
+      locked.hashCode ^
+      hidden.hashCode ^
+      items.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -220,5 +241,9 @@ class TrackView {
           runtimeType == other.runtimeType &&
           kind == other.kind &&
           name == other.name &&
+          id == other.id &&
+          muted == other.muted &&
+          locked == other.locked &&
+          hidden == other.hidden &&
           items == other.items;
 }

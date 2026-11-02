@@ -304,6 +304,33 @@ void main() {
     expect(find.byTooltip('Delete range'), findsNothing);
   });
 
+  testWidgets('a track header opens its menu and reaches the engine', (
+    tester,
+  ) async {
+    final project = FakeProject('p1', 'Mine')..clips.add('c1');
+    final gateway = FakeGateway()..projects.add(project);
+    await open(
+      tester,
+      '/editor/p1/clips',
+      size: const Size(1280, 800),
+      gateway: gateway,
+    );
+    final timeline = tester.getTopLeft(find.byType(TimelineView));
+    await tester.tapAt(timeline + const Offset(20, 40));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Lock'));
+    await tester.pumpAndSettle();
+    expect(gateway.audioCalls.single, 'flags video null true null');
+  });
+
+  testWidgets('on phones the timeline folds and unfolds', (tester) async {
+    await open(tester, '/editor/p1/clips');
+    await tester.tap(find.text('All tracks'));
+    await tester.pumpAndSettle();
+    expect(find.text('Collapse timeline'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('a project that cannot open shows a human message', (
     tester,
   ) async {

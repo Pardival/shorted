@@ -70,7 +70,12 @@ abstract interface class ProjectGateway {
   Future<ProjectView> addAudioTrack();
   Future<ProjectView> removeAudioTrack(String id);
   Future<ProjectView> renameAudioTrack(String id, String name);
-  Future<ProjectView> setAudioTrackMuted(String? id, {required bool muted});
+  Future<ProjectView> setTrackFlags(
+    TrackView track, {
+    bool? muted,
+    bool? locked,
+    bool? hidden,
+  });
   Future<Uint8List> peaks(String mediaId);
   Future<ProjectView> deleteRange(int startUs, int endUs);
   Future<ProjectView> muteRange(int startUs, int endUs);
@@ -259,8 +264,18 @@ class EngineGateway implements ProjectGateway {
       audio.renameAudioTrack(id: id, name: name);
 
   @override
-  Future<ProjectView> setAudioTrackMuted(String? id, {required bool muted}) =>
-      audio.setAudioTrackMuted(id: id, muted: muted);
+  Future<ProjectView> setTrackFlags(
+    TrackView track, {
+    bool? muted,
+    bool? locked,
+    bool? hidden,
+  }) => audio.setTrackFlags(
+    kind: track.kind,
+    id: track.id,
+    muted: muted ?? track.muted,
+    locked: locked ?? track.locked,
+    hidden: hidden ?? track.hidden,
+  );
 
   @override
   Future<ProjectView> setClipSpeed(String id, double speed) =>

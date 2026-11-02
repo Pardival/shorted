@@ -39,7 +39,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -2063639712;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1014069773;
 
 // Section: executor
 
@@ -1772,44 +1772,6 @@ fn wire__crate__api__audio__set_audio_sound_impl(
         },
     )
 }
-fn wire__crate__api__audio__set_audio_track_muted_impl(
-    port_: flutter_rust_bridge::for_generated::MessagePort,
-    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
-    rust_vec_len_: i32,
-    data_len_: i32,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "set_audio_track_muted",
-            port: Some(port_),
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
-        },
-        move || {
-            let message = unsafe {
-                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
-                    ptr_,
-                    rust_vec_len_,
-                    data_len_,
-                )
-            };
-            let mut deserializer =
-                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_id = <Option<String>>::sse_decode(&mut deserializer);
-            let api_muted = <bool>::sse_decode(&mut deserializer);
-            deserializer.end();
-            move |context| async move {
-                transform_result_sse::<_, crate::error::EngineFailure>(
-                    (move || async move {
-                        let output_ok =
-                            crate::api::audio::set_audio_track_muted(api_id, api_muted).await?;
-                        std::result::Result::Ok(output_ok)
-                    })()
-                    .await,
-                )
-            }
-        },
-    )
-}
 fn wire__crate__api__look__set_clip_color_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -1931,6 +1893,49 @@ fn wire__crate__api__look__set_clip_speed_impl(
                 transform_result_sse::<_, crate::error::EngineFailure>(
                     (move || async move {
                         let output_ok = crate::api::look::set_clip_speed(api_id, api_speed).await?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__audio__set_track_flags_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "set_track_flags",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_kind = <crate::api::projects::TrackKindView>::sse_decode(&mut deserializer);
+            let api_id = <Option<String>>::sse_decode(&mut deserializer);
+            let api_muted = <bool>::sse_decode(&mut deserializer);
+            let api_locked = <bool>::sse_decode(&mut deserializer);
+            let api_hidden = <bool>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, crate::error::EngineFailure>(
+                    (move || async move {
+                        let output_ok = crate::api::audio::set_track_flags(
+                            api_kind, api_id, api_muted, api_locked, api_hidden,
+                        )
+                        .await?;
                         std::result::Result::Ok(output_ok)
                     })()
                     .await,
@@ -2909,10 +2914,18 @@ impl SseDecode for crate::api::projects::TrackView {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_kind = <crate::api::projects::TrackKindView>::sse_decode(deserializer);
         let mut var_name = <Option<String>>::sse_decode(deserializer);
+        let mut var_id = <Option<String>>::sse_decode(deserializer);
+        let mut var_muted = <bool>::sse_decode(deserializer);
+        let mut var_locked = <bool>::sse_decode(deserializer);
+        let mut var_hidden = <bool>::sse_decode(deserializer);
         let mut var_items = <Vec<crate::api::projects::TrackItemView>>::sse_decode(deserializer);
         return crate::api::projects::TrackView {
             kind: var_kind,
             name: var_name,
+            id: var_id,
+            muted: var_muted,
+            locked: var_locked,
+            hidden: var_hidden,
             items: var_items,
         };
     }
@@ -3012,12 +3025,10 @@ fn pde_ffi_dispatcher_primary_impl(
         46 => wire__crate__api__audio__set_audio_loop_impl(port, ptr, rust_vec_len, data_len),
         47 => wire__crate__api__audio__set_audio_role_impl(port, ptr, rust_vec_len, data_len),
         48 => wire__crate__api__audio__set_audio_sound_impl(port, ptr, rust_vec_len, data_len),
-        49 => {
-            wire__crate__api__audio__set_audio_track_muted_impl(port, ptr, rust_vec_len, data_len)
-        }
-        50 => wire__crate__api__look__set_clip_color_impl(port, ptr, rust_vec_len, data_len),
-        51 => wire__crate__api__audio__set_clip_sound_impl(port, ptr, rust_vec_len, data_len),
-        52 => wire__crate__api__look__set_clip_speed_impl(port, ptr, rust_vec_len, data_len),
+        49 => wire__crate__api__look__set_clip_color_impl(port, ptr, rust_vec_len, data_len),
+        50 => wire__crate__api__audio__set_clip_sound_impl(port, ptr, rust_vec_len, data_len),
+        51 => wire__crate__api__look__set_clip_speed_impl(port, ptr, rust_vec_len, data_len),
+        52 => wire__crate__api__audio__set_track_flags_impl(port, ptr, rust_vec_len, data_len),
         53 => {
             wire__crate__api__look__set_transition_for_all_impl(port, ptr, rust_vec_len, data_len)
         }
@@ -3533,6 +3544,10 @@ impl flutter_rust_bridge::IntoDart for crate::api::projects::TrackView {
         [
             self.kind.into_into_dart().into_dart(),
             self.name.into_into_dart().into_dart(),
+            self.id.into_into_dart().into_dart(),
+            self.muted.into_into_dart().into_dart(),
+            self.locked.into_into_dart().into_dart(),
+            self.hidden.into_into_dart().into_dart(),
             self.items.into_into_dart().into_dart(),
         ]
         .into_dart()
@@ -4103,6 +4118,10 @@ impl SseEncode for crate::api::projects::TrackView {
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <crate::api::projects::TrackKindView>::sse_encode(self.kind, serializer);
         <Option<String>>::sse_encode(self.name, serializer);
+        <Option<String>>::sse_encode(self.id, serializer);
+        <bool>::sse_encode(self.muted, serializer);
+        <bool>::sse_encode(self.locked, serializer);
+        <bool>::sse_encode(self.hidden, serializer);
         <Vec<crate::api::projects::TrackItemView>>::sse_encode(self.items, serializer);
     }
 }

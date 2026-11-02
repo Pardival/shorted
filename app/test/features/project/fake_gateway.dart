@@ -107,6 +107,9 @@ class FakeGateway implements ProjectGateway {
       tracks: [
         TrackView(
           kind: TrackKindView.video,
+          muted: false,
+          locked: false,
+          hidden: false,
           items: [
             for (final (index, clip) in project.clips.indexed)
               TrackItemView(
@@ -119,6 +122,16 @@ class FakeGateway implements ProjectGateway {
               ),
           ],
         ),
+        for (final track in project.audioTracks)
+          TrackView(
+            kind: TrackKindView.audio,
+            id: track.id,
+            name: track.name,
+            muted: track.muted,
+            locked: false,
+            hidden: false,
+            items: const [],
+          ),
       ],
       media: project.media,
       sound: SoundView(
@@ -228,8 +241,12 @@ class FakeGateway implements ProjectGateway {
       _audio('rename $id $name');
 
   @override
-  Future<ProjectView> setAudioTrackMuted(String? id, {required bool muted}) =>
-      _audio('mute $id $muted');
+  Future<ProjectView> setTrackFlags(
+    TrackView track, {
+    bool? muted,
+    bool? locked,
+    bool? hidden,
+  }) => _audio('flags ${track.kind.name} $muted $locked $hidden');
 
   @override
   Future<Uint8List> peaks(String mediaId) async => Uint8List(0);

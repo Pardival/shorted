@@ -37,6 +37,8 @@ class TimelineView extends StatefulWidget {
     this.rangeUs,
     this.onRange,
     this.zoomRequests,
+    this.collapsed = false,
+    this.onTrackMenu,
   });
 
   final List<TimelineTrack> tracks;
@@ -60,6 +62,12 @@ class TimelineView extends StatefulWidget {
 
   /// Each value multiplies the zoom, around the playhead.
   final Stream<double>? zoomRequests;
+
+  /// Phone layout: the Video track and a thin strip per other track.
+  final bool collapsed;
+
+  /// A track header was tapped: its index, and where, for a menu.
+  final void Function(int index, Offset globalPosition)? onTrackMenu;
 
   @override
   State<TimelineView> createState() => _TimelineViewState();
@@ -118,7 +126,37 @@ class _TimelineViewState extends State<TimelineView> {
     widget.onRange?.call(time < anchor ? (time, anchor) : (anchor, time));
   }
 
+  double _viewportHeight = 0;
+  double? _headerDragY;
+
+  int? get _pinnedIndex {
+    final index = widget.tracks.indexWhere((t) => t.kind == TrackKind.video);
+    return index < 0 ? null : index;
+  }
+
+  /// The layout for the current tracks: they come and go, and the widget can resize.
+  TimelineLayout get _current {
+    final layout = _layout.copyWith(
+      pinnedIndex: _pinnedIndex,
+      collapsed: widget.collapsed,
+    );
+    final most = layout.maxScrollY(widget.tracks.length, _viewportHeight);
+    return layout.copyWith(scrollY: layout.scrollY.clamp(0, most));
+  }
+
+  void _scrollBy(double dy) {
+    final most = _current.maxScrollY(widget.tracks.length, _viewportHeight);
+    setState(() {
+      _layout = _current.copyWith(
+        scrollY: (_current.scrollY + dy).clamp(0, most),
+      );
+    });
+  }
+
   void _pointerDown(PointerDownEvent event) {
+    if (event.localPosition.dx < _layout.headerWidth) {
+      _headerDragY = event.localPosition.dy;
+    }
     _pointers++;
     if (_pointers == 1) {
       _beginDrag(event.localPosition);
@@ -131,6 +169,7 @@ class _TimelineViewState extends State<TimelineView> {
   }
 
   void _pointerGone(PointerEvent event) {
+    _headerDragY = null;
     _pointers--;
     if (_drag != _DragKind.scrub) _endDrag();
     _drag = _DragKind.scrub;
@@ -139,7 +178,7 @@ class _TimelineViewState extends State<TimelineView> {
   /// Decides at touch down what this drag does: only the selected item can be edited.
   void _beginDrag(Offset position) {
     _drag = _DragKind.scrub;
-    final index = _layout.trackAt(position.dy, widget.tracks.length);
+    final index = _current.trackAt(position.dy, widget.tracks.length);
     if (index == null || _selectedId == null) return;
     final time = _layout.timeForX(position.dx);
     final slop = (_handleWidth / _layout.pixelsPerSecond * 1e6).round();
@@ -232,12 +271,19 @@ class _TimelineViewState extends State<TimelineView> {
   void _tap(TapUpDetails details) {
     final position = details.localPosition;
     if (widget.rangeUs != null) widget.onRange?.call(null);
-    final index = _layout.trackAt(position.dy, widget.tracks.length);
+    if (position.dx < _current.headerWidth) {
+      final index = _current.trackAt(position.dy, widget.tracks.length);
+      if (index != null) {
+        widget.onTrackMenu?.call(index, details.globalPosition);
+      }
+      return;
+    }
+    final index = _current.trackAt(position.dy, widget.tracks.length);
     if (index == null) {
       _scrub(position.dx);
       return;
     }
-    final item = _layout.itemAt(
+    final item = _current.itemAt(
       widget.tracks[index],
       _layout.timeForX(position.dx),
     );
@@ -247,18 +293,44 @@ class _TimelineViewState extends State<TimelineView> {
 
   void _onPointerSignal(PointerSignalEvent event) {
     if (event is! PointerScrollEvent) return;
-    final factor = 1 - event.scrollDelta.dy * _wheelZoomSpeed;
-    setState(() => _layout = _layout.zoomed(factor, event.localPosition.dx));
+    final keys = HardwareKeyboard.instance;
+    final zooming = keys.isMetaPressed || keys.isControlPressed;
+    final overflow = _current.maxScrollY(widget.tracks.length, _viewportHeight);
+    if (event.scrollDelta.dx != 0 && !zooming) {
+      final deltaUs = event.scrollDelta.dx / _layout.pixelsPerSecond * 1e6;
+      final next = (_layout.scrollUs + deltaUs).round();
+      setState(() => _layout = _layout.copyWith(scrollUs: next < 0 ? 0 : next));
+    } else if (overflow > 0 && !zooming) {
+      _scrollBy(event.scrollDelta.dy);
+    } else {
+      final factor = 1 - event.scrollDelta.dy * _wheelZoomSpeed;
+      setState(() => _layout = _layout.zoomed(factor, event.localPosition.dx));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, box) {
+        _viewportHeight = box.maxHeight;
+        return _gestures(context);
+      },
+    );
+  }
+
+  Widget _gestures(BuildContext context) {
     return Listener(
       // Edits use raw pointers: the scale gesture only starts after 36 pixels, far too much
       // for a precise trim.
       onPointerDown: _pointerDown,
       onPointerMove: (event) {
-        if (_drag != _DragKind.scrub) _updateDrag(event.localPosition.dx);
+        final headerY = _headerDragY;
+        if (headerY != null) {
+          _scrollBy(headerY - event.localPosition.dy);
+          _headerDragY = event.localPosition.dy;
+        } else if (_drag != _DragKind.scrub) {
+          _updateDrag(event.localPosition.dx);
+        }
       },
       onPointerUp: _pointerGone,
       onPointerCancel: _pointerGone,
@@ -287,7 +359,7 @@ class _TimelineViewState extends State<TimelineView> {
               child: CustomPaint(
                 key: TimelineView.tracksKey,
                 painter: TimelinePainter(
-                  layout: _layout,
+                  layout: _current,
                   tracks: widget.tracks,
                   durationUs: widget.durationUs,
                   selectedId: _selectedId,
@@ -302,7 +374,7 @@ class _TimelineViewState extends State<TimelineView> {
             RepaintBoundary(
               child: CustomPaint(
                 painter: PlayheadPainter(
-                  layout: _layout,
+                  layout: _current,
                   playheadUs: widget.playheadUs,
                 ),
               ),

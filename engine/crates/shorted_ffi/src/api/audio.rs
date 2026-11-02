@@ -13,7 +13,7 @@ use uuid::Uuid;
 
 use crate::api::clips::{edit, parse};
 use crate::api::media::resolve;
-use crate::api::projects::{on_command_thread, view_of, with_active, ProjectView};
+use crate::api::projects::{on_command_thread, view_of, with_active, ProjectView, TrackKindView};
 use crate::error::{EngineError, EngineFailure};
 use crate::transport::transport;
 
@@ -310,30 +310,32 @@ pub async fn rename_audio_track(id: String, name: String) -> Result<ProjectView,
     })
 }
 
-/// Mutes the Voice-over track when `id` is None.
-pub async fn set_audio_track_muted(
+/// Mute, lock and hide for any track: a user audio track when `id` is set, else `kind`.
+pub async fn set_track_flags(
+    kind: TrackKindView,
     id: Option<String>,
     muted: bool,
+    locked: bool,
+    hidden: bool,
 ) -> Result<ProjectView, EngineFailure> {
-    edit(move |project| match id {
-        Some(id) => {
-            let id = parse(&id)?;
-            let track = project.timeline.audio_tracks.iter().find(|t| t.id == id);
-            let track = track.ok_or_else(|| EngineError::Internal("unknown track".into()))?;
-            Ok(Command::SetAudioTrackFlags {
-                id,
-                flags: TrackFlags {
-                    muted,
-                    ..track.flags
-                },
-            })
-        }
+    let flags = TrackFlags {
+        muted,
+        locked,
+        hidden,
+    };
+    edit(move |_| match id {
+        Some(id) => Ok(Command::SetAudioTrackFlags {
+            id: parse(&id)?,
+            flags,
+        }),
         None => Ok(Command::SetTrackFlags {
-            track: TrackKind::VoiceOver,
-            flags: TrackFlags {
-                muted,
-                ..project.timeline.track_flags.voice_over
+            track: match kind {
+                TrackKindView::Widgets => TrackKind::Widgets,
+                TrackKindView::Video => TrackKind::Video,
+                TrackKindView::Captions => TrackKind::Captions,
+                _ => TrackKind::VoiceOver,
             },
+            flags,
         }),
     })
 }

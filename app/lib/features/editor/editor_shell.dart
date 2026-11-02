@@ -15,6 +15,7 @@ import 'editor_parts.dart';
 import 'editor_section.dart';
 
 const _phoneTimelineHeight = 132.0;
+const _phoneExpandedTimelineHeight = 320.0;
 const _desktopTimelineHeight = 220.0;
 
 /// The section lives in the route, so resizing the window keeps it (T-0202).
@@ -38,6 +39,7 @@ const _zoomStep = 1.25;
 
 class _EditorShellState extends ConsumerState<EditorShell> {
   final _playheadUs = ValueNotifier<int>(0);
+  var _expanded = false;
   final _transport = GlobalKey<TransportBarState>();
   final _zoomRequests = StreamController<double>.broadcast();
 
@@ -226,10 +228,14 @@ class _EditorShellState extends ConsumerState<EditorShell> {
         const Expanded(flex: 5, child: PreviewArea()),
         transport,
         TimelineArea(
-          height: _phoneTimelineHeight,
+          height: _expanded
+              ? _phoneExpandedTimelineHeight
+              : _phoneTimelineHeight,
           view: state.view,
           playheadUs: _playheadUs,
           zoomRequests: _zoomRequests.stream,
+          collapsed: !_expanded,
+          onToggleExpanded: () => setState(() => _expanded = !_expanded),
         ),
         Expanded(flex: 3, child: _panel(state)),
         SectionBar(selected: section, onSelect: (s) => _select(context, s)),

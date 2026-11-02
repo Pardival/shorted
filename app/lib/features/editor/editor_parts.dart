@@ -315,6 +315,8 @@ class TimelineArea extends ConsumerStatefulWidget {
   const TimelineArea({
     super.key,
     this.zoomRequests,
+    this.collapsed = false,
+    this.onToggleExpanded,
     required this.height,
     required this.view,
     required this.playheadUs,
@@ -322,6 +324,10 @@ class TimelineArea extends ConsumerStatefulWidget {
 
   final double height;
   final Stream<double>? zoomRequests;
+  final bool collapsed;
+
+  /// Offered on phones, where the timeline folds.
+  final VoidCallback? onToggleExpanded;
   final ProjectView view;
   final ValueNotifier<int> playheadUs;
 
@@ -331,6 +337,99 @@ class TimelineArea extends ConsumerStatefulWidget {
 
 class _TimelineAreaState extends ConsumerState<TimelineArea> {
   (int, int)? _range;
+
+  /// A selected sound: its tools show whatever the section.
+  String? _audioItem;
+
+  Future<void> _trackMenu(int index, Offset position) async {
+    final l10n = AppLocalizations.of(context);
+    final track = widget.view.tracks[index];
+    final id = track.id;
+    final isSound =
+        track.kind == TrackKindView.audio ||
+        track.kind == TrackKindView.voiceOver;
+    final area = Overlay.of(context).context.findRenderObject()! as RenderBox;
+    final choice = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromRect(
+        position & Size.zero,
+        Offset.zero & area.size,
+      ),
+      items: [
+        if (isSound || track.kind == TrackKindView.video)
+          PopupMenuItem(
+            value: 'mute',
+            child: Text(track.muted ? l10n.unmute : l10n.mute),
+          ),
+        PopupMenuItem(
+          value: 'lock',
+          child: Text(track.locked ? l10n.unlockTrack : l10n.lockTrack),
+        ),
+        PopupMenuItem(
+          value: 'hide',
+          child: Text(track.hidden ? l10n.showTrack : l10n.hideTrack),
+        ),
+        if (id != null) ...[
+          PopupMenuItem(value: 'rename', child: Text(l10n.renameTrack)),
+          PopupMenuItem(value: 'remove', child: Text(l10n.removeTrack)),
+        ],
+      ],
+    );
+    if (!mounted || choice == null) return;
+    switch (choice) {
+      case 'mute':
+        await _guard(
+          () => _editor.apply(
+            (gateway) => gateway.setTrackFlags(track, muted: !track.muted),
+          ),
+        );
+      case 'lock':
+        await _guard(
+          () => _editor.apply(
+            (gateway) => gateway.setTrackFlags(track, locked: !track.locked),
+          ),
+        );
+      case 'hide':
+        await _guard(
+          () => _editor.apply(
+            (gateway) => gateway.setTrackFlags(track, hidden: !track.hidden),
+          ),
+        );
+      case 'rename':
+        final name = await askTitle(context, track.name ?? '');
+        if (name != null && id != null) {
+          await _guard(
+            () => _editor.apply((g) => g.renameAudioTrack(id, name)),
+          );
+        }
+      case 'remove':
+        if (id == null) return;
+        if (track.items.isNotEmpty && !await _confirmRemove()) return;
+        await _guard(() => _editor.apply((g) => g.removeAudioTrack(id)));
+    }
+  }
+
+  Future<bool> _confirmRemove() async {
+    final l10n = AppLocalizations.of(context);
+    final sure = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.removeTrack),
+        content: Text(l10n.removeTrackBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(l10n.delete),
+          ),
+        ],
+      ),
+    );
+    return sure ?? false;
+  }
 
   /// The selected clip, for the tools. Other tracks get their tools with their tickets.
   TimelineItem? _clip;
@@ -397,6 +496,13 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
     return null;
   }
 
+  bool _isSound(TimelineItem item) => widget.view.tracks.any(
+    (track) =>
+        (track.kind == TrackKindView.audio ||
+            track.kind == TrackKindView.voiceOver) &&
+        track.items.any((other) => other.id == item.id),
+  );
+
   bool _isClip(TimelineItem item) => widget.view.tracks.any(
     (track) =>
         track.kind == TrackKindView.video &&
@@ -424,6 +530,9 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
                 TrackKindView.captions => l10n.trackCaptions,
                 _ => l10n.trackVoiceOver,
               },
+          muted: track.muted,
+          locked: track.locked,
+          hidden: track.hidden,
           items: [
             for (final item in track.items)
               TimelineItem(
@@ -453,10 +562,22 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
     final cropping = ref.watch(cropTargetProvider) != null;
     ref.watch(selectedClipProvider);
     final slowZoom = clip == null ? null : _slowZoom(clip);
-    return SizedBox(
+    return AnimatedContainer(
+      duration: motionDuration(context, ShortedMotion.section),
+      curve: Curves.easeOutCubic,
       height: widget.height,
       child: Column(
         children: [
+          if (widget.onToggleExpanded != null)
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: widget.onToggleExpanded,
+                child: Text(
+                  widget.collapsed ? l10n.allTracks : l10n.collapseTimeline,
+                ),
+              ),
+            ),
           if (range != null)
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -485,6 +606,20 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
                   icon: Icons.close,
                   tooltip: l10n.clearRange,
                   onPressed: () => setState(() => _range = null),
+                ),
+              ],
+            )
+          else if (_audioItem case final sound?)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ShortedIconButton(
+                  icon: Icons.delete_outline,
+                  tooltip: l10n.delete,
+                  onPressed: () {
+                    setState(() => _audioItem = null);
+                    _guard(() => _editor.apply((g) => g.deleteAudio(sound)));
+                  },
                 ),
               ],
             )
@@ -541,6 +676,8 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
               playheadUs: widget.playheadUs,
               filmstrips: _filmstrips,
               waveforms: _waveforms,
+              collapsed: widget.collapsed,
+              onTrackMenu: _trackMenu,
               rangeUs: range,
               onRange: (next) => setState(() => _range = next),
               zoomRequests: widget.zoomRequests,
@@ -548,6 +685,7 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
                 _stopCropping();
                 setState(() {
                   _clip = item != null && _isClip(item) ? item : null;
+                  _audioItem = item != null && _isSound(item) ? item.id : null;
                 });
                 ref.read(selectedClipProvider.notifier).set(_clip?.id);
               },

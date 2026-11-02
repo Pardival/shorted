@@ -86,9 +86,20 @@ Future<ProjectView> renameAudioTrack({
   required String name,
 }) => RustLib.instance.api.crateApiAudioRenameAudioTrack(id: id, name: name);
 
-/// Mutes the Voice-over track when `id` is None.
-Future<ProjectView> setAudioTrackMuted({String? id, required bool muted}) =>
-    RustLib.instance.api.crateApiAudioSetAudioTrackMuted(id: id, muted: muted);
+/// Mute, lock and hide for any track: a user audio track when `id` is set, else `kind`.
+Future<ProjectView> setTrackFlags({
+  required TrackKindView kind,
+  String? id,
+  required bool muted,
+  required bool locked,
+  required bool hidden,
+}) => RustLib.instance.api.crateApiAudioSetTrackFlags(
+  kind: kind,
+  id: id,
+  muted: muted,
+  locked: locked,
+  hidden: hidden,
+);
 
 /// The waveform of a media, 100 values per second, from the cache when possible.
 Future<Uint8List> mediaPeaks({required String mediaId}) =>

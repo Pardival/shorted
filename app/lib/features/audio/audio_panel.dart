@@ -68,7 +68,18 @@ class AudioPanel extends ConsumerWidget {
               : null,
         ),
         for (final track in view.sound.tracks)
-          _Track(track: track, media: view.media, run: run),
+          _Track(
+            track: track,
+            timelineTrack: view.tracks.firstWhere(
+              (candidate) =>
+                  candidate.id == track.id &&
+                  candidate.kind != TrackKindView.widgets &&
+                  candidate.kind != TrackKindView.video &&
+                  candidate.kind != TrackKindView.captions,
+            ),
+            media: view.media,
+            run: run,
+          ),
         _Heading(l10n.originalSound),
         for (final (index, clip) in view.sound.clips.indexed)
           _SoundRow(
@@ -140,9 +151,15 @@ typedef _Run = Future<void> Function(
 );
 
 class _Track extends StatelessWidget {
-  const _Track({required this.track, required this.media, required this.run});
+  const _Track({
+    required this.track,
+    required this.timelineTrack,
+    required this.media,
+    required this.run,
+  });
 
   final AudioTrackView track;
+  final TrackView timelineTrack;
   final List<MediaItemView> media;
   final _Run run;
 
@@ -200,7 +217,7 @@ class _Track extends StatelessWidget {
               tooltip: l10n.mute,
               onPressed: () => run(
                 (gateway) =>
-                    gateway.setAudioTrackMuted(id, muted: !track.muted),
+                    gateway.setTrackFlags(timelineTrack, muted: !track.muted),
               ),
             ),
             if (id != null) ...[

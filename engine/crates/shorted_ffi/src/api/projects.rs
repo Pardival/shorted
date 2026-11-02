@@ -55,6 +55,11 @@ pub struct TrackView {
     pub kind: TrackKindView,
     /// Set for user audio tracks; the others get their name from the app's translations.
     pub name: Option<String>,
+    /// Set for user audio tracks.
+    pub id: Option<String>,
+    pub muted: bool,
+    pub locked: bool,
+    pub hidden: bool,
     pub items: Vec<TrackItemView>,
 }
 
@@ -306,11 +311,19 @@ fn track_view(session: &ProjectSession) -> Vec<TrackView> {
         TrackView {
             kind: TrackKindView::Widgets,
             name: None,
+            id: None,
+            muted: timeline.track_flags.widgets.muted,
+            locked: timeline.track_flags.widgets.locked,
+            hidden: timeline.track_flags.widgets.hidden,
             items: overlays,
         },
         TrackView {
             kind: TrackKindView::Video,
             name: None,
+            id: None,
+            muted: timeline.track_flags.video.muted,
+            locked: timeline.track_flags.video.locked,
+            hidden: timeline.track_flags.video.hidden,
             items: clip_positions(project)
                 .into_iter()
                 .zip(&timeline.clips)
@@ -330,17 +343,29 @@ fn track_view(session: &ProjectSession) -> Vec<TrackView> {
         TrackView {
             kind: TrackKindView::Captions,
             name: None,
+            id: None,
+            muted: timeline.track_flags.captions.muted,
+            locked: timeline.track_flags.captions.locked,
+            hidden: timeline.track_flags.captions.hidden,
             items: Vec::new(),
         },
         TrackView {
             kind: TrackKindView::VoiceOver,
             name: None,
+            id: None,
+            muted: timeline.track_flags.voice_over.muted,
+            locked: timeline.track_flags.voice_over.locked,
+            hidden: timeline.track_flags.voice_over.hidden,
             items: audio_on(AudioTrackRef::VoiceOver),
         },
     ];
     tracks.extend(timeline.audio_tracks.iter().map(|track| TrackView {
         kind: TrackKindView::Audio,
         name: Some(track.name.clone()),
+        id: Some(track.id.to_string()),
+        muted: track.flags.muted,
+        locked: track.flags.locked,
+        hidden: track.flags.hidden,
         items: audio_on(AudioTrackRef::User(track.id)),
     }));
     tracks

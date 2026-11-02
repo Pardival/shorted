@@ -24,6 +24,7 @@ Widget harness(Widget child) => MaterialApp(
 );
 
 void main() {
+  scrollingGeometry();
   test('time and pixels convert both ways', () {
     expect(layout.xForTime(2000000), 250);
     expect(layout.timeForX(250), 2000000);
@@ -192,5 +193,35 @@ void main() {
     await tester.tapAt(origin + const Offset(700, 40));
     await tester.pump(const Duration(milliseconds: 400));
     expect(selected, ['0', null]);
+  });
+}
+
+void scrollingGeometry() {
+  const layout = TimelineLayout(
+    pixelsPerSecond: 40,
+    scrollUs: 0,
+    headerWidth: 88,
+    rulerHeight: 20,
+    trackHeight: 30,
+    scrollY: 40,
+    pinnedIndex: 1,
+  );
+  test('tracks scroll under a pinned Video track', () {
+    expect(layout.topOfTrack(1), 20);
+    expect(layout.topOfTrack(3), 70);
+    expect(layout.trackAt(25, 5), 1);
+    expect(layout.trackAt(75, 5), 3);
+    expect(layout.maxScrollY(5, 100), 70);
+    expect(layout.maxScrollY(2, 100), 0);
+  });
+  test('collapsed tracks are the video and thin strips', () {
+    final collapsed = layout.copyWith(collapsed: true);
+    expect(collapsed.heightOfTrack(1), 30);
+    expect(collapsed.heightOfTrack(0), 6);
+    expect(collapsed.topOfTrack(1), 20);
+    expect(collapsed.topOfTrack(0), 50);
+    expect(collapsed.topOfTrack(2), 56);
+    expect(collapsed.maxScrollY(5, 40), 0);
+    expect(collapsed.trackAt(52, 5), 0);
   });
 }

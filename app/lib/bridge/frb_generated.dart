@@ -79,7 +79,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => -2063639712;
+  int get rustContentHash => 1014069773;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -252,11 +252,6 @@ abstract class RustLibApi extends BaseApi {
     required PlatformInt64 fadeOutUs,
   });
 
-  Future<ProjectView> crateApiAudioSetAudioTrackMuted({
-    String? id,
-    required bool muted,
-  });
-
   Future<ProjectView> crateApiLookSetClipColor({
     required String id,
     required double brightness,
@@ -275,6 +270,14 @@ abstract class RustLibApi extends BaseApi {
   Future<ProjectView> crateApiLookSetClipSpeed({
     required String id,
     required double speed,
+  });
+
+  Future<ProjectView> crateApiAudioSetTrackFlags({
+    required TrackKindView kind,
+    String? id,
+    required bool muted,
+    required bool locked,
+    required bool hidden,
   });
 
   Future<ProjectView> crateApiLookSetTransitionForAll({
@@ -1753,41 +1756,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   );
 
   @override
-  Future<ProjectView> crateApiAudioSetAudioTrackMuted({
-    String? id,
-    required bool muted,
-  }) {
-    return handler.executeNormal(
-      NormalTask(
-        callFfi: (port_) {
-          final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_opt_String(id, serializer);
-          sse_encode_bool(muted, serializer);
-          pdeCallFfi(
-            generalizedFrbRustBinding,
-            serializer,
-            funcId: 49,
-            port: port_,
-          );
-        },
-        codec: SseCodec(
-          decodeSuccessData: sse_decode_project_view,
-          decodeErrorData: sse_decode_engine_failure,
-        ),
-        constMeta: kCrateApiAudioSetAudioTrackMutedConstMeta,
-        argValues: [id, muted],
-        apiImpl: this,
-      ),
-    );
-  }
-
-  TaskConstMeta get kCrateApiAudioSetAudioTrackMutedConstMeta =>
-      const TaskConstMeta(
-        debugName: "set_audio_track_muted",
-        argNames: ["id", "muted"],
-      );
-
-  @override
   Future<ProjectView> crateApiLookSetClipColor({
     required String id,
     required double brightness,
@@ -1805,7 +1773,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 50,
+            funcId: 49,
             port: port_,
           );
         },
@@ -1845,7 +1813,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 51,
+            funcId: 50,
             port: port_,
           );
         },
@@ -1879,7 +1847,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 52,
+            funcId: 51,
             port: port_,
           );
         },
@@ -1897,6 +1865,46 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiLookSetClipSpeedConstMeta => const TaskConstMeta(
     debugName: "set_clip_speed",
     argNames: ["id", "speed"],
+  );
+
+  @override
+  Future<ProjectView> crateApiAudioSetTrackFlags({
+    required TrackKindView kind,
+    String? id,
+    required bool muted,
+    required bool locked,
+    required bool hidden,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_track_kind_view(kind, serializer);
+          sse_encode_opt_String(id, serializer);
+          sse_encode_bool(muted, serializer);
+          sse_encode_bool(locked, serializer);
+          sse_encode_bool(hidden, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 52,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiAudioSetTrackFlagsConstMeta,
+        argValues: [kind, id, muted, locked, hidden],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAudioSetTrackFlagsConstMeta => const TaskConstMeta(
+    debugName: "set_track_flags",
+    argNames: ["kind", "id", "muted", "locked", "hidden"],
   );
 
   @override
@@ -2633,12 +2641,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TrackView dco_decode_track_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 3)
-      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
     return TrackView(
       kind: dco_decode_track_kind_view(arr[0]),
       name: dco_decode_opt_String(arr[1]),
-      items: dco_decode_list_track_item_view(arr[2]),
+      id: dco_decode_opt_String(arr[2]),
+      muted: dco_decode_bool(arr[3]),
+      locked: dco_decode_bool(arr[4]),
+      hidden: dco_decode_bool(arr[5]),
+      items: dco_decode_list_track_item_view(arr[6]),
     );
   }
 
@@ -3242,8 +3254,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_kind = sse_decode_track_kind_view(deserializer);
     var var_name = sse_decode_opt_String(deserializer);
+    var var_id = sse_decode_opt_String(deserializer);
+    var var_muted = sse_decode_bool(deserializer);
+    var var_locked = sse_decode_bool(deserializer);
+    var var_hidden = sse_decode_bool(deserializer);
     var var_items = sse_decode_list_track_item_view(deserializer);
-    return TrackView(kind: var_kind, name: var_name, items: var_items);
+    return TrackView(
+      kind: var_kind,
+      name: var_name,
+      id: var_id,
+      muted: var_muted,
+      locked: var_locked,
+      hidden: var_hidden,
+      items: var_items,
+    );
   }
 
   @protected
@@ -3823,6 +3847,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_track_kind_view(self.kind, serializer);
     sse_encode_opt_String(self.name, serializer);
+    sse_encode_opt_String(self.id, serializer);
+    sse_encode_bool(self.muted, serializer);
+    sse_encode_bool(self.locked, serializer);
+    sse_encode_bool(self.hidden, serializer);
     sse_encode_list_track_item_view(self.items, serializer);
   }
 

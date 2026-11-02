@@ -8,6 +8,7 @@ import 'waveforms.dart';
 const _itemRadius = Radius.circular(ShortedRadius.s);
 const _itemGap = 2.0;
 const _waveformStep = 2.0;
+const _hiddenTrackAlpha = 0.35;
 const _rangeTint = 0.25;
 
 Color _trackColor(TrackKind kind) => switch (kind) {
@@ -60,14 +61,30 @@ class TimelinePainter extends CustomPainter {
     canvas.save();
     canvas.clipRect(content);
     _paintRuler(canvas, size, fromUs, toUs);
+    // The pinned track goes last: the others scroll underneath it.
+    final pinned = layout.pinnedIndex;
     for (var index = 0; index < tracks.length; index++) {
-      _paintTrack(canvas, size, tracks[index], index, fromUs, toUs);
+      if (index != pinned) {
+        _paintTrack(canvas, size, tracks[index], index, fromUs, toUs);
+      }
+    }
+    if (pinned != null && pinned < tracks.length) {
+      canvas.drawRect(
+        Rect.fromLTWH(
+          layout.headerWidth,
+          layout.topOfTrack(pinned),
+          size.width,
+          layout.heightOfTrack(pinned),
+        ),
+        Paint()..color = ShortedColors.surface,
+      );
+      _paintTrack(canvas, size, tracks[pinned], pinned, fromUs, toUs);
     }
     _paintDrag(canvas);
     _paintRange(canvas, size);
     canvas.restore();
 
-    _paintHeaders(canvas);
+    _paintHeaders(canvas, size);
   }
 
   void _paintRuler(Canvas canvas, Size size, int fromUs, int toUs) {
@@ -177,19 +194,26 @@ class TimelinePainter extends CustomPainter {
     int fromUs,
     int toUs,
   ) {
-    final top = layout.rulerHeight + index * layout.trackHeight;
+    final top = layout.topOfTrack(index);
+    final height = layout.heightOfTrack(index);
+    canvas.save();
+    canvas.clipRect(
+      Rect.fromLTRB(0, layout.rulerHeight, size.width, size.height),
+    );
     canvas.drawLine(
       Offset(layout.headerWidth, top),
       Offset(size.width, top),
       Paint()..color = ShortedColors.line,
     );
-    final fill = Paint()..color = _trackColor(track.kind);
+    final fill = Paint()
+      ..color = _trackColor(track.kind)
+          .withValues(alpha: track.hidden ? _hiddenTrackAlpha : 1);
     for (final item in TimelineLayout.visible(track.items, fromUs, toUs)) {
       final rect = Rect.fromLTRB(
         layout.xForTime(item.startUs),
         top + _itemGap,
         layout.xForTime(item.endUs),
-        top + layout.trackHeight - _itemGap,
+        top + height - _itemGap,
       );
       final shape = RRect.fromRectAndRadius(rect, _itemRadius);
       canvas.drawRRect(shape, fill);
@@ -208,13 +232,14 @@ class TimelinePainter extends CustomPainter {
         );
       }
     }
+    canvas.restore();
   }
 
   void _paintDrag(Canvas canvas) {
     final drag = dragPreview;
     if (drag == null) return;
     final (index, startUs, endUs) = drag;
-    final top = layout.rulerHeight + index * layout.trackHeight;
+    final top = layout.topOfTrack(index);
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromLTRB(
@@ -232,21 +257,49 @@ class TimelinePainter extends CustomPainter {
     );
   }
 
-  void _paintHeaders(Canvas canvas) {
-    final height = layout.rulerHeight + tracks.length * layout.trackHeight;
+  void _paintHeaders(Canvas canvas, Size size) {
     canvas.drawRect(
-      Rect.fromLTWH(0, 0, layout.headerWidth, height),
+      Rect.fromLTWH(0, 0, layout.headerWidth, size.height),
       Paint()..color = ShortedColors.surfaceRaised,
     );
-    for (var index = 0; index < tracks.length; index++) {
-      final top = layout.rulerHeight + index * layout.trackHeight;
-      _text(
-        canvas,
-        tracks[index].label,
-        Offset(8, top + 10),
-        ShortedColors.text,
-      );
+    canvas.save();
+    canvas.clipRect(
+      Rect.fromLTRB(0, layout.rulerHeight, layout.headerWidth, size.height),
+    );
+    if (!layout.collapsed) {
+      for (var index = 0; index < tracks.length; index++) {
+        if (index != layout.pinnedIndex) _header(canvas, index);
+      }
     }
+    final pinned = layout.pinnedIndex;
+    if (pinned != null && pinned < tracks.length) {
+      canvas.drawRect(
+        Rect.fromLTWH(
+          0,
+          layout.topOfTrack(pinned),
+          layout.headerWidth,
+          layout.heightOfTrack(pinned),
+        ),
+        Paint()..color = ShortedColors.surfaceRaised,
+      );
+      _header(canvas, pinned);
+    }
+    canvas.restore();
+  }
+
+  void _header(Canvas canvas, int index) {
+    final track = tracks[index];
+    final marks = [
+      if (track.muted) 'M',
+      if (track.locked) 'L',
+      if (track.hidden) 'H',
+    ].join();
+    _text(
+      canvas,
+      marks.isEmpty ? track.label : '${track.label} $marks',
+      Offset(8, layout.topOfTrack(index) + 10),
+      ShortedColors.text,
+    );
   }
 
   void _text(Canvas canvas, String value, Offset at, Color color) {

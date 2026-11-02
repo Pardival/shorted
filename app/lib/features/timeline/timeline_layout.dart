@@ -27,10 +27,16 @@ class TimelineTrack {
     required this.kind,
     required this.label,
     required this.items,
+    this.muted = false,
+    this.locked = false,
+    this.hidden = false,
   });
 
   final TrackKind kind;
   final String label;
+  final bool muted;
+  final bool locked;
+  final bool hidden;
 
   /// Sorted by start, so visible items can be found by bisection.
   final List<TimelineItem> items;
@@ -44,8 +50,13 @@ class TimelineLayout {
     required this.headerWidth,
     required this.rulerHeight,
     required this.trackHeight,
+    this.scrollY = 0,
+    this.pinnedIndex,
+    this.collapsed = false,
   });
 
+  static const collapsedPinnedHeight = 30.0;
+  static const collapsedStripHeight = 6.0;
   static const minPixelsPerSecond = 2.0;
   static const maxPixelsPerSecond = 2000.0;
 
@@ -55,17 +66,76 @@ class TimelineLayout {
   final double rulerHeight;
   final double trackHeight;
 
+  /// How far the tracks have scrolled up. The ruler and the pinned track stay put.
+  final double scrollY;
+
+  /// The Video track, which stays visible however the tracks scroll.
+  final int? pinnedIndex;
+
+  /// Phone layout: the pinned track, then a thin strip per other track.
+  final bool collapsed;
+
   double xForTime(int timeUs) =>
       headerWidth + (timeUs - scrollUs) / 1e6 * pixelsPerSecond;
 
   int timeForX(double x) =>
       scrollUs + ((x - headerWidth) / pixelsPerSecond * 1e6).round();
 
+  double heightOfTrack(int index) {
+    if (!collapsed) return trackHeight;
+    return index == pinnedIndex ? collapsedPinnedHeight : collapsedStripHeight;
+  }
+
+  double topOfTrack(int index) {
+    if (collapsed) {
+      if (index == pinnedIndex) return rulerHeight;
+      final pinned = pinnedIndex;
+      final rank = pinned != null && index > pinned ? index - 1 : index;
+      return rulerHeight + collapsedPinnedHeight + rank * collapsedStripHeight;
+    }
+    final natural = rulerHeight + index * trackHeight - scrollY;
+    return index == pinnedIndex ? math.max(natural, rulerHeight) : natural;
+  }
+
+  /// Total height of the tracks and the ruler, before scrolling.
+  double contentHeight(int trackCount) => collapsed
+      ? rulerHeight +
+            collapsedPinnedHeight +
+            (trackCount - 1) * collapsedStripHeight
+      : rulerHeight + trackCount * trackHeight;
+
+  double maxScrollY(int trackCount, double viewportHeight) =>
+      collapsed ? 0 : math.max(0, contentHeight(trackCount) - viewportHeight);
+
   int? trackAt(double y, int trackCount) {
     if (y < rulerHeight) return null;
-    final index = (y - rulerHeight) ~/ trackHeight;
-    return index < trackCount ? index : null;
+    final pinned = pinnedIndex;
+    if (pinned != null && pinned < trackCount) {
+      final top = topOfTrack(pinned);
+      if (y >= top && y < top + heightOfTrack(pinned)) return pinned;
+    }
+    for (var index = 0; index < trackCount; index++) {
+      final top = topOfTrack(index);
+      if (y >= top && y < top + heightOfTrack(index)) return index;
+    }
+    return null;
   }
+
+  TimelineLayout copyWith({
+    int? scrollUs,
+    double? scrollY,
+    int? pinnedIndex,
+    bool? collapsed,
+  }) => TimelineLayout(
+    pixelsPerSecond: pixelsPerSecond,
+    scrollUs: scrollUs ?? this.scrollUs,
+    headerWidth: headerWidth,
+    rulerHeight: rulerHeight,
+    trackHeight: trackHeight,
+    scrollY: scrollY ?? this.scrollY,
+    pinnedIndex: pinnedIndex ?? this.pinnedIndex,
+    collapsed: collapsed ?? this.collapsed,
+  );
 
   /// Keeps the time under `focusX` in place, so a pinch zooms around the fingers.
   TimelineLayout zoomed(double factor, double focusX) {
@@ -81,6 +151,9 @@ class TimelineLayout {
       headerWidth: headerWidth,
       rulerHeight: rulerHeight,
       trackHeight: trackHeight,
+      scrollY: scrollY,
+      pinnedIndex: pinnedIndex,
+      collapsed: collapsed,
     );
   }
 
