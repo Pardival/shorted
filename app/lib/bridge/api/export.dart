@@ -9,7 +9,7 @@ import '../runtime.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `bits_per_second`, `frame_count`, `frame_time_us`, `output_size`, `run_export`
+// These functions are ignored because they are not marked as `pub`: `audio_chunk`, `audio_target`, `bits_per_second`, `frame_count`, `frame_time_us`, `output_size`, `run_export`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`
 
 /// Starts exporting the open project. The first event carries the id for `cancel_task`.

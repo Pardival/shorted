@@ -79,7 +79,7 @@ impl TaskContext<'_> {
 }
 
 /// Runs `task` as a job would, without a queue or a listener.
-#[cfg(test)]
+#[cfg(all(test, target_vendor = "apple"))]
 pub(crate) fn with_test_context<R>(task: impl FnOnce(&TaskContext<'_>) -> R) -> R {
     struct Silent;
     impl TaskReporter for Silent {

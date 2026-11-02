@@ -7,7 +7,7 @@ use std::ops::Range;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use shorted_audio::mixer::{us_to_frames, CHANNELS};
+use shorted_audio::mixer::us_to_frames;
 use shorted_core::model::{Project, MAX_PROJECT_DURATION_MS};
 
 use crate::error::{EngineError, ErrorCode};
@@ -70,7 +70,7 @@ fn run_export(
 ) -> Result<(), EngineError> {
     use std::collections::HashMap;
 
-    use shorted_audio::mixer::mix;
+    use shorted_audio::mixer::{mix, CHANNELS};
     use shorted_media::apple_writer::AppleEncoder;
     use shorted_media::MediaError;
     use shorted_render::apple::texture_from_iosurface;
