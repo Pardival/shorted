@@ -36,13 +36,16 @@ Future<ArrangeReviewView> applyArrangement() =>
 Future<ProjectView> undoArrangement() =>
     RustLib.instance.api.crateApiArrangeUndoArrangement();
 
-/// Builds the AI request for the open project, without sending it.
+/// Builds the AI request for the open project, without sending it: an arrangement, or with
+/// `instruction` what the user typed in "Ask Shorted" (FR-AI-05).
 Future<AiPayloadView> prepareAiArrangement({
   required String root,
   required String language,
+  String? instruction,
 }) => RustLib.instance.api.crateApiArrangePrepareAiArrangement(
   root: root,
   language: language,
+  instruction: instruction,
 );
 
 /// Sends exactly the request the user saw; the plan then waits for review like a local one.

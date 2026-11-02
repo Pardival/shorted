@@ -2431,13 +2431,17 @@ fn wire__crate__api__arrange__prepare_ai_arrangement_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_root = <String>::sse_decode(&mut deserializer);
             let api_language = <String>::sse_decode(&mut deserializer);
+            let api_instruction = <Option<String>>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, crate::error::EngineFailure>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::arrange::prepare_ai_arrangement(api_root, api_language)
-                                .await?;
+                        let output_ok = crate::api::arrange::prepare_ai_arrangement(
+                            api_root,
+                            api_language,
+                            api_instruction,
+                        )
+                        .await?;
                         std::result::Result::Ok(output_ok)
                     })()
                     .await,

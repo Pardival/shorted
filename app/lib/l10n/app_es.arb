@@ -311,5 +311,9 @@
   "aiConsentRemember": "Recordar para este proyecto",
   "aiConsentSend": "Enviar",
   "aiFellBack": "El plan de la IA no se pudo usar, así que se muestra el local.",
-  "aiConsentTo": "A {provider}, modelo {model}."
+  "aiConsentTo": "A {provider}, modelo {model}.",
+  "askShorted": "Pedir a Shorted",
+  "askShortedHint": "Pon primero el plano del café",
+  "askShortedGo": "Pedir",
+  "aiMenu": "IA"
 }

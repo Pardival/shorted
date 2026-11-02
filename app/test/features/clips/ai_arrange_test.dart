@@ -19,6 +19,13 @@ Future<FakeGateway> _clips(WidgetTester tester) async {
   return gateway;
 }
 
+Future<void> _menu(WidgetTester tester, String item) async {
+  await tester.tap(find.byTooltip('AI'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(item));
+  await tester.pumpAndSettle();
+}
+
 Future<void> _finish(WidgetTester tester, FakeGateway gateway) async {
   gateway.arranging!
     ..add(TaskEvent.started(taskId: BigInt.two))
@@ -31,8 +38,7 @@ void main() {
     tester,
   ) async {
     final gateway = await _clips(tester);
-    await tester.tap(find.byTooltip('Arrange with AI'));
-    await tester.pumpAndSettle();
+    await _menu(tester, 'Arrange with AI');
     expect(find.text('Send to the AI?'), findsOneWidget);
     expect(find.text('To anthropic, model claude-sonnet-5-5.'), findsOneWidget);
     final shown = tester.widget<SelectableText>(
@@ -52,8 +58,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Remembered: the next request goes without the sheet.
-    await tester.tap(find.byTooltip('Arrange with AI'));
-    await tester.pumpAndSettle();
+    await _menu(tester, 'Arrange with AI');
     expect(find.text('Send to the AI?'), findsNothing);
     expect(gateway.arrangeCalls.last, 'send');
   });
@@ -62,15 +67,13 @@ void main() {
     tester,
   ) async {
     final gateway = await _clips(tester);
-    await tester.tap(find.byTooltip('Arrange with AI'));
-    await tester.pumpAndSettle();
+    await _menu(tester, 'Arrange with AI');
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
     expect(gateway.arrangeCalls, ['prepare en']);
 
     gateway.fellBack = true;
-    await tester.tap(find.byTooltip('Arrange with AI'));
-    await tester.pumpAndSettle();
+    await _menu(tester, 'Arrange with AI');
     await tester.tap(find.text('Send'));
     await tester.pumpAndSettle();
     await _finish(tester, gateway);
@@ -82,12 +85,32 @@ void main() {
   ) async {
     final gateway = await _clips(tester)
       ..aiTestFails = ErrorCode.aiNotConfigured;
-    await tester.tap(find.byTooltip('Arrange with AI'));
-    await tester.pumpAndSettle();
+    await _menu(tester, 'Arrange with AI');
     expect(
       find.text('Choose a provider and add its key first.'),
       findsOneWidget,
     );
     expect(gateway.arrangeCalls, ['prepare en']);
+  });
+
+  testWidgets('an instruction goes through its own consent and the review', (
+    tester,
+  ) async {
+    final gateway = await _clips(tester);
+    gateway.consented.add('p1');
+    await _menu(tester, 'Ask Shorted');
+    await tester.enterText(
+      find.byKey(const ValueKey('ask-shorted')),
+      'put the coffee shot first',
+    );
+    await tester.tap(find.text('Ask'));
+    await tester.pumpAndSettle();
+    // Arranging was allowed, but a free instruction is another kind of request.
+    expect(find.text('Send to the AI?'), findsOneWidget);
+    await tester.tap(find.text('Send'));
+    await tester.pumpAndSettle();
+    expect(gateway.arrangeCalls, ['ask en put the coffee shot first', 'send']);
+    await _finish(tester, gateway);
+    expect(find.byType(ArrangeReview), findsOneWidget);
   });
 }

@@ -8,6 +8,9 @@ use shorted_core::model::{MediaKind, Project};
 use crate::plan::{Aliases, MAX_SHORT_US};
 
 pub const ARRANGE_V1: &str = include_str!("../prompts/arrange.v1.md");
+pub const INSTRUCT_V1: &str = include_str!("../prompts/instruct.v1.md");
+/// An instruction longer than this is cut: it is a request, not a document.
+const MAX_INSTRUCTION_CHARS: usize = 1_000;
 
 /// What the model should do if its plan did not validate: the errors, and its own answer.
 pub const REPAIR_INSTRUCTION: &str = "Your plan was refused for these reasons. Return the whole \
@@ -78,6 +81,33 @@ pub fn arrange_messages(
         .trim()
         .to_string();
     let user = format!("Clips:\n{}", clips_block(project, aliases));
+    (system, user)
+}
+
+/// The messages for one free-text instruction ("Ask Shorted", FR-AI-05). The instruction is
+/// user content: it is fenced off and never placed in the system message.
+pub fn instruction_messages(
+    project: &Project,
+    aliases: &Aliases,
+    ui_language: &str,
+    instruction: &str,
+) -> (String, String) {
+    let system = INSTRUCT_V1
+        .replace("{max_seconds}", &(MAX_SHORT_US / 1_000_000).to_string())
+        .replace("{ui_language}", ui_language)
+        .trim()
+        .to_string();
+    let request: String = instruction
+        .chars()
+        .filter(|c| !c.is_control() || *c == '\n')
+        .take(MAX_INSTRUCTION_CHARS)
+        .collect::<String>()
+        .replace("</instruction>", "");
+    let user = format!(
+        "<instruction>{}</instruction>\n\nClips:\n{}",
+        request.trim(),
+        clips_block(project, aliases)
+    );
     (system, user)
 }
 

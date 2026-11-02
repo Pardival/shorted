@@ -344,6 +344,7 @@ abstract class RustLibApi extends BaseApi {
   Future<AiPayloadView> crateApiArrangePrepareAiArrangement({
     required String root,
     required String language,
+    String? instruction,
   });
 
   PresetSampleView crateApiOverlaysPresetSample({
@@ -2644,6 +2645,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Future<AiPayloadView> crateApiArrangePrepareAiArrangement({
     required String root,
     required String language,
+    String? instruction,
   }) {
     return handler.executeNormal(
       NormalTask(
@@ -2651,6 +2653,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(root, serializer);
           sse_encode_String(language, serializer);
+          sse_encode_opt_String(instruction, serializer);
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
@@ -2663,7 +2666,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: sse_decode_engine_failure,
         ),
         constMeta: kCrateApiArrangePrepareAiArrangementConstMeta,
-        argValues: [root, language],
+        argValues: [root, language, instruction],
         apiImpl: this,
       ),
     );
@@ -2672,7 +2675,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiArrangePrepareAiArrangementConstMeta =>
       const TaskConstMeta(
         debugName: "prepare_ai_arrangement",
-        argNames: ["root", "language"],
+        argNames: ["root", "language", "instruction"],
       );
 
   @override

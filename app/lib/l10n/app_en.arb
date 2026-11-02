@@ -498,5 +498,9 @@
         "type": "String"
       }
     }
-  }
+  },
+  "askShorted": "Ask Shorted",
+  "askShortedHint": "Put the coffee shot first",
+  "askShortedGo": "Ask",
+  "aiMenu": "AI"
 }

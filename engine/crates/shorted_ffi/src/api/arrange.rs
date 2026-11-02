@@ -203,17 +203,25 @@ pub struct AiPayloadView {
     pub body: String,
 }
 
-/// Builds the AI request for the open project, without sending it.
+/// Builds the AI request for the open project, without sending it: an arrangement, or with
+/// `instruction` what the user typed in "Ask Shorted" (FR-AI-05).
 pub async fn prepare_ai_arrangement(
     root: String,
     language: String,
+    instruction: Option<String>,
 ) -> Result<AiPayloadView, EngineFailure> {
     on_command_thread(move || {
         let project = transport()
             .project
             .clone()
             .ok_or_else(|| EngineError::Internal("no project".into()))?;
-        let ready = prepare(Path::new(&root), &SystemKeychain, &project, &language)?;
+        let ready = prepare(
+            Path::new(&root),
+            &SystemKeychain,
+            &project,
+            &language,
+            instruction.as_deref(),
+        )?;
         let view = AiPayloadView {
             provider: ready.provider.config.kind.id().into(),
             model: ready.provider.config.model.clone(),

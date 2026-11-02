@@ -35,7 +35,10 @@ abstract interface class ProjectGateway {
   Stream<TaskEvent> analyseForArrange();
   Future<arrange.ArrangeReviewView> applyArrangement();
   Future<ProjectView> undoArrangement();
-  Future<arrange.AiPayloadView> prepareAiArrangement(String language);
+  Future<arrange.AiPayloadView> prepareAiArrangement(
+    String language, {
+    String? instruction,
+  });
   Stream<TaskEvent> sendAiArrangement();
   bool aiArrangementFellBack();
   bool aiConsentRemembered(String projectId);
@@ -306,8 +309,14 @@ class EngineGateway implements ProjectGateway {
   Future<ProjectView> undoArrangement() => arrange.undoArrangement();
 
   @override
-  Future<arrange.AiPayloadView> prepareAiArrangement(String language) =>
-      arrange.prepareAiArrangement(root: root, language: language);
+  Future<arrange.AiPayloadView> prepareAiArrangement(
+    String language, {
+    String? instruction,
+  }) => arrange.prepareAiArrangement(
+    root: root,
+    language: language,
+    instruction: instruction,
+  );
 
   @override
   Stream<TaskEvent> sendAiArrangement() => arrange.sendAiArrangement();

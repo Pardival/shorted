@@ -74,22 +74,37 @@ class _ClipsPanelState extends ConsumerState<ClipsPanel> {
 
   /// AI arrangement (T-0806): the exact request is shown for consent, unless the user asked to
   /// be asked only once for this project.
-  Future<void> _arrangeWithAi() async {
+  Future<void> _arrangeWithAi({String? instruction}) async {
     final l10n = AppLocalizations.of(context);
     final gateway = ref.read(projectGatewayProvider);
     final language = Localizations.localeOf(context).languageCode;
+    // Consent is asked per kind of request (docs/07 §4): arranging, and free instructions.
+    final kind = instruction == null
+        ? widget.projectId
+        : '${widget.projectId}:ask';
     try {
-      final payload = await gateway.prepareAiArrangement(language);
+      final payload = await gateway.prepareAiArrangement(
+        language,
+        instruction: instruction,
+      );
       if (!mounted) return;
-      if (!gateway.aiConsentRemembered(widget.projectId)) {
+      if (!gateway.aiConsentRemembered(kind)) {
         final consent = await askAiConsent(context, payload);
         if (!consent.send || !mounted) return;
-        if (consent.remember) await gateway.rememberAiConsent(widget.projectId);
+        if (consent.remember) await gateway.rememberAiConsent(kind);
       }
       _follow(gateway.sendAiArrangement(), ai: true);
     } on Object catch (error) {
       if (mounted) showToast(context, connectionError(l10n, error));
     }
+  }
+
+  /// "Ask Shorted" (FR-AI-05): one instruction in the user's words, then the same consent,
+  /// validation and review as an arrangement.
+  Future<void> _ask() async {
+    final instruction = await askShorted(context);
+    if (instruction == null || !mounted) return;
+    await _arrangeWithAi(instruction: instruction);
   }
 
   void _follow(Stream<TaskEvent> events, {bool ai = false}) {
@@ -230,11 +245,22 @@ class _ClipsPanelState extends ConsumerState<ClipsPanel> {
                       ),
                     },
                   ),
+                  // One menu for the AI: a phone has no width for two more buttons.
                   if (_arranging == null)
-                    ShortedIconButton(
-                      icon: Icons.auto_awesome,
-                      tooltip: l10n.arrangeWithAi,
-                      onPressed: _arrangeWithAi,
+                    PopupMenuButton<bool>(
+                      icon: const Icon(Icons.auto_awesome),
+                      tooltip: l10n.aiMenu,
+                      onSelected: (ask) => ask ? _ask() : _arrangeWithAi(),
+                      itemBuilder: (context) => [
+                        PopupMenuItem(
+                          value: false,
+                          child: Text(l10n.arrangeWithAi),
+                        ),
+                        PopupMenuItem(
+                          value: true,
+                          child: Text(l10n.askShorted),
+                        ),
+                      ],
                     ),
                 ],
               ),

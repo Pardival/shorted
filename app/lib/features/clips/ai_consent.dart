@@ -113,3 +113,57 @@ class _ConsentSheetState extends State<_ConsentSheet> {
     );
   }
 }
+
+/// "Ask Shorted": what the user wants changed, in their own words. Null when cancelled.
+Future<String?> askShorted(BuildContext context) => showDialog<String>(
+  context: context,
+  builder: (context) => const _AskDialog(),
+);
+
+/// Owns its controller: the field still needs it during the closing animation.
+class _AskDialog extends StatefulWidget {
+  const _AskDialog();
+
+  @override
+  State<_AskDialog> createState() => _AskDialogState();
+}
+
+class _AskDialogState extends State<_AskDialog> {
+  final _words = TextEditingController();
+
+  @override
+  void dispose() {
+    _words.dispose();
+    super.dispose();
+  }
+
+  void _send() {
+    final words = _words.text.trim();
+    if (words.isNotEmpty) Navigator.pop(context, words);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return AlertDialog(
+      title: Text(l10n.askShorted),
+      content: TextField(
+        key: const ValueKey('ask-shorted'),
+        controller: _words,
+        autofocus: true,
+        maxLength: 500,
+        minLines: 1,
+        maxLines: 4,
+        decoration: InputDecoration(hintText: l10n.askShortedHint),
+        onSubmitted: (_) => _send(),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(l10n.cancel),
+        ),
+        TextButton(onPressed: _send, child: Text(l10n.askShortedGo)),
+      ],
+    );
+  }
+}

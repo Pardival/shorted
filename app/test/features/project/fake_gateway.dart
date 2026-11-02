@@ -250,8 +250,13 @@ class FakeGateway implements ProjectGateway {
       '{"model":"m","messages":[{"role":"user","content":"Clips: c1"}]}';
 
   @override
-  Future<AiPayloadView> prepareAiArrangement(String language) async {
-    arrangeCalls.add('prepare $language');
+  Future<AiPayloadView> prepareAiArrangement(
+    String language, {
+    String? instruction,
+  }) async {
+    arrangeCalls.add(
+      instruction == null ? 'prepare $language' : 'ask $language $instruction',
+    );
     final code = aiTestFails;
     if (code != null) throw EngineFailure(code: code);
     return const AiPayloadView(
