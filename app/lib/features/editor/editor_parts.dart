@@ -13,6 +13,7 @@ import '../../l10n/generated/app_localizations.dart';
 import '../audio/audio_panel.dart';
 import '../captions/captions_panel.dart';
 import '../clips/clips_panel.dart';
+import '../enhance/animate_sheet.dart';
 import '../enhance/enhance_panel.dart';
 import '../enhance/overlay_selection.dart';
 import '../export/export_panel.dart';
@@ -557,6 +558,17 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
+        ShortedIconButton(
+          icon: Icons.animation,
+          tooltip: l10n.animate,
+          onPressed: overlay.locked
+              ? null
+              : () => showAnimateSheet(
+                  context,
+                  projectId: widget.view.id,
+                  overlayId: overlay.id,
+                ),
+        ),
         ShortedIconButton(
           icon: Icons.flip_to_front,
           tooltip: l10n.bringForward,

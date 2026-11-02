@@ -54,6 +54,8 @@ pub struct Sprite {
     /// Degrees, clockwise.
     pub rotation: f32,
     pub flip: bool,
+    /// How much shows, from the picture's left edge: 1 is all of it.
+    pub reveal: f32,
 }
 
 impl Sprite {
@@ -72,7 +74,10 @@ impl Sprite {
             u = [-u[0], -u[1]];
             u_offset = 1.0 - u_offset;
         }
-        ([u[0], u[1], u_offset, 0.0], [v[0], v[1], v_offset, 0.0])
+        (
+            [u[0], u[1], u_offset, self.reveal.clamp(0.0, 1.0)],
+            [v[0], v[1], v_offset, 0.0],
+        )
     }
 }
 
@@ -709,6 +714,7 @@ mod tests {
                     size,
                     rotation,
                     flip,
+                    reveal: 1.0,
                 }),
                 ..LayerEffect::default()
             },
@@ -770,5 +776,20 @@ mod tests {
             "{:?}",
             rgb_at(&pixels, x, y)
         );
+    }
+
+    #[test]
+    fn a_half_revealed_sprite_shows_its_left_half() {
+        let Some(compositor) = compositor() else {
+            return;
+        };
+        let texture = solid(&compositor, [0, 200, 0]);
+        let mut layer = sprite([0.5, 0.5], [0.8, 0.5], 0.0, false);
+        if let Some(sprite) = layer.effect.sprite.as_mut() {
+            sprite.reveal = 0.5;
+        }
+        let pixels = compositor.render_to_pixels(&[(&texture, layer)]).unwrap();
+        assert!(close(rgb_at(&pixels, 0.3, 0.5), [0, 200, 0]));
+        assert!(close(rgb_at(&pixels, 0.7, 0.5), [0, 0, 0]));
     }
 }

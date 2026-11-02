@@ -39,7 +39,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -2101045659;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1437876608;
 
 // Section: executor
 
@@ -1877,6 +1877,42 @@ fn wire__crate__api__media__place_clips_impl(
         },
     )
 }
+fn wire__crate__api__overlays__preset_sample_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "preset_sample",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_kind = <crate::api::overlays::PresetKindView>::sse_decode(&mut deserializer);
+            let api_slot = <crate::api::overlays::AnimSlotView>::sse_decode(&mut deserializer);
+            let api_progress = <f32>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Ok::<_, ()>(crate::api::overlays::preset_sample(
+                    api_kind,
+                    api_slot,
+                    api_progress,
+                ))?;
+                std::result::Result::Ok(output_ok)
+            })())
+        },
+    )
+}
 fn wire__crate__api__preview__preview_is_playing_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -3044,6 +3080,52 @@ fn wire__crate__api__overlays__set_overlay_transform_impl(
         },
     )
 }
+fn wire__crate__api__overlays__set_preset_anim_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "set_preset_anim",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_id = <String>::sse_decode(&mut deserializer);
+            let api_slot = <crate::api::overlays::AnimSlotView>::sse_decode(&mut deserializer);
+            let api_kind =
+                <Option<crate::api::overlays::PresetKindView>>::sse_decode(&mut deserializer);
+            let api_duration_us = <i64>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, crate::error::EngineFailure>(
+                    (move || async move {
+                        let output_ok = crate::api::overlays::set_preset_anim(
+                            api_id,
+                            api_slot,
+                            api_kind,
+                            api_duration_us,
+                        )
+                        .await?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
 fn wire__crate__api__overlays__set_text_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -3847,6 +3929,19 @@ impl SseDecode for String {
     }
 }
 
+impl SseDecode for crate::api::overlays::AnimSlotView {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::overlays::AnimSlotView::In,
+            1 => crate::api::overlays::AnimSlotView::Loop,
+            2 => crate::api::overlays::AnimSlotView::Out,
+            _ => unreachable!("Invalid variant for AnimSlotView: {}", inner),
+        };
+    }
+}
+
 impl SseDecode for crate::api::audio::AudioItemView {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -4480,6 +4575,30 @@ impl SseDecode for Option<crate::api::library::PictureView> {
     }
 }
 
+impl SseDecode for Option<crate::api::overlays::PresetKindView> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::overlays::PresetKindView>::sse_decode(
+                deserializer,
+            ));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<crate::api::overlays::PresetView> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::overlays::PresetView>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
 impl SseDecode for Option<crate::api::overlays::TextElementView> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -4565,6 +4684,9 @@ impl SseDecode for crate::api::overlays::OverlayView {
         let mut var_transform = <crate::api::overlays::TransformView>::sse_decode(deserializer);
         let mut var_text =
             <Option<crate::api::overlays::TextElementView>>::sse_decode(deserializer);
+        let mut var_animIn = <Option<crate::api::overlays::PresetView>>::sse_decode(deserializer);
+        let mut var_animLoop = <Option<crate::api::overlays::PresetView>>::sse_decode(deserializer);
+        let mut var_animOut = <Option<crate::api::overlays::PresetView>>::sse_decode(deserializer);
         return crate::api::overlays::OverlayView {
             id: var_id,
             kind: var_kind,
@@ -4575,6 +4697,9 @@ impl SseDecode for crate::api::overlays::OverlayView {
             has_animation: var_hasAnimation,
             transform: var_transform,
             text: var_text,
+            anim_in: var_animIn,
+            anim_loop: var_animLoop,
+            anim_out: var_animOut,
         };
     }
 }
@@ -4589,6 +4714,63 @@ impl SseDecode for crate::api::library::PictureView {
             width: var_width,
             height: var_height,
             rgba: var_rgba,
+        };
+    }
+}
+
+impl SseDecode for crate::api::overlays::PresetKindView {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::overlays::PresetKindView::Pop,
+            1 => crate::api::overlays::PresetKindView::SlideLeft,
+            2 => crate::api::overlays::PresetKindView::SlideRight,
+            3 => crate::api::overlays::PresetKindView::SlideUp,
+            4 => crate::api::overlays::PresetKindView::SlideDown,
+            5 => crate::api::overlays::PresetKindView::Fade,
+            6 => crate::api::overlays::PresetKindView::Zoom,
+            7 => crate::api::overlays::PresetKindView::Stamp,
+            8 => crate::api::overlays::PresetKindView::Wipe,
+            9 => crate::api::overlays::PresetKindView::Shrink,
+            10 => crate::api::overlays::PresetKindView::Float,
+            11 => crate::api::overlays::PresetKindView::Pulse,
+            12 => crate::api::overlays::PresetKindView::Wiggle,
+            13 => crate::api::overlays::PresetKindView::Rotate,
+            14 => crate::api::overlays::PresetKindView::Bounce,
+            _ => unreachable!("Invalid variant for PresetKindView: {}", inner),
+        };
+    }
+}
+
+impl SseDecode for crate::api::overlays::PresetSampleView {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_dx = <f32>::sse_decode(deserializer);
+        let mut var_dy = <f32>::sse_decode(deserializer);
+        let mut var_scale = <f32>::sse_decode(deserializer);
+        let mut var_rotation = <f32>::sse_decode(deserializer);
+        let mut var_opacity = <f32>::sse_decode(deserializer);
+        let mut var_reveal = <f32>::sse_decode(deserializer);
+        return crate::api::overlays::PresetSampleView {
+            dx: var_dx,
+            dy: var_dy,
+            scale: var_scale,
+            rotation: var_rotation,
+            opacity: var_opacity,
+            reveal: var_reveal,
+        };
+    }
+}
+
+impl SseDecode for crate::api::overlays::PresetView {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_kind = <crate::api::overlays::PresetKindView>::sse_decode(deserializer);
+        let mut var_durationUs = <i64>::sse_decode(deserializer);
+        return crate::api::overlays::PresetView {
+            kind: var_kind,
+            duration_us: var_durationUs,
         };
     }
 }
@@ -5002,76 +5184,77 @@ fn pde_ffi_dispatcher_primary_impl(
         47 => wire__crate__api__clips__mute_range_impl(port, ptr, rust_vec_len, data_len),
         48 => wire__crate__api__projects__open_project_impl(port, ptr, rust_vec_len, data_len),
         50 => wire__crate__api__media__place_clips_impl(port, ptr, rust_vec_len, data_len),
-        57 => wire__crate__api__media__project_cover_impl(port, ptr, rust_vec_len, data_len),
-        58 => wire__crate__api__projects__project_view_impl(port, ptr, rust_vec_len, data_len),
-        59 => wire__crate__api__projects__redo_impl(port, ptr, rust_vec_len, data_len),
-        60 => wire__crate__api__media__relink_media_impl(port, ptr, rust_vec_len, data_len),
-        61 => wire__crate__api__audio__remove_audio_track_impl(port, ptr, rust_vec_len, data_len),
-        62 => wire__crate__api__audio__rename_audio_track_impl(port, ptr, rust_vec_len, data_len),
-        63 => wire__crate__api__projects__rename_project_impl(port, ptr, rust_vec_len, data_len),
-        64 => wire__crate__api__audio__reorder_audio_track_impl(port, ptr, rust_vec_len, data_len),
-        65 => wire__crate__api__clips__reset_crop_impl(port, ptr, rust_vec_len, data_len),
-        66 => wire__crate__api__projects__restore_project_impl(port, ptr, rust_vec_len, data_len),
-        67 => wire__crate__api__projects__save_events_impl(port, ptr, rust_vec_len, data_len),
-        68 => wire__crate__api__audio__set_audio_loop_impl(port, ptr, rust_vec_len, data_len),
-        69 => wire__crate__api__audio__set_audio_role_impl(port, ptr, rust_vec_len, data_len),
-        70 => wire__crate__api__audio__set_audio_sound_impl(port, ptr, rust_vec_len, data_len),
-        71 => wire__crate__api__transcribe__set_caption_animation_impl(
+        58 => wire__crate__api__media__project_cover_impl(port, ptr, rust_vec_len, data_len),
+        59 => wire__crate__api__projects__project_view_impl(port, ptr, rust_vec_len, data_len),
+        60 => wire__crate__api__projects__redo_impl(port, ptr, rust_vec_len, data_len),
+        61 => wire__crate__api__media__relink_media_impl(port, ptr, rust_vec_len, data_len),
+        62 => wire__crate__api__audio__remove_audio_track_impl(port, ptr, rust_vec_len, data_len),
+        63 => wire__crate__api__audio__rename_audio_track_impl(port, ptr, rust_vec_len, data_len),
+        64 => wire__crate__api__projects__rename_project_impl(port, ptr, rust_vec_len, data_len),
+        65 => wire__crate__api__audio__reorder_audio_track_impl(port, ptr, rust_vec_len, data_len),
+        66 => wire__crate__api__clips__reset_crop_impl(port, ptr, rust_vec_len, data_len),
+        67 => wire__crate__api__projects__restore_project_impl(port, ptr, rust_vec_len, data_len),
+        68 => wire__crate__api__projects__save_events_impl(port, ptr, rust_vec_len, data_len),
+        69 => wire__crate__api__audio__set_audio_loop_impl(port, ptr, rust_vec_len, data_len),
+        70 => wire__crate__api__audio__set_audio_role_impl(port, ptr, rust_vec_len, data_len),
+        71 => wire__crate__api__audio__set_audio_sound_impl(port, ptr, rust_vec_len, data_len),
+        72 => wire__crate__api__transcribe__set_caption_animation_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        72 => {
+        73 => {
             wire__crate__api__transcribe__set_caption_preset_impl(port, ptr, rust_vec_len, data_len)
         }
-        73 => {
+        74 => {
             wire__crate__api__transcribe__set_caption_style_impl(port, ptr, rust_vec_len, data_len)
         }
-        74 => wire__crate__api__transcribe__set_captions_enabled_impl(
+        75 => wire__crate__api__transcribe__set_captions_enabled_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        75 => wire__crate__api__look__set_clip_color_impl(port, ptr, rust_vec_len, data_len),
-        76 => wire__crate__api__audio__set_clip_sound_impl(port, ptr, rust_vec_len, data_len),
-        77 => wire__crate__api__look__set_clip_speed_impl(port, ptr, rust_vec_len, data_len),
-        78 => wire__crate__api__audio__set_ducking_impl(port, ptr, rust_vec_len, data_len),
-        79 => wire__crate__api__overlays__set_overlay_flags_impl(port, ptr, rust_vec_len, data_len),
-        80 => {
+        76 => wire__crate__api__look__set_clip_color_impl(port, ptr, rust_vec_len, data_len),
+        77 => wire__crate__api__audio__set_clip_sound_impl(port, ptr, rust_vec_len, data_len),
+        78 => wire__crate__api__look__set_clip_speed_impl(port, ptr, rust_vec_len, data_len),
+        79 => wire__crate__api__audio__set_ducking_impl(port, ptr, rust_vec_len, data_len),
+        80 => wire__crate__api__overlays__set_overlay_flags_impl(port, ptr, rust_vec_len, data_len),
+        81 => {
             wire__crate__api__overlays__set_overlay_timing_impl(port, ptr, rust_vec_len, data_len)
         }
-        81 => wire__crate__api__overlays__set_overlay_transform_impl(
+        82 => wire__crate__api__overlays__set_overlay_transform_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        82 => wire__crate__api__overlays__set_text_impl(port, ptr, rust_vec_len, data_len),
-        83 => wire__crate__api__audio__set_track_flags_impl(port, ptr, rust_vec_len, data_len),
-        84 => {
+        83 => wire__crate__api__overlays__set_preset_anim_impl(port, ptr, rust_vec_len, data_len),
+        84 => wire__crate__api__overlays__set_text_impl(port, ptr, rust_vec_len, data_len),
+        85 => wire__crate__api__audio__set_track_flags_impl(port, ptr, rust_vec_len, data_len),
+        86 => {
             wire__crate__api__look__set_transition_for_all_impl(port, ptr, rust_vec_len, data_len)
         }
-        85 => {
+        87 => {
             wire__crate__api__overlays__shift_overlay_layer_impl(port, ptr, rust_vec_len, data_len)
         }
-        87 => wire__crate__api__clips__split_all_at_impl(port, ptr, rust_vec_len, data_len),
-        88 => wire__crate__api__clips__split_clip_impl(port, ptr, rust_vec_len, data_len),
-        89 => wire__crate__api__start_demo_task_impl(port, ptr, rust_vec_len, data_len),
-        90 => wire__crate__api__export__start_export_impl(port, ptr, rust_vec_len, data_len),
-        91 => wire__crate__api__audio__start_voice_over_impl(port, ptr, rust_vec_len, data_len),
-        92 => wire__crate__api__audio__stop_voice_over_impl(port, ptr, rust_vec_len, data_len),
-        93 => wire__crate__api__transcribe__toggle_emphasis_impl(port, ptr, rust_vec_len, data_len),
-        94 => wire__crate__api__clips__toggle_slow_zoom_impl(port, ptr, rust_vec_len, data_len),
-        95 => {
+        89 => wire__crate__api__clips__split_all_at_impl(port, ptr, rust_vec_len, data_len),
+        90 => wire__crate__api__clips__split_clip_impl(port, ptr, rust_vec_len, data_len),
+        91 => wire__crate__api__start_demo_task_impl(port, ptr, rust_vec_len, data_len),
+        92 => wire__crate__api__export__start_export_impl(port, ptr, rust_vec_len, data_len),
+        93 => wire__crate__api__audio__start_voice_over_impl(port, ptr, rust_vec_len, data_len),
+        94 => wire__crate__api__audio__stop_voice_over_impl(port, ptr, rust_vec_len, data_len),
+        95 => wire__crate__api__transcribe__toggle_emphasis_impl(port, ptr, rust_vec_len, data_len),
+        96 => wire__crate__api__clips__toggle_slow_zoom_impl(port, ptr, rust_vec_len, data_len),
+        97 => {
             wire__crate__api__transcribe__transcribe_project_impl(port, ptr, rust_vec_len, data_len)
         }
-        96 => wire__crate__api__projects__trash_project_impl(port, ptr, rust_vec_len, data_len),
-        97 => wire__crate__api__audio__trim_audio_impl(port, ptr, rust_vec_len, data_len),
-        98 => wire__crate__api__clips__trim_clip_impl(port, ptr, rust_vec_len, data_len),
-        99 => wire__crate__api__projects__undo_impl(port, ptr, rust_vec_len, data_len),
-        101 => wire__crate__api__transcribe__write_srt_impl(port, ptr, rust_vec_len, data_len),
+        98 => wire__crate__api__projects__trash_project_impl(port, ptr, rust_vec_len, data_len),
+        99 => wire__crate__api__audio__trim_audio_impl(port, ptr, rust_vec_len, data_len),
+        100 => wire__crate__api__clips__trim_clip_impl(port, ptr, rust_vec_len, data_len),
+        101 => wire__crate__api__projects__undo_impl(port, ptr, rust_vec_len, data_len),
+        103 => wire__crate__api__transcribe__write_srt_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -5093,22 +5276,45 @@ fn pde_ffi_dispatcher_sync_impl(
         39 => wire__crate__api__library__library_thumbnail_impl(ptr, rust_vec_len, data_len),
         46 => wire__crate__api__clips__move_crop_impl(ptr, rust_vec_len, data_len),
         49 => wire__crate__api__overlays__overlay_boxes_impl(ptr, rust_vec_len, data_len),
-        51 => wire__crate__api__preview__preview_is_playing_impl(ptr, rust_vec_len, data_len),
-        52 => {
+        51 => wire__crate__api__overlays__preset_sample_impl(ptr, rust_vec_len, data_len),
+        52 => wire__crate__api__preview__preview_is_playing_impl(ptr, rust_vec_len, data_len),
+        53 => {
             wire__crate__api__overlays__preview_overlay_transform_impl(ptr, rust_vec_len, data_len)
         }
-        53 => wire__crate__api__preview__preview_pause_impl(ptr, rust_vec_len, data_len),
-        54 => wire__crate__api__preview__preview_play_impl(ptr, rust_vec_len, data_len),
-        55 => wire__crate__api__preview__preview_position_us_impl(ptr, rust_vec_len, data_len),
-        56 => wire__crate__api__preview__preview_seek_impl(ptr, rust_vec_len, data_len),
-        86 => wire__crate__api__transcribe__speech_model_impl(ptr, rust_vec_len, data_len),
-        100 => wire__crate__api__audio__voice_level_impl(ptr, rust_vec_len, data_len),
+        54 => wire__crate__api__preview__preview_pause_impl(ptr, rust_vec_len, data_len),
+        55 => wire__crate__api__preview__preview_play_impl(ptr, rust_vec_len, data_len),
+        56 => wire__crate__api__preview__preview_position_us_impl(ptr, rust_vec_len, data_len),
+        57 => wire__crate__api__preview__preview_seek_impl(ptr, rust_vec_len, data_len),
+        88 => wire__crate__api__transcribe__speech_model_impl(ptr, rust_vec_len, data_len),
+        102 => wire__crate__api__audio__voice_level_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
 
 // Section: rust2dart
 
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::overlays::AnimSlotView {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::In => 0.into_dart(),
+            Self::Loop => 1.into_dart(),
+            Self::Out => 2.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::overlays::AnimSlotView
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::overlays::AnimSlotView>
+    for crate::api::overlays::AnimSlotView
+{
+    fn into_into_dart(self) -> crate::api::overlays::AnimSlotView {
+        self
+    }
+}
 // Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::audio::AudioItemView {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
@@ -5617,6 +5823,9 @@ impl flutter_rust_bridge::IntoDart for crate::api::overlays::OverlayView {
             self.has_animation.into_into_dart().into_dart(),
             self.transform.into_into_dart().into_dart(),
             self.text.into_into_dart().into_dart(),
+            self.anim_in.into_into_dart().into_dart(),
+            self.anim_loop.into_into_dart().into_dart(),
+            self.anim_out.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -5651,6 +5860,86 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::library::PictureView>
     for crate::api::library::PictureView
 {
     fn into_into_dart(self) -> crate::api::library::PictureView {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::overlays::PresetKindView {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::Pop => 0.into_dart(),
+            Self::SlideLeft => 1.into_dart(),
+            Self::SlideRight => 2.into_dart(),
+            Self::SlideUp => 3.into_dart(),
+            Self::SlideDown => 4.into_dart(),
+            Self::Fade => 5.into_dart(),
+            Self::Zoom => 6.into_dart(),
+            Self::Stamp => 7.into_dart(),
+            Self::Wipe => 8.into_dart(),
+            Self::Shrink => 9.into_dart(),
+            Self::Float => 10.into_dart(),
+            Self::Pulse => 11.into_dart(),
+            Self::Wiggle => 12.into_dart(),
+            Self::Rotate => 13.into_dart(),
+            Self::Bounce => 14.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::overlays::PresetKindView
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::overlays::PresetKindView>
+    for crate::api::overlays::PresetKindView
+{
+    fn into_into_dart(self) -> crate::api::overlays::PresetKindView {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::overlays::PresetSampleView {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.dx.into_into_dart().into_dart(),
+            self.dy.into_into_dart().into_dart(),
+            self.scale.into_into_dart().into_dart(),
+            self.rotation.into_into_dart().into_dart(),
+            self.opacity.into_into_dart().into_dart(),
+            self.reveal.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::overlays::PresetSampleView
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::overlays::PresetSampleView>
+    for crate::api::overlays::PresetSampleView
+{
+    fn into_into_dart(self) -> crate::api::overlays::PresetSampleView {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::overlays::PresetView {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.kind.into_into_dart().into_dart(),
+            self.duration_us.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::overlays::PresetView
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::overlays::PresetView>
+    for crate::api::overlays::PresetView
+{
+    fn into_into_dart(self) -> crate::api::overlays::PresetView {
         self
     }
 }
@@ -6116,6 +6405,23 @@ impl SseEncode for String {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <Vec<u8>>::sse_encode(self.into_bytes(), serializer);
+    }
+}
+
+impl SseEncode for crate::api::overlays::AnimSlotView {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::overlays::AnimSlotView::In => 0,
+                crate::api::overlays::AnimSlotView::Loop => 1,
+                crate::api::overlays::AnimSlotView::Out => 2,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
     }
 }
 
@@ -6645,6 +6951,26 @@ impl SseEncode for Option<crate::api::library::PictureView> {
     }
 }
 
+impl SseEncode for Option<crate::api::overlays::PresetKindView> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::overlays::PresetKindView>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<crate::api::overlays::PresetView> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::overlays::PresetView>::sse_encode(value, serializer);
+        }
+    }
+}
+
 impl SseEncode for Option<crate::api::overlays::TextElementView> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -6718,6 +7044,9 @@ impl SseEncode for crate::api::overlays::OverlayView {
         <bool>::sse_encode(self.has_animation, serializer);
         <crate::api::overlays::TransformView>::sse_encode(self.transform, serializer);
         <Option<crate::api::overlays::TextElementView>>::sse_encode(self.text, serializer);
+        <Option<crate::api::overlays::PresetView>>::sse_encode(self.anim_in, serializer);
+        <Option<crate::api::overlays::PresetView>>::sse_encode(self.anim_loop, serializer);
+        <Option<crate::api::overlays::PresetView>>::sse_encode(self.anim_out, serializer);
     }
 }
 
@@ -6727,6 +7056,55 @@ impl SseEncode for crate::api::library::PictureView {
         <u32>::sse_encode(self.width, serializer);
         <u32>::sse_encode(self.height, serializer);
         <Vec<u8>>::sse_encode(self.rgba, serializer);
+    }
+}
+
+impl SseEncode for crate::api::overlays::PresetKindView {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::overlays::PresetKindView::Pop => 0,
+                crate::api::overlays::PresetKindView::SlideLeft => 1,
+                crate::api::overlays::PresetKindView::SlideRight => 2,
+                crate::api::overlays::PresetKindView::SlideUp => 3,
+                crate::api::overlays::PresetKindView::SlideDown => 4,
+                crate::api::overlays::PresetKindView::Fade => 5,
+                crate::api::overlays::PresetKindView::Zoom => 6,
+                crate::api::overlays::PresetKindView::Stamp => 7,
+                crate::api::overlays::PresetKindView::Wipe => 8,
+                crate::api::overlays::PresetKindView::Shrink => 9,
+                crate::api::overlays::PresetKindView::Float => 10,
+                crate::api::overlays::PresetKindView::Pulse => 11,
+                crate::api::overlays::PresetKindView::Wiggle => 12,
+                crate::api::overlays::PresetKindView::Rotate => 13,
+                crate::api::overlays::PresetKindView::Bounce => 14,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
+    }
+}
+
+impl SseEncode for crate::api::overlays::PresetSampleView {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <f32>::sse_encode(self.dx, serializer);
+        <f32>::sse_encode(self.dy, serializer);
+        <f32>::sse_encode(self.scale, serializer);
+        <f32>::sse_encode(self.rotation, serializer);
+        <f32>::sse_encode(self.opacity, serializer);
+        <f32>::sse_encode(self.reveal, serializer);
+    }
+}
+
+impl SseEncode for crate::api::overlays::PresetView {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <crate::api::overlays::PresetKindView>::sse_encode(self.kind, serializer);
+        <i64>::sse_encode(self.duration_us, serializer);
     }
 }
 

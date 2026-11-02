@@ -3,6 +3,7 @@
 
 use std::ops::Range;
 
+use crate::command::AnimSlot;
 use crate::model::*;
 
 /// One video layer. During a transition there are two: outgoing first.
@@ -32,6 +33,8 @@ pub struct OverlayLayer {
     pub rotation: f32,
     pub opacity: f32,
     pub flip: bool,
+    /// How much of the element shows, from its left edge: 1 is all of it (Wipe).
+    pub reveal: f32,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -186,26 +189,39 @@ pub(crate) fn path_position(path: &MotionPath, t: i64) -> Option<(Vec2, f32)> {
 }
 
 /// Relative changes a preset makes; they compose with paths and keyframes (docs/06 §3).
-#[derive(Clone, Copy)]
-struct Modifier {
-    offset: Vec2,
-    scale: f32,
-    rotation: f32,
-    opacity: f32,
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Modifier {
+    pub offset: Vec2,
+    pub scale: f32,
+    pub rotation: f32,
+    pub opacity: f32,
+    pub reveal: f32,
 }
 
-const NEUTRAL: Modifier = Modifier {
+pub const NEUTRAL: Modifier = Modifier {
     offset: Vec2 { x: 0.0, y: 0.0 },
     scale: 1.0,
     rotation: 0.0,
     opacity: 1.0,
+    reveal: 1.0,
 };
+
+/// What a preset does `progress` (0 to 1) through its slot: an In arrives, an Out leaves, a
+/// Loop goes round once. For previews of the presets, drawn by the same code as the frames.
+pub fn preset_modifier(kind: PresetKind, slot: AnimSlot, progress: f32) -> Modifier {
+    let progress = progress.clamp(0.0, 1.0);
+    match slot {
+        AnimSlot::In => enter_exit(kind, progress),
+        AnimSlot::Out => enter_exit(kind, 1.0 - progress),
+        AnimSlot::Loop => looping(kind, progress),
+    }
+}
 const SLIDE_DISTANCE: f32 = CANVAS_WIDTH as f32 * 0.5;
 const LOOP_AMOUNT: f32 = 24.0;
 
 /// `visible` is 0 when fully gone and 1 when fully present.
 fn enter_exit(kind: PresetKind, visible: f32) -> Modifier {
-    let hidden = 1.0 - visible;
+    let hidden = 1.0 - ease(Easing::EaseOut, visible);
     let slide = |x: f32, y: f32| Modifier {
         offset: Vec2 {
             x: x * SLIDE_DISTANCE * hidden,
@@ -231,6 +247,10 @@ fn enter_exit(kind: PresetKind, visible: f32) -> Modifier {
         PresetKind::Stamp => Modifier {
             scale: 1.0 + 2.0 * hidden,
             opacity: visible,
+            ..NEUTRAL
+        },
+        PresetKind::Wipe => Modifier {
+            reveal: ease(Easing::EaseInOut, visible),
             ..NEUTRAL
         },
         _ => Modifier {
@@ -279,6 +299,7 @@ fn overlay_layer(item: &OverlayItem, t: i64) -> OverlayLayer {
     let mut scale = item.base.scale;
     let mut rotation = item.base.rotation;
     let mut opacity = item.base.opacity;
+    let mut reveal: f32 = 1.0;
 
     if let Some((point, heading)) = item.path.as_ref().and_then(|p| path_position(p, local)) {
         position = point;
@@ -328,6 +349,7 @@ fn overlay_layer(item: &OverlayItem, t: i64) -> OverlayLayer {
         scale *= modifier.scale;
         rotation += modifier.rotation;
         opacity *= modifier.opacity;
+        reveal = reveal.min(modifier.reveal);
     }
 
     OverlayLayer {
@@ -341,6 +363,7 @@ fn overlay_layer(item: &OverlayItem, t: i64) -> OverlayLayer {
         rotation,
         opacity: opacity.clamp(0.0, 1.0),
         flip: item.base.flip,
+        reveal: reveal.clamp(0.0, 1.0),
     }
 }
 

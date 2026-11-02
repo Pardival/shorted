@@ -147,6 +147,17 @@ abstract interface class ProjectGateway {
   Future<ProjectView> addShape(overlays.ShapeKindView shape, int atUs);
   Future<ProjectView> addText(String content, int atUs);
   Future<ProjectView> setText(String id, overlays.TextElementView text);
+  Future<ProjectView> setPresetAnim(
+    String id,
+    overlays.AnimSlotView slot,
+    overlays.PresetKindView? kind,
+    int durationUs,
+  );
+  overlays.PresetSampleView presetSample(
+    overlays.PresetKindView kind,
+    overlays.AnimSlotView slot,
+    double progress,
+  );
   Future<ProjectView> setOverlayTiming(String id, int startUs, int endUs);
   Future<ProjectView> shiftOverlayLayer(String id, {required bool forward});
   Future<ProjectView> setOverlayFlags(
@@ -432,6 +443,26 @@ class EngineGateway implements ProjectGateway {
   @override
   Future<ProjectView> setText(String id, overlays.TextElementView text) =>
       overlays.setText(id: id, text: text);
+
+  @override
+  Future<ProjectView> setPresetAnim(
+    String id,
+    overlays.AnimSlotView slot,
+    overlays.PresetKindView? kind,
+    int durationUs,
+  ) => overlays.setPresetAnim(
+    id: id,
+    slot: slot,
+    kind: kind,
+    durationUs: durationUs,
+  );
+
+  @override
+  overlays.PresetSampleView presetSample(
+    overlays.PresetKindView kind,
+    overlays.AnimSlotView slot,
+    double progress,
+  ) => overlays.presetSample(kind: kind, slot: slot, progress: progress);
 
   @override
   Future<ProjectView> setOverlayTiming(String id, int startUs, int endUs) =>

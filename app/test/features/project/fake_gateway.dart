@@ -255,6 +255,9 @@ class FakeGateway implements ProjectGateway {
   Future<ProjectView> addShape(ShapeKindView shape, int atUs) {
     opened!.overlays.add(
       OverlayView(
+        animIn: null,
+        animLoop: null,
+        animOut: null,
         text: null,
         id: 'o${_next++}',
         kind: OverlayKindView.shape,
@@ -280,6 +283,9 @@ class FakeGateway implements ProjectGateway {
   Future<ProjectView> addText(String content, int atUs) {
     opened!.overlays.add(
       OverlayView(
+        animIn: null,
+        animLoop: null,
+        animOut: null,
         id: 'o${_next++}',
         kind: OverlayKindView.text,
         startUs: big(atUs),
@@ -323,6 +329,9 @@ class FakeGateway implements ProjectGateway {
       hasAnimation: old.hasAnimation,
       transform: old.transform,
       text: text,
+      animIn: old.animIn,
+      animLoop: old.animLoop,
+      animOut: old.animOut,
     );
     return _overlay(
       'set $id ${text.content.replaceAll('\n', '|')} ${text.font} '
@@ -330,6 +339,28 @@ class FakeGateway implements ProjectGateway {
       '${text.decoration.name}',
     );
   }
+
+  @override
+  Future<ProjectView> setPresetAnim(
+    String id,
+    AnimSlotView slot,
+    PresetKindView? kind,
+    int durationUs,
+  ) => _overlay('preset $id ${slot.name} ${kind?.name} $durationUs');
+
+  @override
+  PresetSampleView presetSample(
+    PresetKindView kind,
+    AnimSlotView slot,
+    double progress,
+  ) => PresetSampleView(
+    dx: 0,
+    dy: 0,
+    scale: 1,
+    rotation: 0,
+    opacity: progress,
+    reveal: 1,
+  );
 
   @override
   Future<ProjectView> setOverlayTiming(String id, int startUs, int endUs) =>
@@ -388,6 +419,9 @@ class FakeGateway implements ProjectGateway {
   }) {
     opened!.overlays.add(
       OverlayView(
+        animIn: null,
+        animLoop: null,
+        animOut: null,
         text: null,
         id: 'o${_next++}',
         kind: OverlayKindView.image,

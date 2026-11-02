@@ -14,8 +14,8 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'projects.dart';
 import 'transcribe.dart';
 
-// These functions are ignored because they are not marked as `pub`: `boxes`, `find`, `natural_size`, `new_overlay`, `overlay_views`, `text_look`, `text_view`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `from`, `from`, `from`
+// These functions are ignored because they are not marked as `pub`: `boxes`, `find`, `natural_size`, `new_overlay`, `overlay_views`, `preset_view`, `text_look`, `text_view`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `from`, `from`, `from`, `from`, `from`, `from`
 
 /// The elements on screen at `time_us`, as the renderer places them, top first.
 List<OverlayBoxView> overlayBoxes({required PlatformInt64 timeUs}) =>
@@ -38,6 +38,30 @@ Future<ProjectView> setText({
   required String id,
   required TextElementView text,
 }) => RustLib.instance.api.crateApiOverlaysSetText(id: id, text: text);
+
+/// Sets or clears the In, Loop or Out animation. In and Out last at most half the element each,
+/// so both fit.
+Future<ProjectView> setPresetAnim({
+  required String id,
+  required AnimSlotView slot,
+  PresetKindView? kind,
+  required PlatformInt64 durationUs,
+}) => RustLib.instance.api.crateApiOverlaysSetPresetAnim(
+  id: id,
+  slot: slot,
+  kind: kind,
+  durationUs: durationUs,
+);
+
+PresetSampleView presetSample({
+  required PresetKindView kind,
+  required AnimSlotView slot,
+  required double progress,
+}) => RustLib.instance.api.crateApiOverlaysPresetSample(
+  kind: kind,
+  slot: slot,
+  progress: progress,
+);
 
 /// Moves an element in time, or one of its edges. Times are timeline microseconds.
 Future<ProjectView> setOverlayTiming({
@@ -93,6 +117,8 @@ Future<ProjectView> duplicateOverlay({required String id}) =>
 
 Future<ProjectView> deleteOverlay({required String id}) =>
     RustLib.instance.api.crateApiOverlaysDeleteOverlay(id: id);
+
+enum AnimSlotView { in_, loop, out }
 
 /// Where an element is drawn at one instant, in canvas units (1080 × 1920, origin top left).
 class OverlayBoxView {
@@ -151,6 +177,9 @@ class OverlayView {
 
   /// Set for text elements.
   final TextElementView? text;
+  final PresetView? animIn;
+  final PresetView? animLoop;
+  final PresetView? animOut;
 
   const OverlayView({
     required this.id,
@@ -162,6 +191,9 @@ class OverlayView {
     required this.hasAnimation,
     required this.transform,
     this.text,
+    this.animIn,
+    this.animLoop,
+    this.animOut,
   });
 
   @override
@@ -174,7 +206,10 @@ class OverlayView {
       hidden.hashCode ^
       hasAnimation.hashCode ^
       transform.hashCode ^
-      text.hashCode;
+      text.hashCode ^
+      animIn.hashCode ^
+      animLoop.hashCode ^
+      animOut.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -189,7 +224,88 @@ class OverlayView {
           hidden == other.hidden &&
           hasAnimation == other.hasAnimation &&
           transform == other.transform &&
-          text == other.text;
+          text == other.text &&
+          animIn == other.animIn &&
+          animLoop == other.animLoop &&
+          animOut == other.animOut;
+}
+
+/// The presets of FR-ENH-20.
+enum PresetKindView {
+  pop,
+  slideLeft,
+  slideRight,
+  slideUp,
+  slideDown,
+  fade,
+  zoom,
+  stamp,
+  wipe,
+  shrink,
+  float,
+  pulse,
+  wiggle,
+  rotate,
+  bounce,
+}
+
+/// What a preset does at one instant, relative to the element: for the animated thumbnails of
+/// the Animate sheet, so they move exactly as the video will.
+class PresetSampleView {
+  final double dx;
+  final double dy;
+  final double scale;
+  final double rotation;
+  final double opacity;
+  final double reveal;
+
+  const PresetSampleView({
+    required this.dx,
+    required this.dy,
+    required this.scale,
+    required this.rotation,
+    required this.opacity,
+    required this.reveal,
+  });
+
+  @override
+  int get hashCode =>
+      dx.hashCode ^
+      dy.hashCode ^
+      scale.hashCode ^
+      rotation.hashCode ^
+      opacity.hashCode ^
+      reveal.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PresetSampleView &&
+          runtimeType == other.runtimeType &&
+          dx == other.dx &&
+          dy == other.dy &&
+          scale == other.scale &&
+          rotation == other.rotation &&
+          opacity == other.opacity &&
+          reveal == other.reveal;
+}
+
+class PresetView {
+  final PresetKindView kind;
+  final PlatformInt64 durationUs;
+
+  const PresetView({required this.kind, required this.durationUs});
+
+  @override
+  int get hashCode => kind.hashCode ^ durationUs.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PresetView &&
+          runtimeType == other.runtimeType &&
+          kind == other.kind &&
+          durationUs == other.durationUs;
 }
 
 enum ShapeKindView { rectangle, ellipse, arrow }

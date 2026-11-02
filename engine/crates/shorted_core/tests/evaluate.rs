@@ -3,7 +3,8 @@
 #![allow(clippy::unwrap_used)]
 
 use proptest::prelude::*;
-use shorted_core::evaluate::{ease, evaluate};
+use shorted_core::command::AnimSlot;
+use shorted_core::evaluate::{Modifier, ease, evaluate, preset_modifier};
 use shorted_core::model::*;
 use uuid::Uuid;
 
@@ -407,4 +408,164 @@ proptest! {
         let frame = evaluate(&project, i64::MAX);
         prop_assert_eq!(frame.time_us, project.duration_us() - 1);
     }
+}
+
+const IN_PRESETS: [PresetKind; 9] = [
+    PresetKind::Pop,
+    PresetKind::SlideLeft,
+    PresetKind::SlideRight,
+    PresetKind::SlideUp,
+    PresetKind::SlideDown,
+    PresetKind::Fade,
+    PresetKind::Zoom,
+    PresetKind::Stamp,
+    PresetKind::Wipe,
+];
+
+fn hidden(modifier: Modifier) -> bool {
+    modifier.opacity < 0.01
+        || modifier.scale < 0.01
+        || modifier.reveal < 0.01
+        || modifier.offset.x.abs() >= 500.0
+        || modifier.offset.y.abs() >= 500.0
+}
+
+fn neutral(modifier: Modifier) -> bool {
+    (modifier.opacity - 1.0).abs() < 1e-4
+        && (modifier.scale - 1.0).abs() < 1e-3
+        && (modifier.reveal - 1.0).abs() < 1e-4
+        && modifier.offset.x.abs() < 1e-3
+        && modifier.offset.y.abs() < 1e-3
+        && modifier.rotation.abs() < 1e-3
+}
+
+#[test]
+fn every_in_preset_arrives_and_every_out_preset_leaves() {
+    for kind in IN_PRESETS {
+        assert!(
+            hidden(preset_modifier(kind, AnimSlot::In, 0.0)),
+            "{kind:?} starts visible"
+        );
+        assert!(
+            neutral(preset_modifier(kind, AnimSlot::In, 1.0)),
+            "{kind:?} does not settle"
+        );
+    }
+    for kind in [
+        PresetKind::Fade,
+        PresetKind::Shrink,
+        PresetKind::SlideLeft,
+        PresetKind::Pop,
+    ] {
+        assert!(
+            neutral(preset_modifier(kind, AnimSlot::Out, 0.0)),
+            "{kind:?}"
+        );
+        assert!(
+            hidden(preset_modifier(kind, AnimSlot::Out, 1.0)),
+            "{kind:?}"
+        );
+    }
+}
+
+#[test]
+fn every_loop_comes_back_to_where_it_started() {
+    for kind in [
+        PresetKind::Float,
+        PresetKind::Pulse,
+        PresetKind::Wiggle,
+        PresetKind::Bounce,
+    ] {
+        let start = preset_modifier(kind, AnimSlot::Loop, 0.0);
+        let end = preset_modifier(kind, AnimSlot::Loop, 1.0);
+        assert!(neutral(start), "{kind:?}");
+        assert!((start.offset.y - end.offset.y).abs() < 1e-3, "{kind:?}");
+        assert!((start.scale - end.scale).abs() < 1e-3, "{kind:?}");
+        assert!(
+            !neutral(preset_modifier(kind, AnimSlot::Loop, 0.25)),
+            "{kind:?} does not move"
+        );
+    }
+    let turned = preset_modifier(PresetKind::Rotate, AnimSlot::Loop, 0.5);
+    assert_eq!(turned.rotation, 180.0);
+}
+
+#[test]
+fn a_wipe_reveals_from_the_left() {
+    let project = overlay_only(|item| {
+        item.anim_in = Some(PresetAnim {
+            kind: PresetKind::Wipe,
+            duration_us: 1_000_000,
+        });
+    });
+    let reveal = |t| evaluate(&project, t).overlays[0].reveal;
+    assert_eq!(reveal(0), 0.0);
+    assert!((reveal(500_000) - 0.5).abs() < 1e-3);
+    assert_eq!(reveal(1_000_000), 1.0);
+}
+
+#[test]
+fn a_preset_adds_to_keyframes() {
+    let project = overlay_only(|item| {
+        item.keyframes = vec![AnimatedProperty {
+            property: Prop::X,
+            keys: vec![
+                Key {
+                    t_us: 0,
+                    value: 100.0,
+                    easing: Easing::Linear,
+                },
+                Key {
+                    t_us: 1_000_000,
+                    value: 300.0,
+                    easing: Easing::Linear,
+                },
+            ],
+        }];
+        item.anim_in = Some(PresetAnim {
+            kind: PresetKind::SlideLeft,
+            duration_us: 1_000_000,
+        });
+    });
+    let x = |t| evaluate(&project, t).overlays[0].position.x;
+    let slide = preset_modifier(PresetKind::SlideLeft, AnimSlot::In, 0.5)
+        .offset
+        .x;
+    assert!((x(500_000) - (200.0 + slide)).abs() < 1e-3);
+    assert!((x(1_000_000) - 300.0).abs() < 1e-3);
+}
+
+#[test]
+fn a_loop_adds_to_a_path_and_its_heading() {
+    let project = overlay_only(|item| {
+        item.base.rotation = 0.0;
+        item.path = Some(MotionPath {
+            samples: vec![
+                PathSample {
+                    t_us: 0,
+                    x: 0.0,
+                    y: 0.0,
+                },
+                PathSample {
+                    t_us: 2_000_000,
+                    x: 0.0,
+                    y: 400.0,
+                },
+            ],
+            smoothing: 0.0,
+            orient_to_path: true,
+        });
+        item.anim_loop = Some(PresetAnim {
+            kind: PresetKind::Wiggle,
+            duration_us: 1_000_000,
+        });
+    });
+    let layer = evaluate(&project, 250_000).overlays[0].clone();
+    let wiggle = preset_modifier(PresetKind::Wiggle, AnimSlot::Loop, 0.25).rotation;
+    assert!((layer.position.y - 50.0).abs() < 1e-3);
+    assert!(
+        (layer.rotation - (90.0 + wiggle)).abs() < 1e-3,
+        "{}",
+        layer.rotation
+    );
 }

@@ -19,6 +19,9 @@ Future<FakeGateway> _editor(WidgetTester tester, {bool locked = false}) async {
   final project = FakeProject('p1', 'Mine')..clips.add('c1');
   project.overlays.add(
     OverlayView(
+      animIn: null,
+      animLoop: null,
+      animOut: null,
       text: null,
       id: 'o9',
       kind: OverlayKindView.shape,

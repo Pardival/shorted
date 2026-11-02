@@ -58,6 +58,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String dco_decode_String(dynamic raw);
 
   @protected
+  AnimSlotView dco_decode_anim_slot_view(dynamic raw);
+
+  @protected
   AudioItemView dco_decode_audio_item_view(dynamic raw);
 
   @protected
@@ -83,6 +86,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   PictureView dco_decode_box_autoadd_picture_view(dynamic raw);
+
+  @protected
+  PresetKindView dco_decode_box_autoadd_preset_kind_view(dynamic raw);
+
+  @protected
+  PresetView dco_decode_box_autoadd_preset_view(dynamic raw);
 
   @protected
   TextElementView dco_decode_box_autoadd_text_element_view(dynamic raw);
@@ -229,6 +238,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PictureView? dco_decode_opt_box_autoadd_picture_view(dynamic raw);
 
   @protected
+  PresetKindView? dco_decode_opt_box_autoadd_preset_kind_view(dynamic raw);
+
+  @protected
+  PresetView? dco_decode_opt_box_autoadd_preset_view(dynamic raw);
+
+  @protected
   TextElementView? dco_decode_opt_box_autoadd_text_element_view(dynamic raw);
 
   @protected
@@ -250,6 +265,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   PictureView dco_decode_picture_view(dynamic raw);
+
+  @protected
+  PresetKindView dco_decode_preset_kind_view(dynamic raw);
+
+  @protected
+  PresetSampleView dco_decode_preset_sample_view(dynamic raw);
+
+  @protected
+  PresetView dco_decode_preset_view(dynamic raw);
 
   @protected
   ProjectSummary dco_decode_project_summary(dynamic raw);
@@ -341,6 +365,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String sse_decode_String(SseDeserializer deserializer);
 
   @protected
+  AnimSlotView sse_decode_anim_slot_view(SseDeserializer deserializer);
+
+  @protected
   AudioItemView sse_decode_audio_item_view(SseDeserializer deserializer);
 
   @protected
@@ -368,6 +395,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   PictureView sse_decode_box_autoadd_picture_view(SseDeserializer deserializer);
+
+  @protected
+  PresetKindView sse_decode_box_autoadd_preset_kind_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  PresetView sse_decode_box_autoadd_preset_view(SseDeserializer deserializer);
 
   @protected
   TextElementView sse_decode_box_autoadd_text_element_view(
@@ -554,6 +589,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  PresetKindView? sse_decode_opt_box_autoadd_preset_kind_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  PresetView? sse_decode_opt_box_autoadd_preset_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   TextElementView? sse_decode_opt_box_autoadd_text_element_view(
     SseDeserializer deserializer,
   );
@@ -579,6 +624,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   PictureView sse_decode_picture_view(SseDeserializer deserializer);
+
+  @protected
+  PresetKindView sse_decode_preset_kind_view(SseDeserializer deserializer);
+
+  @protected
+  PresetSampleView sse_decode_preset_sample_view(SseDeserializer deserializer);
+
+  @protected
+  PresetView sse_decode_preset_view(SseDeserializer deserializer);
 
   @protected
   ProjectSummary sse_decode_project_summary(SseDeserializer deserializer);
@@ -681,6 +735,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_String(String self, SseSerializer serializer);
 
   @protected
+  void sse_encode_anim_slot_view(AnimSlotView self, SseSerializer serializer);
+
+  @protected
   void sse_encode_audio_item_view(AudioItemView self, SseSerializer serializer);
 
   @protected
@@ -716,6 +773,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_picture_view(
     PictureView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_preset_kind_view(
+    PresetKindView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_preset_view(
+    PresetView self,
     SseSerializer serializer,
   );
 
@@ -945,6 +1014,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_opt_box_autoadd_preset_kind_view(
+    PresetKindView? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_preset_view(
+    PresetView? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_box_autoadd_text_element_view(
     TextElementView? self,
     SseSerializer serializer,
@@ -979,6 +1060,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_picture_view(PictureView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_preset_kind_view(
+    PresetKindView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_preset_sample_view(
+    PresetSampleView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_preset_view(PresetView self, SseSerializer serializer);
 
   @protected
   void sse_encode_project_summary(

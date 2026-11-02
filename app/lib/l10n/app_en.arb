@@ -324,5 +324,33 @@
   "textPlain": "Plain",
   "textChip": "Chip",
   "textOutline": "Outline",
-  "textShadow": "Shadow"
+  "textShadow": "Shadow",
+  "animate": "Animate",
+  "animateIn": "In",
+  "animateLoop": "Loop",
+  "animateOut": "Out",
+  "presetNone": "None",
+  "presetPop": "Pop",
+  "presetSlideLeft": "From right",
+  "presetSlideRight": "From left",
+  "presetSlideUp": "From below",
+  "presetSlideDown": "From above",
+  "presetFade": "Fade",
+  "presetZoom": "Zoom",
+  "presetStamp": "Stamp",
+  "presetWipe": "Wipe",
+  "presetShrink": "Shrink",
+  "presetFloat": "Float",
+  "presetPulse": "Pulse",
+  "presetWiggle": "Wiggle",
+  "presetRotate": "Rotate",
+  "presetBounce": "Bounce",
+  "seconds": "{value} s",
+  "@seconds": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  }
 }

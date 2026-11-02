@@ -108,6 +108,9 @@ void main() {
       ];
     project.overlays.add(
       OverlayView(
+        animIn: null,
+        animLoop: null,
+        animOut: null,
         text: null,
         id: 'o9',
         kind: OverlayKindView.shape,

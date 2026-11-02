@@ -427,6 +427,7 @@ impl FrameComposer {
             ],
             rotation: layer.rotation,
             flip: layer.flip,
+            reveal: layer.reveal,
         };
         Some((
             texture,

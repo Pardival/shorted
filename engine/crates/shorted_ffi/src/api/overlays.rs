@@ -1,8 +1,8 @@
 //! Overlays on the Widgets track (T-0701): timing, layer order, lock, hide, duplicate, delete,
 //! and where each one sits on screen so Flutter can draw the selection around it.
 
-use shorted_core::command::Command;
-use shorted_core::evaluate::evaluate;
+use shorted_core::command::{AnimSlot, Command};
+use shorted_core::evaluate::{evaluate, preset_modifier};
 use shorted_core::model::*;
 use shorted_render::captions::parse_color;
 use shorted_render::overlays::{shape_size, CANVAS_HEIGHT, CANVAS_WIDTH};
@@ -102,6 +102,111 @@ fn text_view(content: &str, style: &TextStyle) -> TextElementView {
     }
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum AnimSlotView {
+    In,
+    Loop,
+    Out,
+}
+
+impl From<AnimSlotView> for AnimSlot {
+    fn from(slot: AnimSlotView) -> Self {
+        match slot {
+            AnimSlotView::In => Self::In,
+            AnimSlotView::Loop => Self::Loop,
+            AnimSlotView::Out => Self::Out,
+        }
+    }
+}
+
+/// The presets of FR-ENH-20.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum PresetKindView {
+    Pop,
+    SlideLeft,
+    SlideRight,
+    SlideUp,
+    SlideDown,
+    Fade,
+    Zoom,
+    Stamp,
+    Wipe,
+    Shrink,
+    Float,
+    Pulse,
+    Wiggle,
+    Rotate,
+    Bounce,
+}
+
+impl From<PresetKindView> for PresetKind {
+    fn from(kind: PresetKindView) -> Self {
+        match kind {
+            PresetKindView::Pop => Self::Pop,
+            PresetKindView::SlideLeft => Self::SlideLeft,
+            PresetKindView::SlideRight => Self::SlideRight,
+            PresetKindView::SlideUp => Self::SlideUp,
+            PresetKindView::SlideDown => Self::SlideDown,
+            PresetKindView::Fade => Self::Fade,
+            PresetKindView::Zoom => Self::Zoom,
+            PresetKindView::Stamp => Self::Stamp,
+            PresetKindView::Wipe => Self::Wipe,
+            PresetKindView::Shrink => Self::Shrink,
+            PresetKindView::Float => Self::Float,
+            PresetKindView::Pulse => Self::Pulse,
+            PresetKindView::Wiggle => Self::Wiggle,
+            PresetKindView::Rotate => Self::Rotate,
+            PresetKindView::Bounce => Self::Bounce,
+        }
+    }
+}
+
+impl From<PresetKind> for PresetKindView {
+    fn from(kind: PresetKind) -> Self {
+        match kind {
+            PresetKind::Pop => Self::Pop,
+            PresetKind::SlideLeft => Self::SlideLeft,
+            PresetKind::SlideRight => Self::SlideRight,
+            PresetKind::SlideUp => Self::SlideUp,
+            PresetKind::SlideDown => Self::SlideDown,
+            PresetKind::Fade => Self::Fade,
+            PresetKind::Zoom => Self::Zoom,
+            PresetKind::Stamp => Self::Stamp,
+            PresetKind::Wipe => Self::Wipe,
+            PresetKind::Shrink => Self::Shrink,
+            PresetKind::Float => Self::Float,
+            PresetKind::Pulse => Self::Pulse,
+            PresetKind::Wiggle => Self::Wiggle,
+            PresetKind::Rotate => Self::Rotate,
+            PresetKind::Bounce => Self::Bounce,
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct PresetView {
+    pub kind: PresetKindView,
+    pub duration_us: i64,
+}
+
+fn preset_view(anim: Option<PresetAnim>) -> Option<PresetView> {
+    anim.map(|anim| PresetView {
+        kind: anim.kind.into(),
+        duration_us: anim.duration_us,
+    })
+}
+
+/// What a preset does at one instant, relative to the element: for the animated thumbnails of
+/// the Animate sheet, so they move exactly as the video will.
+pub struct PresetSampleView {
+    pub dx: f32,
+    pub dy: f32,
+    pub scale: f32,
+    pub rotation: f32,
+    pub opacity: f32,
+    pub reveal: f32,
+}
+
 /// One element, bottom first in `ProjectView::overlays`.
 pub struct OverlayView {
     pub id: String,
@@ -114,6 +219,9 @@ pub struct OverlayView {
     pub transform: TransformView,
     /// Set for text elements.
     pub text: Option<TextElementView>,
+    pub anim_in: Option<PresetView>,
+    pub anim_loop: Option<PresetView>,
+    pub anim_out: Option<PresetView>,
 }
 
 /// An element's own placement, before animation: centre in canvas units, degrees clockwise.
@@ -213,6 +321,9 @@ pub(crate) fn overlay_views(project: &Project) -> Vec<OverlayView> {
                 OverlayKind::Text { content, style } => Some(text_view(content, style)),
                 _ => None,
             },
+            anim_in: preset_view(item.anim_in),
+            anim_loop: preset_view(item.anim_loop),
+            anim_out: preset_view(item.anim_out),
         })
         .collect()
 }
@@ -346,6 +457,49 @@ pub async fn set_text(id: String, text: TextElementView) -> Result<ProjectView, 
             overlay: Box::new(item),
         })
     })
+}
+
+const MIN_PRESET_US: i64 = 100_000;
+const MAX_PRESET_US: i64 = 10_000_000;
+
+/// Sets or clears the In, Loop or Out animation. In and Out last at most half the element each,
+/// so both fit.
+pub async fn set_preset_anim(
+    id: String,
+    slot: AnimSlotView,
+    kind: Option<PresetKindView>,
+    duration_us: i64,
+) -> Result<ProjectView, EngineFailure> {
+    edit(move |project| {
+        let item = find(project, parse(&id)?)?;
+        let length = item.end_us - item.start_us;
+        let most = if slot == AnimSlotView::Loop {
+            MAX_PRESET_US
+        } else {
+            (length / 2).max(MIN_PRESET_US)
+        };
+        Ok(Command::SetPresetAnim {
+            id: item.id,
+            slot: slot.into(),
+            anim: kind.map(|kind| PresetAnim {
+                kind: kind.into(),
+                duration_us: duration_us.clamp(MIN_PRESET_US, most.min(MAX_PRESET_US)),
+            }),
+        })
+    })
+}
+
+#[flutter_rust_bridge::frb(sync)]
+pub fn preset_sample(kind: PresetKindView, slot: AnimSlotView, progress: f32) -> PresetSampleView {
+    let modifier = preset_modifier(kind.into(), slot.into(), progress);
+    PresetSampleView {
+        dx: modifier.offset.x,
+        dy: modifier.offset.y,
+        scale: modifier.scale,
+        rotation: modifier.rotation,
+        opacity: modifier.opacity,
+        reveal: modifier.reveal,
+    }
 }
 
 /// Moves an element in time, or one of its edges. Times are timeline microseconds.

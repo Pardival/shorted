@@ -42,7 +42,8 @@ fn fs(in: Out) -> @location(0) vec4<f32> {
     if layer.sprite > 0.5 {
         let point = vec3<f32>(in.uv, 1.0);
         let at = vec2<f32>(dot(layer.sprite_u.xyz, point), dot(layer.sprite_v.xyz, point));
-        if any(at < vec2<f32>(0.0)) || any(at > vec2<f32>(1.0)) {
+        // The fourth value of the first row is how much of the picture a wipe has revealed.
+        if any(at < vec2<f32>(0.0)) || any(at > vec2<f32>(1.0)) || at.x > layer.sprite_u.w {
             discard;
         }
         let picture = textureSample(source, source_sampler, at);
