@@ -7,11 +7,11 @@ use std::path::Path;
 use objc2_core_foundation::CFRetained;
 use objc2_io_surface::IOSurfaceRef;
 use shorted_core::evaluate::{evaluate, ClipLayer, TransitionState};
-use shorted_core::model::{Id, MediaKind, MediaRef, Project, TransitionKind};
+use shorted_core::model::{ColorAdjust, Id, MediaKind, MediaRef, Project, TransitionKind};
 use shorted_media::apple::{AppleBackend, AppleDecoder, AppleFrame};
 use shorted_media::{DecodedFrame, MediaBackend, MediaInfo, VideoDecoder};
 use shorted_render::apple::texture_from_iosurface;
-use shorted_render::compositor::{load_image, Compositor, LayerPlacement};
+use shorted_render::compositor::{load_image, Compositor, LayerEffect, LayerPlacement};
 use shorted_render::spike::RenderError;
 
 use crate::api::media::resolve;
@@ -112,15 +112,85 @@ pub struct FrameComposer {
     offline: wgpu::Texture,
 }
 
-fn layer_opacity(index: usize, transition: Option<TransitionState>) -> f32 {
-    match transition {
-        Some(state) if index > 0 => match state.kind {
-            TransitionKind::Crossfade => state.progress,
-            // The other kinds are drawn as a cut until T-0709.
-            _ if state.progress >= 0.5 => 1.0,
-            _ => 0.0,
+const BLACK: [f32; 3] = [0.0; 3];
+const WHITE: [f32; 3] = [1.0; 3];
+
+fn dip(color: [f32; 3], incoming: bool, progress: f32) -> LayerEffect {
+    // Up to the colour on the first half, back down from it on the second.
+    let amount = if incoming {
+        (2.0 - progress * 2.0).min(1.0)
+    } else {
+        (progress * 2.0).min(1.0)
+    };
+    LayerEffect {
+        opacity: if incoming && progress < 0.5 { 0.0 } else { 1.0 },
+        tint: [color[0], color[1], color[2], amount],
+        ..LayerEffect::default()
+    }
+}
+
+fn eased(progress: f32) -> f32 {
+    progress * progress * (3.0 - 2.0 * progress)
+}
+
+/// One layer of a transition. Layer 0 is the outgoing clip, drawn first; Spin and Glitch are
+/// drawn as a cut until they have a look of their own, and are not offered in the app.
+fn transition_effect(index: usize, state: TransitionState) -> LayerEffect {
+    let incoming = index > 0;
+    let progress = state.progress.clamp(0.0, 1.0);
+    let base = LayerEffect::default();
+    match state.kind {
+        TransitionKind::Crossfade if incoming => LayerEffect {
+            opacity: progress,
+            ..base
         },
-        _ => 1.0,
+        TransitionKind::DipToBlack => dip(BLACK, incoming, progress),
+        TransitionKind::DipToWhite | TransitionKind::Flash => dip(WHITE, incoming, progress),
+        TransitionKind::Slide if incoming => LayerEffect {
+            shift: [1.0 - eased(progress), 0.0],
+            ..base
+        },
+        TransitionKind::Push => push(incoming, eased(progress)),
+        TransitionKind::WhipPan => push(incoming, eased(eased(progress))),
+        TransitionKind::ZoomIn => LayerEffect {
+            opacity: if incoming { progress } else { 1.0 },
+            frame_zoom: if incoming { 1.0 } else { 1.0 + progress },
+            ..base
+        },
+        TransitionKind::ZoomOut => LayerEffect {
+            opacity: if incoming { progress } else { 1.0 },
+            frame_zoom: if incoming { 1.5 - progress / 2.0 } else { 1.0 },
+            ..base
+        },
+        TransitionKind::Crossfade | TransitionKind::Slide => base,
+        _ if incoming => LayerEffect {
+            opacity: if progress >= 0.5 { 1.0 } else { 0.0 },
+            ..base
+        },
+        _ => base,
+    }
+}
+
+fn push(incoming: bool, progress: f32) -> LayerEffect {
+    let shift = if incoming { 1.0 - progress } else { -progress };
+    LayerEffect {
+        shift: [shift, 0.0],
+        ..LayerEffect::default()
+    }
+}
+
+fn layer_effect(
+    index: usize,
+    transition: Option<TransitionState>,
+    color: ColorAdjust,
+) -> LayerEffect {
+    LayerEffect {
+        brightness: color.brightness,
+        contrast: color.contrast,
+        saturation: color.saturation,
+        ..transition.map_or_else(LayerEffect::default, |state| {
+            transition_effect(index, state)
+        })
     }
 }
 
@@ -172,7 +242,7 @@ impl FrameComposer {
         &self,
         media: Option<&MediaRef>,
         layer: &ClipLayer,
-        opacity: f32,
+        effect: LayerEffect,
     ) -> (&wgpu::Texture, LayerPlacement) {
         let crop = LayerPlacement {
             width: 1,
@@ -180,7 +250,7 @@ impl FrameComposer {
             quarter_turns: 0,
             center: [layer.crop.center.x, layer.crop.center.y],
             zoom: layer.crop.scale,
-            opacity,
+            effect,
         };
         let Some(media) = media else {
             return (&self.offline, crop);
@@ -225,9 +295,81 @@ impl FrameComposer {
         if let Some((project, frame)) = &frame {
             for (index, layer) in frame.clips.iter().enumerate() {
                 let media = project.media.iter().find(|m| m.id == layer.media_id);
-                layers.push(self.placed(media, layer, layer_opacity(index, frame.transition)));
+                let effect = layer_effect(index, frame.transition, layer.color);
+                layers.push(self.placed(media, layer, effect));
             }
         }
         self.compositor.render(&layers, target)
+    }
+}
+
+#[cfg(test)]
+mod transition_tests {
+    use super::*;
+
+    fn at(kind: TransitionKind, index: usize, progress: f32) -> LayerEffect {
+        transition_effect(index, TransitionState { kind, progress })
+    }
+
+    #[test]
+    fn every_offered_transition_starts_on_the_old_clip_and_ends_on_the_new_one() {
+        for kind in [
+            TransitionKind::Crossfade,
+            TransitionKind::DipToBlack,
+            TransitionKind::DipToWhite,
+            TransitionKind::Flash,
+            TransitionKind::Slide,
+            TransitionKind::Push,
+            TransitionKind::WhipPan,
+            TransitionKind::ZoomIn,
+            TransitionKind::ZoomOut,
+        ] {
+            let incoming = at(kind, 1, 0.0);
+            let hidden = incoming.opacity == 0.0 || incoming.shift[0] == 1.0;
+            assert!(hidden, "{kind:?} shows the new clip too early");
+            let end = at(kind, 1, 1.0);
+            assert_eq!(end.opacity, 1.0, "{kind:?}");
+            assert_eq!(end.shift, [0.0, 0.0], "{kind:?}");
+            assert_eq!(end.tint[3], 0.0, "{kind:?}");
+            assert_eq!(end.frame_zoom, 1.0, "{kind:?}");
+        }
+    }
+
+    #[test]
+    fn a_dip_reaches_its_colour_halfway() {
+        assert_eq!(at(TransitionKind::DipToWhite, 0, 0.25).tint[3], 0.5);
+        assert_eq!(at(TransitionKind::DipToWhite, 0, 0.5).tint[3], 1.0);
+        assert_eq!(at(TransitionKind::DipToWhite, 1, 0.5).tint[3], 1.0);
+        assert_eq!(at(TransitionKind::DipToWhite, 1, 0.75).tint[3], 0.5);
+        assert_eq!(
+            at(TransitionKind::DipToBlack, 0, 0.5).tint,
+            [0.0, 0.0, 0.0, 1.0]
+        );
+    }
+
+    #[test]
+    fn a_push_moves_both_clips_together() {
+        let (out, new) = (
+            at(TransitionKind::Push, 0, 0.5),
+            at(TransitionKind::Push, 1, 0.5),
+        );
+        assert_eq!(new.shift[0] - out.shift[0], 1.0);
+    }
+
+    #[test]
+    fn colour_applies_with_or_without_a_transition() {
+        let color = ColorAdjust {
+            brightness: 0.1,
+            contrast: 1.2,
+            saturation: 0.5,
+        };
+        let plain = layer_effect(0, None, color);
+        assert_eq!((plain.brightness, plain.opacity), (0.1, 1.0));
+        let state = TransitionState {
+            kind: TransitionKind::Crossfade,
+            progress: 0.25,
+        };
+        let faded = layer_effect(1, Some(state), color);
+        assert_eq!((faded.saturation, faded.opacity), (0.5, 0.25));
     }
 }

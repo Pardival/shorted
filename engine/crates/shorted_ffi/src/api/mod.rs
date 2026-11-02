@@ -3,6 +3,7 @@
 pub mod audio;
 pub mod clips;
 pub mod export;
+pub mod look;
 pub mod media;
 pub mod preview;
 pub mod projects;

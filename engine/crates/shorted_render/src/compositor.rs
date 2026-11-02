@@ -16,7 +16,38 @@ struct LayerUniform {
     offset: [f32; 2],
     quarter_turns: u32,
     opacity: f32,
-    padding: [f32; 2],
+    shift: [f32; 2],
+    tint: [f32; 4],
+    brightness: f32,
+    contrast: f32,
+    saturation: f32,
+    frame_zoom: f32,
+}
+
+/// What a clip's colour and a transition do to a layer. The default changes nothing.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct LayerEffect {
+    pub opacity: f32,
+    pub shift: [f32; 2],
+    pub tint: [f32; 4],
+    pub brightness: f32,
+    pub contrast: f32,
+    pub saturation: f32,
+    pub frame_zoom: f32,
+}
+
+impl Default for LayerEffect {
+    fn default() -> Self {
+        Self {
+            opacity: 1.0,
+            shift: [0.0; 2],
+            tint: [0.0; 4],
+            brightness: 0.0,
+            contrast: 1.0,
+            saturation: 1.0,
+            frame_zoom: 1.0,
+        }
+    }
 }
 
 /// How to place one source in the frame.
@@ -30,7 +61,7 @@ pub struct LayerPlacement {
     /// Crop: centre in 0..1 of the displayed picture, and zoom.
     pub center: [f32; 2],
     pub zoom: f32,
-    pub opacity: f32,
+    pub effect: LayerEffect,
 }
 
 impl LayerPlacement {
@@ -59,8 +90,13 @@ impl LayerPlacement {
             scale,
             offset,
             quarter_turns: self.quarter_turns % 4,
-            opacity: self.opacity,
-            padding: [0.0; 2],
+            opacity: self.effect.opacity,
+            shift: self.effect.shift,
+            tint: self.effect.tint,
+            brightness: self.effect.brightness,
+            contrast: self.effect.contrast,
+            saturation: self.effect.saturation,
+            frame_zoom: self.effect.frame_zoom.max(0.01),
         }
     }
 }
@@ -383,7 +419,7 @@ mod tests {
             quarter_turns: 0,
             center: [0.5, 0.5],
             zoom: 1.0,
-            opacity: 1.0,
+            effect: LayerEffect::default(),
         }
     }
 
@@ -455,7 +491,10 @@ mod tests {
         let black = solid(&compositor, [0, 0, 0]);
         let white = solid(&compositor, [255, 255, 255]);
         let top = LayerPlacement {
-            opacity: 0.5,
+            effect: LayerEffect {
+                opacity: 0.5,
+                ..LayerEffect::default()
+            },
             ..placement()
         };
         let pixels = compositor
@@ -485,6 +524,66 @@ mod tests {
         };
         let uniform = moved.uniform(90, 160);
         assert_eq!(uniform.offset, [0.25, 0.75]);
+    }
+
+    /// The middle pixel of a solid colour drawn with `effect`.
+    fn drawn(rgb: [u8; 3], effect: LayerEffect) -> Option<[u8; 3]> {
+        let compositor = compositor()?;
+        let texture = solid(&compositor, rgb);
+        let layer = LayerPlacement {
+            effect,
+            ..placement()
+        };
+        let pixels = compositor.render_to_pixels(&[(&texture, layer)]).ok()?;
+        Some(rgb_at(&pixels, 0.5, 0.5))
+    }
+
+    #[test]
+    fn colour_adjustments_change_the_picture() {
+        let grey = [128, 128, 128];
+        let plain = LayerEffect::default();
+        let Some(same) = drawn(grey, plain) else {
+            return;
+        };
+        assert!(close(same, grey), "{same:?}");
+        let bright = LayerEffect {
+            brightness: 0.25,
+            ..plain
+        };
+        assert!(close(drawn(grey, bright).unwrap(), [192, 192, 192]));
+        let flat = LayerEffect {
+            contrast: 0.0,
+            ..plain
+        };
+        assert!(close(drawn([255, 0, 0], flat).unwrap(), [128, 128, 128]));
+        let pale = LayerEffect {
+            saturation: 0.0,
+            ..plain
+        };
+        let luma = drawn([255, 0, 0], pale).unwrap();
+        assert!(close(luma, [54, 54, 54]), "{luma:?}");
+    }
+
+    #[test]
+    fn a_tint_covers_the_picture() {
+        let white = LayerEffect {
+            tint: [1.0, 1.0, 1.0, 1.0],
+            ..LayerEffect::default()
+        };
+        if let Some(found) = drawn([10, 20, 30], white) {
+            assert!(close(found, [255, 255, 255]), "{found:?}");
+        }
+    }
+
+    #[test]
+    fn a_shifted_picture_leaves_the_frame() {
+        let gone = LayerEffect {
+            shift: [1.0, 0.0],
+            ..LayerEffect::default()
+        };
+        if let Some(found) = drawn([200, 200, 200], gone) {
+            assert!(close(found, [0, 0, 0]), "{found:?}");
+        }
     }
 
     #[test]

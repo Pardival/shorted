@@ -7,6 +7,7 @@ import 'api.dart';
 import 'api/audio.dart';
 import 'api/clips.dart';
 import 'api/export.dart';
+import 'api/look.dart';
 import 'api/media.dart';
 import 'api/preview.dart';
 import 'api/projects.dart';
@@ -78,7 +79,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => -1264281635;
+  int get rustContentHash => -857181803;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -240,12 +241,28 @@ abstract class RustLibApi extends BaseApi {
     required bool muted,
   });
 
+  Future<ProjectView> crateApiLookSetClipColor({
+    required String id,
+    required double brightness,
+    required double contrast,
+    required double saturation,
+  });
+
   Future<ProjectView> crateApiAudioSetClipSound({
     required String id,
     required double volume,
     required bool muted,
     required PlatformInt64 fadeInUs,
     required PlatformInt64 fadeOutUs,
+  });
+
+  Future<ProjectView> crateApiLookSetClipSpeed({
+    required String id,
+    required double speed,
+  });
+
+  Future<ProjectView> crateApiLookSetTransitionForAll({
+    required TransitionKindView kind,
   });
 
   Future<ProjectView> crateApiClipsSplitClip({
@@ -1602,6 +1619,44 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<ProjectView> crateApiLookSetClipColor({
+    required String id,
+    required double brightness,
+    required double contrast,
+    required double saturation,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_f_32(brightness, serializer);
+          sse_encode_f_32(contrast, serializer);
+          sse_encode_f_32(saturation, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 45,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiLookSetClipColorConstMeta,
+        argValues: [id, brightness, contrast, saturation],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiLookSetClipColorConstMeta => const TaskConstMeta(
+    debugName: "set_clip_color",
+    argNames: ["id", "brightness", "contrast", "saturation"],
+  );
+
+  @override
   Future<ProjectView> crateApiAudioSetClipSound({
     required String id,
     required double volume,
@@ -1621,7 +1676,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 45,
+            funcId: 46,
             port: port_,
           );
         },
@@ -1642,6 +1697,73 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   );
 
   @override
+  Future<ProjectView> crateApiLookSetClipSpeed({
+    required String id,
+    required double speed,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_f_32(speed, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 47,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiLookSetClipSpeedConstMeta,
+        argValues: [id, speed],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiLookSetClipSpeedConstMeta => const TaskConstMeta(
+    debugName: "set_clip_speed",
+    argNames: ["id", "speed"],
+  );
+
+  @override
+  Future<ProjectView> crateApiLookSetTransitionForAll({
+    required TransitionKindView kind,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_transition_kind_view(kind, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 48,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiLookSetTransitionForAllConstMeta,
+        argValues: [kind],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiLookSetTransitionForAllConstMeta =>
+      const TaskConstMeta(
+        debugName: "set_transition_for_all",
+        argNames: ["kind"],
+      );
+
+  @override
   Future<ProjectView> crateApiClipsSplitClip({
     required String id,
     required PlatformInt64 timeUs,
@@ -1655,7 +1777,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 46,
+            funcId: 49,
             port: port_,
           );
         },
@@ -1686,7 +1808,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 47,
+              funcId: 50,
               port: port_,
             );
           },
@@ -1725,7 +1847,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 48,
+              funcId: 51,
               port: port_,
             );
           },
@@ -1757,7 +1879,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 49,
+            funcId: 52,
             port: port_,
           );
         },
@@ -1789,7 +1911,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 50,
+            funcId: 53,
             port: port_,
           );
         },
@@ -1823,7 +1945,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 51,
+            funcId: 54,
             port: port_,
           );
         },
@@ -1852,7 +1974,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 52,
+            funcId: 55,
             port: port_,
           );
         },
@@ -1972,9 +2094,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  TransitionKindView dco_decode_box_autoadd_transition_kind_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_transition_kind_view(raw);
+  }
+
+  @protected
   ClipEdge dco_decode_clip_edge(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return ClipEdge.values[raw as int];
+  }
+
+  @protected
+  ClipLookView dco_decode_clip_look_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return ClipLookView(
+      clipId: dco_decode_String(arr[0]),
+      speed: dco_decode_f_32(arr[1]),
+      brightness: dco_decode_f_32(arr[2]),
+      contrast: dco_decode_f_32(arr[3]),
+      saturation: dco_decode_f_32(arr[4]),
+    );
   }
 
   @protected
@@ -2074,6 +2217,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<ClipLookView> dco_decode_list_clip_look_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_clip_look_view).toList();
+  }
+
+  @protected
   List<ClipSoundView> dco_decode_list_clip_sound_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_clip_sound_view).toList();
@@ -2116,6 +2265,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  LookView dco_decode_look_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return LookView(
+      clips: dco_decode_list_clip_look_view(arr[0]),
+      transition: dco_decode_opt_box_autoadd_transition_kind_view(arr[1]),
+    );
+  }
+
+  @protected
   MediaItemView dco_decode_media_item_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -2155,6 +2316,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  TransitionKindView? dco_decode_opt_box_autoadd_transition_kind_view(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null
+        ? null
+        : dco_decode_box_autoadd_transition_kind_view(raw);
+  }
+
+  @protected
   ProjectSummary dco_decode_project_summary(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -2172,8 +2343,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ProjectView dco_decode_project_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 8)
-      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
     return ProjectView(
       id: dco_decode_String(arr[0]),
       title: dco_decode_String(arr[1]),
@@ -2183,6 +2354,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       tracks: dco_decode_list_track_view(arr[5]),
       media: dco_decode_list_media_item_view(arr[6]),
       sound: dco_decode_sound_view(arr[7]),
+      look: dco_decode_look_view(arr[8]),
     );
   }
 
@@ -2271,6 +2443,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       name: dco_decode_opt_String(arr[1]),
       items: dco_decode_list_track_item_view(arr[2]),
     );
+  }
+
+  @protected
+  TransitionKindView dco_decode_transition_kind_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return TransitionKindView.values[raw as int];
   }
 
   @protected
@@ -2413,10 +2591,35 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  TransitionKindView sse_decode_box_autoadd_transition_kind_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_transition_kind_view(deserializer));
+  }
+
+  @protected
   ClipEdge sse_decode_clip_edge(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_i_32(deserializer);
     return ClipEdge.values[inner];
+  }
+
+  @protected
+  ClipLookView sse_decode_clip_look_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_clipId = sse_decode_String(deserializer);
+    var var_speed = sse_decode_f_32(deserializer);
+    var var_brightness = sse_decode_f_32(deserializer);
+    var var_contrast = sse_decode_f_32(deserializer);
+    var var_saturation = sse_decode_f_32(deserializer);
+    return ClipLookView(
+      clipId: var_clipId,
+      speed: var_speed,
+      brightness: var_brightness,
+      contrast: var_contrast,
+      saturation: var_saturation,
+    );
   }
 
   @protected
@@ -2531,6 +2734,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<ClipLookView> sse_decode_list_clip_look_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <ClipLookView>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_clip_look_view(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<ClipSoundView> sse_decode_list_clip_sound_view(
     SseDeserializer deserializer,
   ) {
@@ -2620,6 +2837,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  LookView sse_decode_look_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_clips = sse_decode_list_clip_look_view(deserializer);
+    var var_transition = sse_decode_opt_box_autoadd_transition_kind_view(
+      deserializer,
+    );
+    return LookView(clips: var_clips, transition: var_transition);
+  }
+
+  @protected
   MediaItemView sse_decode_media_item_view(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_id = sse_decode_String(deserializer);
@@ -2679,6 +2906,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  TransitionKindView? sse_decode_opt_box_autoadd_transition_kind_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_transition_kind_view(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
   ProjectSummary sse_decode_project_summary(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_id = sse_decode_String(deserializer);
@@ -2704,6 +2944,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_tracks = sse_decode_list_track_view(deserializer);
     var var_media = sse_decode_list_media_item_view(deserializer);
     var var_sound = sse_decode_sound_view(deserializer);
+    var var_look = sse_decode_look_view(deserializer);
     return ProjectView(
       id: var_id,
       title: var_title,
@@ -2713,6 +2954,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       tracks: var_tracks,
       media: var_media,
       sound: var_sound,
+      look: var_look,
     );
   }
 
@@ -2805,6 +3047,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_name = sse_decode_opt_String(deserializer);
     var var_items = sse_decode_list_track_item_view(deserializer);
     return TrackView(kind: var_kind, name: var_name, items: var_items);
+  }
+
+  @protected
+  TransitionKindView sse_decode_transition_kind_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return TransitionKindView.values[inner];
   }
 
   @protected
@@ -2980,9 +3231,28 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_transition_kind_view(
+    TransitionKindView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_transition_kind_view(self, serializer);
+  }
+
+  @protected
   void sse_encode_clip_edge(ClipEdge self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_clip_look_view(ClipLookView self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.clipId, serializer);
+    sse_encode_f_32(self.speed, serializer);
+    sse_encode_f_32(self.brightness, serializer);
+    sse_encode_f_32(self.contrast, serializer);
+    sse_encode_f_32(self.saturation, serializer);
   }
 
   @protected
@@ -3085,6 +3355,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_clip_look_view(
+    List<ClipLookView> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_clip_look_view(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_clip_sound_view(
     List<ClipSoundView> self,
     SseSerializer serializer,
@@ -3167,6 +3449,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_look_view(LookView self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_clip_look_view(self.clips, serializer);
+    sse_encode_opt_box_autoadd_transition_kind_view(
+      self.transition,
+      serializer,
+    );
+  }
+
+  @protected
   void sse_encode_media_item_view(
     MediaItemView self,
     SseSerializer serializer,
@@ -3222,6 +3514,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_opt_box_autoadd_transition_kind_view(
+    TransitionKindView? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_transition_kind_view(self, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_project_summary(
     ProjectSummary self,
     SseSerializer serializer,
@@ -3244,6 +3549,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_list_track_view(self.tracks, serializer);
     sse_encode_list_media_item_view(self.media, serializer);
     sse_encode_sound_view(self.sound, serializer);
+    sse_encode_look_view(self.look, serializer);
   }
 
   @protected
@@ -3321,6 +3627,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_track_kind_view(self.kind, serializer);
     sse_encode_opt_String(self.name, serializer);
     sse_encode_list_track_item_view(self.items, serializer);
+  }
+
+  @protected
+  void sse_encode_transition_kind_view(
+    TransitionKindView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
   }
 
   @protected

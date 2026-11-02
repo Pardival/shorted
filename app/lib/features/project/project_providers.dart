@@ -26,6 +26,17 @@ final cropTargetProvider =
       ({String projectId, String clipId})?
     >(CropTarget.new);
 
+/// The clip selected on the timeline, for the panels that edit one clip.
+class SelectedClip extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void set(String? id) => state = id;
+}
+
+final selectedClipProvider =
+    NotifierProvider.autoDispose<SelectedClip, String?>(SelectedClip.new);
+
 final previewTransportProvider = Provider<PreviewTransport>(
   (ref) => throw UnimplementedError('previewTransportProvider is not set'),
 );

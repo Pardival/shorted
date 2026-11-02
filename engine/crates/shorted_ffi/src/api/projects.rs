@@ -17,6 +17,7 @@ use time::OffsetDateTime;
 use uuid::Uuid;
 
 use crate::api::audio::{sound_view, SoundView};
+use crate::api::look::{look_view, LookView};
 use crate::api::media::{media_views, MediaItemView};
 use crate::error::{EngineError, EngineFailure};
 use crate::frb_generated::StreamSink;
@@ -66,6 +67,7 @@ pub struct ProjectView {
     pub tracks: Vec<TrackView>,
     pub media: Vec<MediaItemView>,
     pub sound: SoundView,
+    pub look: LookView,
 }
 
 #[derive(Clone, Copy)]
@@ -355,6 +357,7 @@ pub(crate) fn view_of(session: &ProjectSession) -> ProjectView {
         can_redo: session.can_redo(),
         tracks: track_view(session),
         sound: sound_view(project),
+        look: look_view(project),
         media: media_views(session),
     }
 }

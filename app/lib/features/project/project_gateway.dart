@@ -4,6 +4,7 @@ import '../../bridge/api.dart' as tasks;
 import '../../bridge/api/audio.dart' as audio;
 import '../../bridge/api/clips.dart' as clips;
 import '../../bridge/api/export.dart' as exporter;
+import '../../bridge/api/look.dart' as look;
 import '../../bridge/api/media.dart' as media;
 import '../../bridge/api/projects.dart' as engine;
 import '../../bridge/api/projects.dart';
@@ -71,6 +72,14 @@ abstract interface class ProjectGateway {
   Future<ProjectView> renameAudioTrack(String id, String name);
   Future<ProjectView> setAudioTrackMuted(String? id, {required bool muted});
   Future<Uint8List> peaks(String mediaId);
+  Future<ProjectView> setClipSpeed(String id, double speed);
+  Future<ProjectView> setClipColor(
+    String id, {
+    required double brightness,
+    required double contrast,
+    required double saturation,
+  });
+  Future<ProjectView> setTransitionForAll(look.TransitionKindView kind);
   void cancelTask(BigInt id);
 }
 
@@ -246,6 +255,27 @@ class EngineGateway implements ProjectGateway {
   @override
   Future<ProjectView> setAudioTrackMuted(String? id, {required bool muted}) =>
       audio.setAudioTrackMuted(id: id, muted: muted);
+
+  @override
+  Future<ProjectView> setClipSpeed(String id, double speed) =>
+      look.setClipSpeed(id: id, speed: speed);
+
+  @override
+  Future<ProjectView> setClipColor(
+    String id, {
+    required double brightness,
+    required double contrast,
+    required double saturation,
+  }) => look.setClipColor(
+    id: id,
+    brightness: brightness,
+    contrast: contrast,
+    saturation: saturation,
+  );
+
+  @override
+  Future<ProjectView> setTransitionForAll(look.TransitionKindView kind) =>
+      look.setTransitionForAll(kind: kind);
 
   @override
   Future<Uint8List> peaks(String mediaId) => audio.mediaPeaks(mediaId: mediaId);

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:shorted/bridge/api/audio.dart';
+import 'package:shorted/bridge/api/look.dart';
 import 'package:shorted/bridge/api/media.dart';
 import 'package:shorted/bridge/api/projects.dart';
 import 'package:shorted/bridge/error.dart';
@@ -133,6 +134,19 @@ class FakeGateway implements ProjectGateway {
         ],
         tracks: project.audioTracks,
       ),
+      look: LookView(
+        clips: [
+          for (final clip in project.clips)
+            ClipLookView(
+              clipId: clip,
+              speed: 1,
+              brightness: 0,
+              contrast: 1,
+              saturation: 1,
+            ),
+        ],
+        transition: TransitionKindView.cut,
+      ),
     );
   }
 
@@ -219,6 +233,29 @@ class FakeGateway implements ProjectGateway {
 
   @override
   Future<Uint8List> peaks(String mediaId) async => Uint8List(0);
+
+  final lookCalls = <String>[];
+
+  Future<ProjectView> _look(String call) async {
+    lookCalls.add(call);
+    return view();
+  }
+
+  @override
+  Future<ProjectView> setClipSpeed(String id, double speed) =>
+      _look('speed $id $speed');
+
+  @override
+  Future<ProjectView> setClipColor(
+    String id, {
+    required double brightness,
+    required double contrast,
+    required double saturation,
+  }) => _look('color $id $brightness $contrast $saturation');
+
+  @override
+  Future<ProjectView> setTransitionForAll(TransitionKindView kind) =>
+      _look('transition ${kind.name}');
 
   @override
   Future<ProjectView> toggleSlowZoom(String id) async {

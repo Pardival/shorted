@@ -86,14 +86,20 @@ class ShortedIconButton extends StatelessWidget {
 }
 
 class ShortedChip extends StatelessWidget {
-  const ShortedChip({super.key, required this.label, this.selected = false});
+  const ShortedChip({
+    super.key,
+    required this.label,
+    this.selected = false,
+    this.onTap,
+  });
 
   final String label;
   final bool selected;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final chip = Container(
       padding: const EdgeInsets.symmetric(
         horizontal: ShortedSpace.m,
         vertical: ShortedSpace.xs,
@@ -107,6 +113,16 @@ class ShortedChip extends StatelessWidget {
         style: Theme.of(context).textTheme.labelMedium?.copyWith(
           color: selected ? ShortedColors.onAccent : ShortedColors.text,
         ),
+      ),
+    );
+    if (onTap == null) return chip;
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(ShortedRadius.pill),
+        child: chip,
       ),
     );
   }

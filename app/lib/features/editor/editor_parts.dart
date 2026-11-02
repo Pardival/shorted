@@ -10,6 +10,7 @@ import '../../design_system/tokens.g.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../audio/audio_panel.dart';
 import '../clips/clips_panel.dart';
+import '../enhance/enhance_panel.dart';
 import '../export/export_panel.dart';
 import '../project/project_dialogs.dart';
 import '../preview/preview_controller.dart';
@@ -432,6 +433,7 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
     }
     final clip = _clip;
     final cropping = ref.watch(cropTargetProvider) != null;
+    ref.watch(selectedClipProvider);
     final slowZoom = clip == null ? null : _slowZoom(clip);
     return SizedBox(
       height: widget.height,
@@ -477,6 +479,7 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
                   onPressed: () {
                     _stopCropping();
                     setState(() => _clip = null);
+                    ref.read(selectedClipProvider.notifier).set(null);
                     _guard(() => _editor.deleteClip(clip.id));
                   },
                 ),
@@ -494,6 +497,7 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
                 setState(() {
                   _clip = item != null && _isClip(item) ? item : null;
                 });
+                ref.read(selectedClipProvider.notifier).set(_clip?.id);
               },
               onTrim: (item, start, deltaUs) => _guard(
                 () => _editor.trimClip(item.id, start: start, deltaUs: deltaUs),
@@ -533,6 +537,10 @@ class SectionPanel extends StatelessWidget {
         ),
         EditorSection.audio => AudioPanel(
           key: const ValueKey(EditorSection.audio),
+          view: view,
+        ),
+        EditorSection.enhance => EnhancePanel(
+          key: const ValueKey(EditorSection.enhance),
           view: view,
         ),
         EditorSection.export => ExportPanel(

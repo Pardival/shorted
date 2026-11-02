@@ -10,6 +10,7 @@ import 'api.dart';
 import 'api/audio.dart';
 import 'api/clips.dart';
 import 'api/export.dart';
+import 'api/look.dart';
 import 'api/media.dart';
 import 'api/preview.dart';
 import 'api/projects.dart';
@@ -76,7 +77,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ExportSettings dco_decode_box_autoadd_export_settings(dynamic raw);
 
   @protected
+  TransitionKindView dco_decode_box_autoadd_transition_kind_view(dynamic raw);
+
+  @protected
   ClipEdge dco_decode_clip_edge(dynamic raw);
+
+  @protected
+  ClipLookView dco_decode_clip_look_view(dynamic raw);
 
   @protected
   ClipSoundView dco_decode_clip_sound_view(dynamic raw);
@@ -115,6 +122,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<AudioTrackView> dco_decode_list_audio_track_view(dynamic raw);
 
   @protected
+  List<ClipLookView> dco_decode_list_clip_look_view(dynamic raw);
+
+  @protected
   List<ClipSoundView> dco_decode_list_clip_sound_view(dynamic raw);
 
   @protected
@@ -136,6 +146,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<TrackView> dco_decode_list_track_view(dynamic raw);
 
   @protected
+  LookView dco_decode_look_view(dynamic raw);
+
+  @protected
   MediaItemView dco_decode_media_item_view(dynamic raw);
 
   @protected
@@ -149,6 +162,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ErrorCode? dco_decode_opt_box_autoadd_error_code(dynamic raw);
+
+  @protected
+  TransitionKindView? dco_decode_opt_box_autoadd_transition_kind_view(
+    dynamic raw,
+  );
 
   @protected
   ProjectSummary dco_decode_project_summary(dynamic raw);
@@ -176,6 +194,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   TrackView dco_decode_track_view(dynamic raw);
+
+  @protected
+  TransitionKindView dco_decode_transition_kind_view(dynamic raw);
 
   @protected
   int dco_decode_u_32(dynamic raw);
@@ -239,7 +260,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  TransitionKindView sse_decode_box_autoadd_transition_kind_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   ClipEdge sse_decode_clip_edge(SseDeserializer deserializer);
+
+  @protected
+  ClipLookView sse_decode_clip_look_view(SseDeserializer deserializer);
 
   @protected
   ClipSoundView sse_decode_clip_sound_view(SseDeserializer deserializer);
@@ -282,6 +311,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<ClipLookView> sse_decode_list_clip_look_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<ClipSoundView> sse_decode_list_clip_sound_view(
     SseDeserializer deserializer,
   );
@@ -313,6 +347,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<TrackView> sse_decode_list_track_view(SseDeserializer deserializer);
 
   @protected
+  LookView sse_decode_look_view(SseDeserializer deserializer);
+
+  @protected
   MediaItemView sse_decode_media_item_view(SseDeserializer deserializer);
 
   @protected
@@ -326,6 +363,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ErrorCode? sse_decode_opt_box_autoadd_error_code(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  TransitionKindView? sse_decode_opt_box_autoadd_transition_kind_view(
     SseDeserializer deserializer,
   );
 
@@ -355,6 +397,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   TrackView sse_decode_track_view(SseDeserializer deserializer);
+
+  @protected
+  TransitionKindView sse_decode_transition_kind_view(
+    SseDeserializer deserializer,
+  );
 
   @protected
   int sse_decode_u_32(SseDeserializer deserializer);
@@ -432,7 +479,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_transition_kind_view(
+    TransitionKindView self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_clip_edge(ClipEdge self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_clip_look_view(ClipLookView self, SseSerializer serializer);
 
   @protected
   void sse_encode_clip_sound_view(ClipSoundView self, SseSerializer serializer);
@@ -480,6 +536,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_clip_look_view(
+    List<ClipLookView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_clip_sound_view(
     List<ClipSoundView> self,
     SseSerializer serializer,
@@ -522,6 +584,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_look_view(LookView self, SseSerializer serializer);
+
+  @protected
   void sse_encode_media_item_view(MediaItemView self, SseSerializer serializer);
 
   @protected
@@ -536,6 +601,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_error_code(
     ErrorCode? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_transition_kind_view(
+    TransitionKindView? self,
     SseSerializer serializer,
   );
 
@@ -568,6 +639,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_track_view(TrackView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_transition_kind_view(
+    TransitionKindView self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_u_32(int self, SseSerializer serializer);

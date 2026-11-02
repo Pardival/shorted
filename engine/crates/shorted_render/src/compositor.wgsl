@@ -4,6 +4,15 @@ struct Layer {
     offset: vec2<f32>,
     quarter_turns: u32,
     opacity: f32,
+    // Moves the whole picture across the frame, in frame widths and heights.
+    shift: vec2<f32>,
+    // Colour to mix in, with its amount in alpha.
+    tint: vec4<f32>,
+    brightness: f32,
+    contrast: f32,
+    saturation: f32,
+    // Enlarges the whole picture around the middle of the frame.
+    frame_zoom: f32,
 };
 @group(0) @binding(0) var<uniform> layer: Layer;
 @group(0) @binding(1) var source: texture_2d<f32>;
@@ -22,7 +31,11 @@ fn vs(@builtin(vertex_index) index: u32) -> Out {
 
 @fragment
 fn fs(in: Out) -> @location(0) vec4<f32> {
-    let framed = (in.uv - 0.5) * layer.scale + layer.offset;
+    let moved = (in.uv - 0.5) / layer.frame_zoom + 0.5 - layer.shift;
+    if any(moved < vec2<f32>(0.0)) || any(moved > vec2<f32>(1.0)) {
+        discard;
+    }
+    let framed = (moved - 0.5) * layer.scale + layer.offset;
     var uv = framed;
     // The stored picture turned clockwise gives the displayed one: go back the other way.
     switch layer.quarter_turns {
@@ -31,6 +44,10 @@ fn fs(in: Out) -> @location(0) vec4<f32> {
         case 3u: { uv = vec2<f32>(1.0 - framed.y, framed.x); }
         default: {}
     }
-    let color = textureSample(source, source_sampler, uv).rgb;
-    return vec4<f32>(color, layer.opacity);
+    var color = textureSample(source, source_sampler, uv).rgb;
+    color = (color + layer.brightness - 0.5) * layer.contrast + 0.5;
+    let luma = dot(color, vec3<f32>(0.2126, 0.7152, 0.0722));
+    color = mix(vec3<f32>(luma), color, layer.saturation);
+    color = mix(color, layer.tint.rgb, layer.tint.a);
+    return vec4<f32>(clamp(color, vec3<f32>(0.0), vec3<f32>(1.0)), layer.opacity);
 }

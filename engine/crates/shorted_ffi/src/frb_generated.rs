@@ -39,7 +39,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1264281635;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -857181803;
 
 // Section: executor
 
@@ -1626,6 +1626,51 @@ fn wire__crate__api__audio__set_audio_track_muted_impl(
         },
     )
 }
+fn wire__crate__api__look__set_clip_color_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "set_clip_color",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_id = <String>::sse_decode(&mut deserializer);
+            let api_brightness = <f32>::sse_decode(&mut deserializer);
+            let api_contrast = <f32>::sse_decode(&mut deserializer);
+            let api_saturation = <f32>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, crate::error::EngineFailure>(
+                    (move || async move {
+                        let output_ok = crate::api::look::set_clip_color(
+                            api_id,
+                            api_brightness,
+                            api_contrast,
+                            api_saturation,
+                        )
+                        .await?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
 fn wire__crate__api__audio__set_clip_sound_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -1665,6 +1710,79 @@ fn wire__crate__api__audio__set_clip_sound_impl(
                             api_fade_out_us,
                         )
                         .await?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__look__set_clip_speed_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "set_clip_speed",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_id = <String>::sse_decode(&mut deserializer);
+            let api_speed = <f32>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, crate::error::EngineFailure>(
+                    (move || async move {
+                        let output_ok = crate::api::look::set_clip_speed(api_id, api_speed).await?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__look__set_transition_for_all_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "set_transition_for_all",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_kind = <crate::api::look::TransitionKindView>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, crate::error::EngineFailure>(
+                    (move || async move {
+                        let output_ok = crate::api::look::set_transition_for_all(api_kind).await?;
                         std::result::Result::Ok(output_ok)
                     })()
                     .await,
@@ -2068,6 +2186,24 @@ impl SseDecode for crate::api::clips::ClipEdge {
     }
 }
 
+impl SseDecode for crate::api::look::ClipLookView {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_clipId = <String>::sse_decode(deserializer);
+        let mut var_speed = <f32>::sse_decode(deserializer);
+        let mut var_brightness = <f32>::sse_decode(deserializer);
+        let mut var_contrast = <f32>::sse_decode(deserializer);
+        let mut var_saturation = <f32>::sse_decode(deserializer);
+        return crate::api::look::ClipLookView {
+            clip_id: var_clipId,
+            speed: var_speed,
+            brightness: var_brightness,
+            contrast: var_contrast,
+            saturation: var_saturation,
+        };
+    }
+}
+
 impl SseDecode for crate::api::audio::ClipSoundView {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -2203,6 +2339,18 @@ impl SseDecode for Vec<crate::api::audio::AudioTrackView> {
     }
 }
 
+impl SseDecode for Vec<crate::api::look::ClipLookView> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::look::ClipLookView>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<crate::api::audio::ClipSoundView> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -2291,6 +2439,19 @@ impl SseDecode for Vec<crate::api::projects::TrackView> {
     }
 }
 
+impl SseDecode for crate::api::look::LookView {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_clips = <Vec<crate::api::look::ClipLookView>>::sse_decode(deserializer);
+        let mut var_transition =
+            <Option<crate::api::look::TransitionKindView>>::sse_decode(deserializer);
+        return crate::api::look::LookView {
+            clips: var_clips,
+            transition: var_transition,
+        };
+    }
+}
+
 impl SseDecode for crate::api::media::MediaItemView {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -2356,6 +2517,19 @@ impl SseDecode for Option<crate::error::ErrorCode> {
     }
 }
 
+impl SseDecode for Option<crate::api::look::TransitionKindView> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::look::TransitionKindView>::sse_decode(
+                deserializer,
+            ));
+        } else {
+            return None;
+        }
+    }
+}
+
 impl SseDecode for crate::api::projects::ProjectSummary {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -2383,6 +2557,7 @@ impl SseDecode for crate::api::projects::ProjectView {
         let mut var_tracks = <Vec<crate::api::projects::TrackView>>::sse_decode(deserializer);
         let mut var_media = <Vec<crate::api::media::MediaItemView>>::sse_decode(deserializer);
         let mut var_sound = <crate::api::audio::SoundView>::sse_decode(deserializer);
+        let mut var_look = <crate::api::look::LookView>::sse_decode(deserializer);
         return crate::api::projects::ProjectView {
             id: var_id,
             title: var_title,
@@ -2392,6 +2567,7 @@ impl SseDecode for crate::api::projects::ProjectView {
             tracks: var_tracks,
             media: var_media,
             sound: var_sound,
+            look: var_look,
         };
     }
 }
@@ -2522,6 +2698,26 @@ impl SseDecode for crate::api::projects::TrackView {
     }
 }
 
+impl SseDecode for crate::api::look::TransitionKindView {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::look::TransitionKindView::Cut,
+            1 => crate::api::look::TransitionKindView::Crossfade,
+            2 => crate::api::look::TransitionKindView::DipToBlack,
+            3 => crate::api::look::TransitionKindView::DipToWhite,
+            4 => crate::api::look::TransitionKindView::Flash,
+            5 => crate::api::look::TransitionKindView::Slide,
+            6 => crate::api::look::TransitionKindView::Push,
+            7 => crate::api::look::TransitionKindView::WhipPan,
+            8 => crate::api::look::TransitionKindView::ZoomIn,
+            9 => crate::api::look::TransitionKindView::ZoomOut,
+            _ => unreachable!("Invalid variant for TransitionKindView: {}", inner),
+        };
+    }
+}
+
 impl SseDecode for u32 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -2594,14 +2790,19 @@ fn pde_ffi_dispatcher_primary_impl(
         44 => {
             wire__crate__api__audio__set_audio_track_muted_impl(port, ptr, rust_vec_len, data_len)
         }
-        45 => wire__crate__api__audio__set_clip_sound_impl(port, ptr, rust_vec_len, data_len),
-        46 => wire__crate__api__clips__split_clip_impl(port, ptr, rust_vec_len, data_len),
-        47 => wire__crate__api__start_demo_task_impl(port, ptr, rust_vec_len, data_len),
-        48 => wire__crate__api__export__start_export_impl(port, ptr, rust_vec_len, data_len),
-        49 => wire__crate__api__clips__toggle_slow_zoom_impl(port, ptr, rust_vec_len, data_len),
-        50 => wire__crate__api__projects__trash_project_impl(port, ptr, rust_vec_len, data_len),
-        51 => wire__crate__api__clips__trim_clip_impl(port, ptr, rust_vec_len, data_len),
-        52 => wire__crate__api__projects__undo_impl(port, ptr, rust_vec_len, data_len),
+        45 => wire__crate__api__look__set_clip_color_impl(port, ptr, rust_vec_len, data_len),
+        46 => wire__crate__api__audio__set_clip_sound_impl(port, ptr, rust_vec_len, data_len),
+        47 => wire__crate__api__look__set_clip_speed_impl(port, ptr, rust_vec_len, data_len),
+        48 => {
+            wire__crate__api__look__set_transition_for_all_impl(port, ptr, rust_vec_len, data_len)
+        }
+        49 => wire__crate__api__clips__split_clip_impl(port, ptr, rust_vec_len, data_len),
+        50 => wire__crate__api__start_demo_task_impl(port, ptr, rust_vec_len, data_len),
+        51 => wire__crate__api__export__start_export_impl(port, ptr, rust_vec_len, data_len),
+        52 => wire__crate__api__clips__toggle_slow_zoom_impl(port, ptr, rust_vec_len, data_len),
+        53 => wire__crate__api__projects__trash_project_impl(port, ptr, rust_vec_len, data_len),
+        54 => wire__crate__api__clips__trim_clip_impl(port, ptr, rust_vec_len, data_len),
+        55 => wire__crate__api__projects__undo_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -2720,6 +2921,30 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::clips::ClipEdge>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::look::ClipLookView {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.clip_id.into_into_dart().into_dart(),
+            self.speed.into_into_dart().into_dart(),
+            self.brightness.into_into_dart().into_dart(),
+            self.contrast.into_into_dart().into_dart(),
+            self.saturation.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::look::ClipLookView
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::look::ClipLookView>
+    for crate::api::look::ClipLookView
+{
+    fn into_into_dart(self) -> crate::api::look::ClipLookView {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::audio::ClipSoundView {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -2823,6 +3048,22 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::media::ImportOutcome>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::look::LookView {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.clips.into_into_dart().into_dart(),
+            self.transition.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::api::look::LookView {}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::look::LookView> for crate::api::look::LookView {
+    fn into_into_dart(self) -> crate::api::look::LookView {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::media::MediaItemView {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -2904,6 +3145,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::projects::ProjectView {
             self.tracks.into_into_dart().into_dart(),
             self.media.into_into_dart().into_dart(),
             self.sound.into_into_dart().into_dart(),
+            self.look.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -3081,6 +3323,35 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::projects::TrackView>
         self
     }
 }
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::look::TransitionKindView {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::Cut => 0.into_dart(),
+            Self::Crossfade => 1.into_dart(),
+            Self::DipToBlack => 2.into_dart(),
+            Self::DipToWhite => 3.into_dart(),
+            Self::Flash => 4.into_dart(),
+            Self::Slide => 5.into_dart(),
+            Self::Push => 6.into_dart(),
+            Self::WhipPan => 7.into_dart(),
+            Self::ZoomIn => 8.into_dart(),
+            Self::ZoomOut => 9.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::look::TransitionKindView
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::look::TransitionKindView>
+    for crate::api::look::TransitionKindView
+{
+    fn into_into_dart(self) -> crate::api::look::TransitionKindView {
+        self
+    }
+}
 
 impl SseEncode for flutter_rust_bridge::for_generated::anyhow::Error {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -3194,6 +3465,17 @@ impl SseEncode for crate::api::clips::ClipEdge {
             },
             serializer,
         );
+    }
+}
+
+impl SseEncode for crate::api::look::ClipLookView {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.clip_id, serializer);
+        <f32>::sse_encode(self.speed, serializer);
+        <f32>::sse_encode(self.brightness, serializer);
+        <f32>::sse_encode(self.contrast, serializer);
+        <f32>::sse_encode(self.saturation, serializer);
     }
 }
 
@@ -3312,6 +3594,16 @@ impl SseEncode for Vec<crate::api::audio::AudioTrackView> {
     }
 }
 
+impl SseEncode for Vec<crate::api::look::ClipLookView> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::look::ClipLookView>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Vec<crate::api::audio::ClipSoundView> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -3382,6 +3674,14 @@ impl SseEncode for Vec<crate::api::projects::TrackView> {
     }
 }
 
+impl SseEncode for crate::api::look::LookView {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <Vec<crate::api::look::ClipLookView>>::sse_encode(self.clips, serializer);
+        <Option<crate::api::look::TransitionKindView>>::sse_encode(self.transition, serializer);
+    }
+}
+
 impl SseEncode for crate::api::media::MediaItemView {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -3441,6 +3741,16 @@ impl SseEncode for Option<crate::error::ErrorCode> {
     }
 }
 
+impl SseEncode for Option<crate::api::look::TransitionKindView> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::look::TransitionKindView>::sse_encode(value, serializer);
+        }
+    }
+}
+
 impl SseEncode for crate::api::projects::ProjectSummary {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -3462,6 +3772,7 @@ impl SseEncode for crate::api::projects::ProjectView {
         <Vec<crate::api::projects::TrackView>>::sse_encode(self.tracks, serializer);
         <Vec<crate::api::media::MediaItemView>>::sse_encode(self.media, serializer);
         <crate::api::audio::SoundView>::sse_encode(self.sound, serializer);
+        <crate::api::look::LookView>::sse_encode(self.look, serializer);
     }
 }
 
@@ -3567,6 +3878,30 @@ impl SseEncode for crate::api::projects::TrackView {
         <crate::api::projects::TrackKindView>::sse_encode(self.kind, serializer);
         <Option<String>>::sse_encode(self.name, serializer);
         <Vec<crate::api::projects::TrackItemView>>::sse_encode(self.items, serializer);
+    }
+}
+
+impl SseEncode for crate::api::look::TransitionKindView {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::look::TransitionKindView::Cut => 0,
+                crate::api::look::TransitionKindView::Crossfade => 1,
+                crate::api::look::TransitionKindView::DipToBlack => 2,
+                crate::api::look::TransitionKindView::DipToWhite => 3,
+                crate::api::look::TransitionKindView::Flash => 4,
+                crate::api::look::TransitionKindView::Slide => 5,
+                crate::api::look::TransitionKindView::Push => 6,
+                crate::api::look::TransitionKindView::WhipPan => 7,
+                crate::api::look::TransitionKindView::ZoomIn => 8,
+                crate::api::look::TransitionKindView::ZoomOut => 9,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
     }
 }
 
