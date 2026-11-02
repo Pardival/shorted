@@ -10,6 +10,7 @@ import '../../l10n/generated/app_localizations.dart';
 import '../project/project_dialogs.dart';
 import 'brand_kit_section.dart';
 import 'library_section.dart';
+import 'text_section.dart';
 import '../project/project_gateway.dart';
 import '../project/project_providers.dart';
 
@@ -105,6 +106,7 @@ class EnhancePanel extends ConsumerWidget {
         ),
       ),
     ]);
+    final textPage = page([TextSection(view: view, run: run)]);
     final clipPage = page([
       if (clip == null)
         Text(
@@ -136,7 +138,7 @@ class EnhancePanel extends ConsumerWidget {
 
     // S40: tabs, with the selected element's own settings above them.
     return DefaultTabController(
-      length: 4,
+      length: 5,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -155,13 +157,14 @@ class EnhancePanel extends ConsumerWidget {
             tabs: [
               Tab(text: l10n.library),
               Tab(text: l10n.myAssets),
+              Tab(text: l10n.textTab),
               Tab(text: l10n.clipTab),
               Tab(text: l10n.transitionsTab),
             ],
           ),
           Expanded(
             child: TabBarView(
-              children: [library, myAssets, clipPage, transitions],
+              children: [library, myAssets, textPage, clipPage, transitions],
             ),
           ),
         ],

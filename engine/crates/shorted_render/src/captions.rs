@@ -10,7 +10,7 @@ const INTER: &[u8] = include_bytes!("../../../../app/assets/fonts/Inter.ttf");
 
 /// Style sizes are for a 1080 wide frame.
 const REFERENCE_WIDTH: f32 = 1080.0;
-const LINE_HEIGHT: f32 = 1.15;
+pub(crate) const LINE_HEIGHT: f32 = 1.15;
 const TEXT_WIDTH_SHARE: f32 = 0.84;
 /// Platform buttons cover the bottom of a short, and its top bar (FR-CAP-05).
 const SAFE_TOP: f32 = 0.15;
@@ -58,7 +58,7 @@ fn block_top(anchor: f32, height: f32, frame: f32) -> f32 {
     top.min((SAFE_BOTTOM * frame - height).max(SAFE_TOP * frame))
 }
 
-fn blend(pixels: &mut [u8], width: i32, x: i32, y: i32, color: [u8; 4]) {
+pub(crate) fn blend(pixels: &mut [u8], width: i32, x: i32, y: i32, color: [u8; 4]) {
     if x < 0 || y < 0 || x >= width {
         return;
     }
@@ -66,18 +66,23 @@ fn blend(pixels: &mut [u8], width: i32, x: i32, y: i32, color: [u8; 4]) {
     let Some(pixel) = pixels.get_mut(at..at + 4) else {
         return;
     };
+    // "Over" with straight alpha: a soft edge on a clear pixel keeps its colour, not black.
     let alpha = u32::from(color[3]);
-    let keep = 255 - alpha;
-    for channel in 0..3 {
-        let mixed = u32::from(color[channel]) * alpha + u32::from(pixel[channel]) * keep;
-        pixel[channel] = (mixed / 255) as u8;
+    let below = u32::from(pixel[3]) * (255 - alpha) / 255;
+    let total = alpha + below;
+    if total == 0 {
+        return;
     }
-    pixel[3] = (alpha + u32::from(pixel[3]) * keep / 255) as u8;
+    for channel in 0..3 {
+        let mixed = u32::from(color[channel]) * alpha + u32::from(pixel[channel]) * below;
+        pixel[channel] = (mixed / total) as u8;
+    }
+    pixel[3] = total as u8;
 }
 
 pub struct CaptionPainter {
-    fonts: FontSystem,
-    cache: SwashCache,
+    pub(crate) fonts: FontSystem,
+    pub(crate) cache: SwashCache,
 }
 
 impl Default for CaptionPainter {

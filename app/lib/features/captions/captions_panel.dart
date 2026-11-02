@@ -9,6 +9,7 @@ import '../../bridge/error.dart';
 import '../../bridge/runtime.dart';
 import '../../design_system/components.dart';
 import '../../design_system/task_progress.dart';
+import '../../design_system/swatches.dart';
 import '../../design_system/tokens.g.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../project/project_dialogs.dart';
@@ -150,9 +151,6 @@ const _colours = [
   '#4DD2FFFF',
 ];
 
-Color _colour(String hex) =>
-    Color(int.parse('FF${hex.substring(1, 7)}', radix: 16));
-
 String _presetName(AppLocalizations l10n, CaptionPresetView preset) =>
     switch (preset) {
       CaptionPresetView.wordByWord => l10n.presetWordByWord,
@@ -218,34 +216,8 @@ class _CaptionStyleState extends State<_CaptionStyle> {
     child: Text(text, style: const TextStyle(fontWeight: FontWeight.w600)),
   );
 
-  Widget _swatches(String selected, ValueChanged<String> onTap) => Wrap(
-    spacing: ShortedSpace.s,
-    children: [
-      for (final hex in _colours)
-        Semantics(
-          button: true,
-          selected: hex == selected,
-          label: hex,
-          child: InkWell(
-            onTap: () => onTap(hex),
-            child: Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                color: _colour(hex),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: hex == selected
-                      ? ShortedColors.text
-                      : ShortedColors.line,
-                  width: 2,
-                ),
-              ),
-            ),
-          ),
-        ),
-    ],
-  );
+  Widget _swatches(String selected, ValueChanged<String> onTap) =>
+      ColourSwatches(selected: selected, onTap: onTap, colours: _colours);
 
   @override
   Widget build(BuildContext context) {

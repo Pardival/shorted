@@ -209,5 +209,15 @@
   "manageAssets": "Gestionar",
   "doneManaging": "Listo",
   "removeAsset": "Quitar de Mis recursos",
-  "errorTooLarge": "Este archivo es demasiado grande. Las imágenes admiten hasta 16 384 píxeles por lado y 100 megapíxeles, las animaciones hasta 500 fotogramas y los vídeos hasta 2 minutos y 4K."
+  "errorTooLarge": "Este archivo es demasiado grande. Las imágenes admiten hasta 16 384 píxeles por lado y 100 megapíxeles, las animaciones hasta 500 fotogramas y los vídeos hasta 2 minutos y 4K.",
+  "textTab": "Texto",
+  "addText": "Añadir texto",
+  "textPlaceholder": "Tu texto",
+  "selectTextToEdit": "Selecciona un texto en la vista previa para cambiar sus palabras y su estilo. Tócalo dos veces para escribir sobre el vídeo.",
+  "textWords": "Palabras",
+  "textSize": "Tamaño",
+  "textPlain": "Simple",
+  "textChip": "Etiqueta",
+  "textOutline": "Contorno",
+  "textShadow": "Sombra"
 }

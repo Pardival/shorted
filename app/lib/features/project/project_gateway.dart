@@ -145,6 +145,8 @@ abstract interface class ProjectGateway {
   void cancelTask(BigInt id);
 
   Future<ProjectView> addShape(overlays.ShapeKindView shape, int atUs);
+  Future<ProjectView> addText(String content, int atUs);
+  Future<ProjectView> setText(String id, overlays.TextElementView text);
   Future<ProjectView> setOverlayTiming(String id, int startUs, int endUs);
   Future<ProjectView> shiftOverlayLayer(String id, {required bool forward});
   Future<ProjectView> setOverlayFlags(
@@ -422,6 +424,14 @@ class EngineGateway implements ProjectGateway {
   @override
   Future<ProjectView> addShape(overlays.ShapeKindView shape, int atUs) =>
       overlays.addShape(shape: shape, atUs: atUs);
+
+  @override
+  Future<ProjectView> addText(String content, int atUs) =>
+      overlays.addText(content: content, atUs: atUs);
+
+  @override
+  Future<ProjectView> setText(String id, overlays.TextElementView text) =>
+      overlays.setText(id: id, text: text);
 
   @override
   Future<ProjectView> setOverlayTiming(String id, int startUs, int endUs) =>

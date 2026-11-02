@@ -4,7 +4,9 @@
 use shorted_core::command::Command;
 use shorted_core::evaluate::evaluate;
 use shorted_core::model::*;
+use shorted_render::captions::parse_color;
 use shorted_render::overlays::{shape_size, CANVAS_HEIGHT, CANVAS_WIDTH};
+use shorted_render::text::{text_size, Decoration, TextLook};
 use uuid::Uuid;
 
 use crate::api::clips::{edit, parse};
@@ -49,6 +51,57 @@ impl From<ShapeKindView> for ShapeKind {
     }
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum TextDecorationView {
+    Plain,
+    Chip,
+    Outline,
+    Shadow,
+}
+
+/// The words of a text element and how they look. Sizes are canvas units.
+#[derive(Clone)]
+pub struct TextElementView {
+    pub content: String,
+    pub font: String,
+    pub size: f32,
+    /// `#RRGGBBAA`.
+    pub color: String,
+    pub uppercase: bool,
+    pub decoration: TextDecorationView,
+}
+
+pub(crate) fn text_look(style: &TextStyle) -> TextLook {
+    TextLook {
+        font: style.font.clone(),
+        size: style.size,
+        color: parse_color(&style.color),
+        uppercase: style.uppercase,
+        decoration: match style.decoration {
+            TextDecoration::Plain => Decoration::Plain,
+            TextDecoration::Chip => Decoration::Chip,
+            TextDecoration::Outline => Decoration::Outline,
+            TextDecoration::Shadow => Decoration::Shadow,
+        },
+    }
+}
+
+fn text_view(content: &str, style: &TextStyle) -> TextElementView {
+    TextElementView {
+        content: content.into(),
+        font: style.font.clone(),
+        size: style.size,
+        color: style.color.clone(),
+        uppercase: style.uppercase,
+        decoration: match style.decoration {
+            TextDecoration::Plain => TextDecorationView::Plain,
+            TextDecoration::Chip => TextDecorationView::Chip,
+            TextDecoration::Outline => TextDecorationView::Outline,
+            TextDecoration::Shadow => TextDecorationView::Shadow,
+        },
+    }
+}
+
 /// One element, bottom first in `ProjectView::overlays`.
 pub struct OverlayView {
     pub id: String,
@@ -59,6 +112,8 @@ pub struct OverlayView {
     pub hidden: bool,
     pub has_animation: bool,
     pub transform: TransformView,
+    /// Set for text elements.
+    pub text: Option<TextElementView>,
 }
 
 /// An element's own placement, before animation: centre in canvas units, degrees clockwise.
@@ -123,8 +178,10 @@ pub(crate) fn natural_size(kind: &OverlayKind, project: &Project) -> (f32, f32) 
             picture(asset).unwrap_or(PLACEHOLDER_SIZE)
         }
         OverlayKind::Video { media, .. } => picture(media).unwrap_or(PLACEHOLDER_SIZE),
-        // Measured from its words by T-0705.
-        OverlayKind::Text { .. } => PLACEHOLDER_SIZE,
+        OverlayKind::Text { content, style } => {
+            let (width, height) = text_size(content, &text_look(style));
+            (width as f32, height as f32)
+        }
     }
 }
 
@@ -152,6 +209,10 @@ pub(crate) fn overlay_views(project: &Project) -> Vec<OverlayView> {
                 || !item.keyframes.is_empty()
                 || item.path.is_some(),
             transform: item.base.into(),
+            text: match &item.kind {
+                OverlayKind::Text { content, style } => Some(text_view(content, style)),
+                _ => None,
+            },
         })
         .collect()
 }
@@ -235,6 +296,54 @@ pub async fn add_shape(shape: ShapeKindView, at_us: i64) -> Result<ProjectView, 
         };
         Ok(Command::AddOverlay {
             overlay: Box::new(new_overlay(kind, at_us, project)),
+        })
+    })
+}
+
+const MAX_TEXT_SIZE: f32 = 600.0;
+const MIN_TEXT_SIZE: f32 = 12.0;
+
+/// A text element in the caption style, from the playhead.
+pub async fn add_text(content: String, at_us: i64) -> Result<ProjectView, EngineFailure> {
+    edit(move |project| {
+        let kind = OverlayKind::Text {
+            content,
+            style: TextStyle::default(),
+        };
+        Ok(Command::AddOverlay {
+            overlay: Box::new(new_overlay(kind, at_us, project)),
+        })
+    })
+}
+
+/// New words or look for a text element.
+pub async fn set_text(id: String, text: TextElementView) -> Result<ProjectView, EngineFailure> {
+    edit(move |project| {
+        let mut item = find(project, parse(&id)?)?.clone();
+        if !matches!(item.kind, OverlayKind::Text { .. }) {
+            return Err(EngineError::Internal("not a text element".into()));
+        }
+        item.kind = OverlayKind::Text {
+            content: text.content,
+            style: TextStyle {
+                font: if text.font == "Inter" {
+                    "Inter".into()
+                } else {
+                    "Space Grotesk".into()
+                },
+                size: text.size.clamp(MIN_TEXT_SIZE, MAX_TEXT_SIZE),
+                color: text.color,
+                uppercase: text.uppercase,
+                decoration: match text.decoration {
+                    TextDecorationView::Plain => TextDecoration::Plain,
+                    TextDecorationView::Chip => TextDecoration::Chip,
+                    TextDecorationView::Outline => TextDecoration::Outline,
+                    TextDecorationView::Shadow => TextDecoration::Shadow,
+                },
+            },
+        };
+        Ok(Command::ReplaceOverlay {
+            overlay: Box::new(item),
         })
     })
 }
@@ -406,6 +515,24 @@ mod tests {
         );
         assert_eq!(item.end_us - item.start_us, DEFAULT_LENGTH_US);
         assert_eq!(item.base.position.x, 540.0);
+    }
+
+    #[test]
+    fn a_text_box_is_the_size_of_its_words() {
+        let short = (
+            OverlayKind::Text {
+                content: "Hi".into(),
+                style: TextStyle::default(),
+            },
+            OverlayKind::Text {
+                content: "Hi\nthere friend".into(),
+                style: TextStyle::default(),
+            },
+        );
+        let project = Project::new(Uuid::nil(), "t".into(), DateTime::default());
+        let (small_width, small_height) = natural_size(&short.0, &project);
+        let (wide_width, tall_height) = natural_size(&short.1, &project);
+        assert!(wide_width > small_width && tall_height > small_height * 1.7);
     }
 
     #[test]

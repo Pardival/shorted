@@ -314,5 +314,15 @@
   "manageAssets": "Manage",
   "doneManaging": "Done",
   "removeAsset": "Remove from My assets",
-  "errorTooLarge": "This file is too large. Pictures can be up to 16,384 pixels a side and 100 megapixels, animations up to 500 frames, videos up to 2 minutes and 4K."
+  "errorTooLarge": "This file is too large. Pictures can be up to 16,384 pixels a side and 100 megapixels, animations up to 500 frames, videos up to 2 minutes and 4K.",
+  "textTab": "Text",
+  "addText": "Add text",
+  "textPlaceholder": "Your text",
+  "selectTextToEdit": "Select a text on the preview to change its words and look. Double-tap it to type on the video.",
+  "textWords": "Words",
+  "textSize": "Size",
+  "textPlain": "Plain",
+  "textChip": "Chip",
+  "textOutline": "Outline",
+  "textShadow": "Shadow"
 }

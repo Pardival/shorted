@@ -11,6 +11,7 @@ mod library_index;
 pub mod overlays;
 pub mod pictures;
 pub mod spike;
+pub mod text;
 
 /// Name of this crate, used by the workspace smoke tests.
 pub const CRATE_NAME: &str = "shorted_render";

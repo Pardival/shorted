@@ -209,5 +209,15 @@
   "manageAssets": "Gerir",
   "doneManaging": "Concluído",
   "removeAsset": "Remover de Meus recursos",
-  "errorTooLarge": "Este arquivo é grande demais. Imagens até 16 384 pixels de lado e 100 megapixels, animações até 500 quadros, vídeos até 2 minutos e 4K."
+  "errorTooLarge": "Este arquivo é grande demais. Imagens até 16 384 pixels de lado e 100 megapixels, animações até 500 quadros, vídeos até 2 minutos e 4K.",
+  "textTab": "Texto",
+  "addText": "Adicionar texto",
+  "textPlaceholder": "Seu texto",
+  "selectTextToEdit": "Selecione um texto na prévia para mudar as palavras e o estilo. Toque duas vezes para escrever sobre o vídeo.",
+  "textWords": "Palavras",
+  "textSize": "Tamanho",
+  "textPlain": "Simples",
+  "textChip": "Etiqueta",
+  "textOutline": "Contorno",
+  "textShadow": "Sombra"
 }

@@ -25,7 +25,7 @@ use shorted_render::pictures::{decode_animation, Animation};
 use shorted_render::spike::RenderError;
 
 use crate::api::media::resolve;
-use crate::api::overlays::natural_size;
+use crate::api::overlays::{natural_size, text_look};
 
 /// A seek further than this is cheaper than decoding the frames between.
 const MAX_DECODE_AHEAD_US: i64 = 500_000;
@@ -359,7 +359,7 @@ impl FrameComposer {
     }
 
     fn load_overlay(
-        &self,
+        &mut self,
         project: &Project,
         folder: &Path,
         kind: &OverlayKind,
@@ -394,8 +394,14 @@ impl FrameComposer {
             }
             OverlayKind::Video { media, .. } => VideoSource::open(&file(media)?)
                 .map(|source| OverlayPicture::Video(Box::new(source))),
-            // Text comes with T-0705.
-            OverlayKind::Text { .. } => None,
+            OverlayKind::Text { content, style } => {
+                let look = text_look(style);
+                let painter = self.painter.get_or_insert_with(CaptionPainter::new);
+                let (width, height, rgba) = painter.paint_text(content, &look);
+                Some(OverlayPicture::Still(
+                    self.compositor.texture_from_rgba(width, height, &rgba),
+                ))
+            }
         }
     }
 

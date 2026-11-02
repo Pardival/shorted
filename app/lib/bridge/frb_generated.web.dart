@@ -87,6 +87,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PictureView dco_decode_box_autoadd_picture_view(dynamic raw);
 
   @protected
+  TextElementView dco_decode_box_autoadd_text_element_view(dynamic raw);
+
+  @protected
   ThumbnailView dco_decode_box_autoadd_thumbnail_view(dynamic raw);
 
   @protected
@@ -228,6 +231,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PictureView? dco_decode_opt_box_autoadd_picture_view(dynamic raw);
 
   @protected
+  TextElementView? dco_decode_opt_box_autoadd_text_element_view(dynamic raw);
+
+  @protected
   ThumbnailView? dco_decode_opt_box_autoadd_thumbnail_view(dynamic raw);
 
   @protected
@@ -267,6 +273,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   TaskEvent dco_decode_task_event(dynamic raw);
+
+  @protected
+  TextDecorationView dco_decode_text_decoration_view(dynamic raw);
+
+  @protected
+  TextElementView dco_decode_text_element_view(dynamic raw);
 
   @protected
   ThumbnailView dco_decode_thumbnail_view(dynamic raw);
@@ -358,6 +370,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   PictureView sse_decode_box_autoadd_picture_view(SseDeserializer deserializer);
+
+  @protected
+  TextElementView sse_decode_box_autoadd_text_element_view(
+    SseDeserializer deserializer,
+  );
 
   @protected
   ThumbnailView sse_decode_box_autoadd_thumbnail_view(
@@ -539,6 +556,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  TextElementView? sse_decode_opt_box_autoadd_text_element_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   ThumbnailView? sse_decode_opt_box_autoadd_thumbnail_view(
     SseDeserializer deserializer,
   );
@@ -580,6 +602,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   TaskEvent sse_decode_task_event(SseDeserializer deserializer);
+
+  @protected
+  TextDecorationView sse_decode_text_decoration_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  TextElementView sse_decode_text_element_view(SseDeserializer deserializer);
 
   @protected
   ThumbnailView sse_decode_thumbnail_view(SseDeserializer deserializer);
@@ -688,6 +718,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_picture_view(
     PictureView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_text_element_view(
+    TextElementView self,
     SseSerializer serializer,
   );
 
@@ -911,6 +947,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_opt_box_autoadd_text_element_view(
+    TextElementView? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_box_autoadd_thumbnail_view(
     ThumbnailView? self,
     SseSerializer serializer,
@@ -963,6 +1005,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_task_event(TaskEvent self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_text_decoration_view(
+    TextDecorationView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_text_element_view(
+    TextElementView self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_thumbnail_view(ThumbnailView self, SseSerializer serializer);

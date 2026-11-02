@@ -209,5 +209,15 @@
   "manageAssets": "Gérer",
   "doneManaging": "Terminé",
   "removeAsset": "Retirer de Mes éléments",
-  "errorTooLarge": "Ce fichier est trop lourd. Les images vont jusqu'à 16 384 pixels de côté et 100 mégapixels, les animations jusqu'à 500 images, les vidéos jusqu'à 2 minutes et la 4K."
+  "errorTooLarge": "Ce fichier est trop lourd. Les images vont jusqu'à 16 384 pixels de côté et 100 mégapixels, les animations jusqu'à 500 images, les vidéos jusqu'à 2 minutes et la 4K.",
+  "textTab": "Texte",
+  "addText": "Ajouter du texte",
+  "textPlaceholder": "Votre texte",
+  "selectTextToEdit": "Sélectionnez un texte sur l'aperçu pour changer ses mots et son style. Touchez-le deux fois pour écrire directement sur la vidéo.",
+  "textWords": "Mots",
+  "textSize": "Taille",
+  "textPlain": "Simple",
+  "textChip": "Pastille",
+  "textOutline": "Contour",
+  "textShadow": "Ombre"
 }

@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -11,6 +13,7 @@ import '../../l10n/generated/app_localizations.dart';
 import '../project/project_dialogs.dart';
 import '../project/project_providers.dart';
 import 'library_section.dart';
+import 'text_section.dart';
 
 /// The canvas every overlay position is given in (docs/06).
 const canvasWidth = 1080.0;
@@ -134,6 +137,96 @@ class _OverlaySelectionState extends ConsumerState<OverlaySelection> {
   /// small handle must be judged from the first touch.
   Offset? _down;
 
+  /// A text element being typed into on the preview (T-0705).
+  String? _editing;
+  Offset? _doubleTapAt;
+
+  /// The last tap, to spot a second one: a double-tap recogniser would hold every single tap.
+  (Duration, Offset)? _lastTap;
+  final _words = TextEditingController();
+  final _wordsFocus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _wordsFocus.addListener(() {
+      if (!_wordsFocus.hasFocus) _finishTyping();
+    });
+  }
+
+  @override
+  void dispose() {
+    _words.dispose();
+    _wordsFocus.dispose();
+    super.dispose();
+  }
+
+  void _startTyping() {
+    final at = _doubleTapAt;
+    if (at == null) return;
+    final point = at / _scale;
+    for (final box in _boxes) {
+      if (!boxContains(box, point)) continue;
+      final overlay = _overlay(box.id);
+      final text = overlay?.text;
+      if (overlay == null || text == null || overlay.locked) return;
+      ref.read(selectedOverlayProvider.notifier).set(box.id);
+      setState(() {
+        _editing = box.id;
+        _words.text = text.content;
+      });
+      _wordsFocus.requestFocus();
+      return;
+    }
+  }
+
+  Future<void> _finishTyping() async {
+    final id = _editing;
+    if (id == null) return;
+    setState(() => _editing = null);
+    final text = _overlay(id)?.text;
+    final words = _words.text;
+    if (text == null || words.trim().isEmpty || words == text.content) return;
+    final l10n = AppLocalizations.of(context);
+    try {
+      await ref
+          .read(editorProvider(widget.projectId).notifier)
+          .apply(
+            (gateway) => gateway.setText(id, copyText(text, content: words)),
+          );
+    } on Object catch (error) {
+      if (mounted) showToast(context, errorMessage(l10n, error));
+    }
+  }
+
+  Widget _typing(OverlayBoxView box) {
+    final width = math.max(box.width * _scale, 160.0);
+    return Positioned(
+      left: box.centerX * _scale - width / 2,
+      top: (box.centerY - box.height / 2) * _scale,
+      width: width,
+      child: Material(
+        color: ShortedColors.surface.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(ShortedRadius.s),
+        child: TextField(
+          key: const ValueKey('preview-text-editor'),
+          controller: _words,
+          focusNode: _wordsFocus,
+          textAlign: TextAlign.center,
+          minLines: 1,
+          maxLines: 6,
+          keyboardType: TextInputType.multiline,
+          decoration: const InputDecoration(
+            isDense: true,
+            border: InputBorder.none,
+            contentPadding: EdgeInsets.all(ShortedSpace.s),
+          ),
+          onTapOutside: (_) => _wordsFocus.unfocus(),
+        ),
+      ),
+    );
+  }
+
   OverlayView? _overlay(String id) {
     final overlays =
         ref.read(editorProvider(widget.projectId)).value?.view.overlays ??
@@ -148,6 +241,17 @@ class _OverlaySelectionState extends ConsumerState<OverlaySelection> {
       ref.read(projectGatewayProvider).overlayBoxes(widget.playheadUs.value);
 
   void _tap(TapUpDetails details) {
+    final now = SchedulerBinding.instance.currentSystemFrameTimeStamp;
+    final last = _lastTap;
+    _lastTap = (now, details.localPosition);
+    if (last != null &&
+        now - last.$1 <= kDoubleTapTimeout &&
+        (details.localPosition - last.$2).distance <= kDoubleTapSlop) {
+      _lastTap = null;
+      _doubleTapAt = details.localPosition;
+      _startTyping();
+      return;
+    }
     final point = details.localPosition / _scale;
     String? hit;
     for (final candidate in _boxes) {
@@ -308,18 +412,23 @@ class _OverlaySelectionState extends ConsumerState<OverlaySelection> {
                 valueListenable: widget.playheadUs,
                 builder: (context, time, _) {
                   OverlayBoxView? shown;
-                  if (selected != null) {
-                    for (final candidate in gateway.overlayBoxes(time)) {
-                      if (candidate.id == selected) shown = candidate;
-                    }
+                  OverlayBoxView? typing;
+                  for (final candidate in gateway.overlayBoxes(time)) {
+                    if (candidate.id == selected) shown = candidate;
+                    if (candidate.id == _editing) typing = candidate;
                   }
-                  return CustomPaint(
+                  final selection = CustomPaint(
                     size: Size.infinite,
                     painter: SelectionPainter(
                       box: shown,
                       scale: _scale,
                       guides: _guides,
                     ),
+                  );
+                  if (typing == null) return selection;
+                  return Stack(
+                    fit: StackFit.expand,
+                    children: [selection, _typing(typing)],
                   );
                 },
               ),

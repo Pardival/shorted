@@ -255,6 +255,7 @@ class FakeGateway implements ProjectGateway {
   Future<ProjectView> addShape(ShapeKindView shape, int atUs) {
     opened!.overlays.add(
       OverlayView(
+        text: null,
         id: 'o${_next++}',
         kind: OverlayKindView.shape,
         startUs: big(atUs),
@@ -273,6 +274,61 @@ class FakeGateway implements ProjectGateway {
       ),
     );
     return _overlay('shape ${shape.name} $atUs');
+  }
+
+  @override
+  Future<ProjectView> addText(String content, int atUs) {
+    opened!.overlays.add(
+      OverlayView(
+        id: 'o${_next++}',
+        kind: OverlayKindView.text,
+        startUs: big(atUs),
+        endUs: big(atUs + 3000000),
+        locked: false,
+        hidden: false,
+        hasAnimation: false,
+        transform: const TransformView(
+          x: 540,
+          y: 960,
+          scale: 1,
+          rotation: 0,
+          opacity: 1,
+          flip: false,
+        ),
+        text: TextElementView(
+          content: content,
+          font: 'Space Grotesk',
+          size: 96,
+          color: '#FFFFFFFF',
+          uppercase: true,
+          decoration: TextDecorationView.plain,
+        ),
+      ),
+    );
+    return _overlay('text $content $atUs');
+  }
+
+  @override
+  Future<ProjectView> setText(String id, TextElementView text) {
+    final overlays = opened!.overlays;
+    final index = overlays.indexWhere((overlay) => overlay.id == id);
+    final old = overlays[index];
+    overlays[index] = OverlayView(
+      id: old.id,
+      kind: old.kind,
+      startUs: old.startUs,
+      endUs: old.endUs,
+      locked: old.locked,
+      hidden: old.hidden,
+      hasAnimation: old.hasAnimation,
+      transform: old.transform,
+      text: text,
+    );
+    return _overlay(
+      'set $id ${text.content.replaceAll('\n', '|')} ${text.font} '
+      '${text.size.round()} ${text.color} ${text.uppercase} '
+      '${text.decoration.name}',
+    );
   }
 
   @override
@@ -332,6 +388,7 @@ class FakeGateway implements ProjectGateway {
   }) {
     opened!.overlays.add(
       OverlayView(
+        text: null,
         id: 'o${_next++}',
         kind: OverlayKindView.image,
         startUs: big(atUs),

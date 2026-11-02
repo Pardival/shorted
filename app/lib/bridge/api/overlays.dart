@@ -14,8 +14,8 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'projects.dart';
 import 'transcribe.dart';
 
-// These functions are ignored because they are not marked as `pub`: `boxes`, `find`, `natural_size`, `new_overlay`, `overlay_views`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `eq`, `eq`, `from`, `from`, `from`
+// These functions are ignored because they are not marked as `pub`: `boxes`, `find`, `natural_size`, `new_overlay`, `overlay_views`, `text_look`, `text_view`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `from`, `from`, `from`
 
 /// The elements on screen at `time_us`, as the renderer places them, top first.
 List<OverlayBoxView> overlayBoxes({required PlatformInt64 timeUs}) =>
@@ -25,6 +25,19 @@ Future<ProjectView> addShape({
   required ShapeKindView shape,
   required PlatformInt64 atUs,
 }) => RustLib.instance.api.crateApiOverlaysAddShape(shape: shape, atUs: atUs);
+
+/// A text element in the caption style, from the playhead.
+Future<ProjectView> addText({
+  required String content,
+  required PlatformInt64 atUs,
+}) =>
+    RustLib.instance.api.crateApiOverlaysAddText(content: content, atUs: atUs);
+
+/// New words or look for a text element.
+Future<ProjectView> setText({
+  required String id,
+  required TextElementView text,
+}) => RustLib.instance.api.crateApiOverlaysSetText(id: id, text: text);
 
 /// Moves an element in time, or one of its edges. Times are timeline microseconds.
 Future<ProjectView> setOverlayTiming({
@@ -136,6 +149,9 @@ class OverlayView {
   final bool hasAnimation;
   final TransformView transform;
 
+  /// Set for text elements.
+  final TextElementView? text;
+
   const OverlayView({
     required this.id,
     required this.kind,
@@ -145,6 +161,7 @@ class OverlayView {
     required this.hidden,
     required this.hasAnimation,
     required this.transform,
+    this.text,
   });
 
   @override
@@ -156,7 +173,8 @@ class OverlayView {
       locked.hashCode ^
       hidden.hashCode ^
       hasAnimation.hashCode ^
-      transform.hashCode;
+      transform.hashCode ^
+      text.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -170,10 +188,55 @@ class OverlayView {
           locked == other.locked &&
           hidden == other.hidden &&
           hasAnimation == other.hasAnimation &&
-          transform == other.transform;
+          transform == other.transform &&
+          text == other.text;
 }
 
 enum ShapeKindView { rectangle, ellipse, arrow }
+
+enum TextDecorationView { plain, chip, outline, shadow }
+
+/// The words of a text element and how they look. Sizes are canvas units.
+class TextElementView {
+  final String content;
+  final String font;
+  final double size;
+
+  /// `#RRGGBBAA`.
+  final String color;
+  final bool uppercase;
+  final TextDecorationView decoration;
+
+  const TextElementView({
+    required this.content,
+    required this.font,
+    required this.size,
+    required this.color,
+    required this.uppercase,
+    required this.decoration,
+  });
+
+  @override
+  int get hashCode =>
+      content.hashCode ^
+      font.hashCode ^
+      size.hashCode ^
+      color.hashCode ^
+      uppercase.hashCode ^
+      decoration.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TextElementView &&
+          runtimeType == other.runtimeType &&
+          content == other.content &&
+          font == other.font &&
+          size == other.size &&
+          color == other.color &&
+          uppercase == other.uppercase &&
+          decoration == other.decoration;
+}
 
 /// An element's own placement, before animation: centre in canvas units, degrees clockwise.
 class TransformView {
