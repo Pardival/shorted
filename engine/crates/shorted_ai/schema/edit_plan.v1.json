@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://shorted.app/schema/edit_plan.v1.json",
+  "title": "Shorted edit plan, version 1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "source", "ops"],
+  "properties": {
+    "version": { "const": 1 },
+    "source": { "enum": ["ai", "local"] },
+    "summary": { "type": "string", "maxLength": 2000 },
+    "ops": {
+      "type": "array",
+      "maxItems": 500,
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["op", "clips"],
+            "properties": {
+              "op": { "const": "order" },
+              "clips": { "type": "array", "items": { "$ref": "#/$defs/clip" } }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["op", "clip", "in_ms", "out_ms"],
+            "properties": {
+              "op": { "const": "trim" },
+              "clip": { "$ref": "#/$defs/clip" },
+              "in_ms": { "type": "integer", "minimum": 0 },
+              "out_ms": { "type": "integer", "minimum": 0 },
+              "reason": { "$ref": "#/$defs/reason" }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["op", "clip"],
+            "properties": {
+              "op": { "const": "drop" },
+              "clip": { "$ref": "#/$defs/clip" },
+              "reason": { "$ref": "#/$defs/reason" }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["op", "clip", "at_ms"],
+            "properties": {
+              "op": { "const": "split" },
+              "clip": { "$ref": "#/$defs/clip" },
+              "at_ms": { "type": "integer", "minimum": 0 }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["op", "after", "kind", "duration_ms"],
+            "properties": {
+              "op": { "const": "transition" },
+              "after": { "$ref": "#/$defs/clip" },
+              "kind": {
+                "enum": [
+                  "cut", "crossfade", "dip_to_black", "dip_to_white", "flash", "slide", "push",
+                  "whip_pan", "zoom_in", "zoom_out"
+                ]
+              },
+              "duration_ms": { "type": "integer", "minimum": 0, "maximum": 1500 }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["op", "words"],
+            "properties": {
+              "op": { "const": "emphasis" },
+              "words": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["segment", "word_index"],
+                  "properties": {
+                    "segment": { "type": "string", "pattern": "^s[0-9]+$" },
+                    "word_index": { "type": "integer", "minimum": 0 }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "uncertain": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["clip", "reason"],
+        "properties": {
+          "clip": { "$ref": "#/$defs/clip" },
+          "reason": { "$ref": "#/$defs/reason" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "clip": { "type": "string", "pattern": "^c[0-9]+$" },
+    "reason": { "type": "string", "maxLength": 300 }
+  }
+}
