@@ -2668,8 +2668,12 @@ dependencies = [
 name = "shorted_analysis"
 version = "0.0.1"
 dependencies = [
+ "serde",
+ "serde_json",
+ "shorted_ai",
  "shorted_core",
  "shorted_media",
+ "uuid",
 ]
 
 [[package]]
@@ -2711,6 +2715,8 @@ dependencies = [
  "objc2-io-surface",
  "regex",
  "rtrb",
+ "serde",
+ "serde_json",
  "shorted_ai",
  "shorted_analysis",
  "shorted_audio",

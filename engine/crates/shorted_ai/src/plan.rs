@@ -60,6 +60,14 @@ pub enum PlanOp {
         clip: String,
         at_ms: i64,
     },
+    /// Removes a stretch inside a clip, such as a long pause; the parts either side stay.
+    Cut {
+        clip: String,
+        from_ms: i64,
+        to_ms: i64,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        reason: Option<String>,
+    },
     Transition {
         after: String,
         kind: String,
@@ -134,6 +142,7 @@ impl Aliases {
 #[derive(Clone, Debug, PartialEq)]
 pub enum ChangeKind {
     Trimmed,
+    Cut,
     Dropped,
     Split,
     Moved,
@@ -213,6 +222,7 @@ pub fn validate(
     let mut trims: HashMap<Id, (i64, i64)> = HashMap::new();
     let mut drops: HashSet<Id> = HashSet::new();
     let mut splits: HashMap<Id, Vec<i64>> = HashMap::new();
+    let mut cuts: HashMap<Id, Vec<(i64, i64)>> = HashMap::new();
     let mut order: Option<Vec<Id>> = None;
     let mut changes = Vec::new();
 
@@ -300,6 +310,44 @@ pub fn validate(
                     }
                 }
             }
+            PlanOp::Cut {
+                clip,
+                from_ms,
+                to_ms,
+                reason,
+            } => {
+                let Some(item) = clip_of(clip, &mut errors) else {
+                    continue;
+                };
+                let (start, end) = trims
+                    .get(&item.id)
+                    .copied()
+                    .unwrap_or((item.source_in_us, item.source_out_us));
+                let (from, to) = (from_ms.saturating_mul(1000), to_ms.saturating_mul(1000));
+                let taken = cuts
+                    .get(&item.id)
+                    .is_some_and(|ranges| ranges.iter().any(|(a, b)| from < *b && *a < to));
+                if drops.contains(&item.id) {
+                    errors.push(format!("{clip} is both dropped and cut"));
+                } else if from >= to || from < start || to > end {
+                    errors.push(format!(
+                        "cut of {clip}: from_ms and to_ms must lie between {} and {} ms",
+                        start / 1000,
+                        end / 1000
+                    ));
+                } else if from == start && to == end {
+                    errors.push(format!("cut of {clip} takes all of it: drop it instead"));
+                } else if taken {
+                    errors.push(format!("cuts of {clip} overlap"));
+                } else {
+                    cuts.entry(item.id).or_default().push((from, to));
+                    changes.push(PlanChange {
+                        clip: item.id,
+                        kind: ChangeKind::Cut,
+                        reason: reason.clone(),
+                    });
+                }
+            }
             PlanOp::Order { clips: listed } => {
                 if order.is_some() {
                     errors.push("only one order op is allowed".into());
@@ -343,22 +391,40 @@ pub fn validate(
             source_out_us: *to,
         });
     }
-    // Each clip becomes its parts, left to right; the right part keeps splitting.
+    // Each clip becomes its parts, left to right; the right part keeps splitting. Cuts are two
+    // splits whose middle part goes.
     let mut parts: HashMap<Id, Vec<Id>> = HashMap::new();
     for clip in clips {
-        let mut pieces = vec![clip.id];
+        let (start, end) = trims
+            .get(&clip.id)
+            .copied()
+            .unwrap_or((clip.source_in_us, clip.source_out_us));
+        let removed = cuts.get(&clip.id).cloned().unwrap_or_default();
         let mut points = splits.get(&clip.id).cloned().unwrap_or_default();
+        points.extend(removed.iter().flat_map(|(from, to)| [*from, *to]));
+        points.retain(|at| *at > start && *at < end);
         points.sort_unstable();
+        points.dedup();
+        let mut pieces = vec![(clip.id, start)];
         for at in points {
             let right = new_id();
             commands.push(Command::SplitClip {
-                id: *pieces.last().unwrap_or(&clip.id),
+                id: pieces.last().map_or(clip.id, |(id, _)| *id),
                 at_source_us: at,
                 new_id: right,
             });
-            pieces.push(right);
+            pieces.push((right, at));
         }
-        parts.insert(clip.id, pieces);
+        let mut kept = Vec::new();
+        for (index, (id, from)) in pieces.iter().enumerate() {
+            let to = pieces.get(index + 1).map_or(end, |(_, at)| *at);
+            if removed.iter().any(|(a, b)| *from >= *a && to <= *b) {
+                commands.push(Command::DeleteClip { id: *id });
+            } else {
+                kept.push(*id);
+            }
+        }
+        parts.insert(clip.id, kept);
     }
     for id in &drops {
         commands.push(Command::DeleteClip { id: *id });

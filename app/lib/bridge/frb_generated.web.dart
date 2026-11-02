@@ -7,6 +7,7 @@
 // ignore_for_file: argument_type_not_assignable
 
 import 'api.dart';
+import 'api/arrange.dart';
 import 'api/audio.dart';
 import 'api/brand_kit.dart';
 import 'api/clips.dart';

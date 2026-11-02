@@ -58,6 +58,18 @@
           {
             "type": "object",
             "additionalProperties": false,
+            "required": ["op", "clip", "from_ms", "to_ms"],
+            "properties": {
+              "op": { "const": "cut" },
+              "clip": { "$ref": "#/$defs/clip" },
+              "from_ms": { "type": "integer", "minimum": 0 },
+              "to_ms": { "type": "integer", "minimum": 0 },
+              "reason": { "$ref": "#/$defs/reason" }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
             "required": ["op", "after", "kind", "duration_ms"],
             "properties": {
               "op": { "const": "transition" },

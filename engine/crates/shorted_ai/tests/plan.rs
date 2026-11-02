@@ -152,6 +152,39 @@ fn a_full_plan_becomes_one_group_that_does_everything() {
 }
 
 #[test]
+fn a_cut_removes_a_stretch_inside_a_clip() {
+    let json = r#"{"version":1,"source":"local","ops":[
+        {"op":"trim","clip":"c2","in_ms":500,"out_ms":4000},
+        {"op":"cut","clip":"c2","from_ms":1000,"to_ms":2500,"reason":"pause"},
+        {"op":"cut","clip":"c2","from_ms":3000,"to_ms":4000}]}"#;
+    let plan = check(json).unwrap();
+    let mut project = project();
+    plan.command.apply(&mut project).unwrap();
+    let ranges: Vec<_> = project
+        .timeline
+        .clips
+        .iter()
+        .map(|c| (c.source_in_us, c.source_out_us))
+        .collect();
+    assert_eq!(
+        ranges,
+        vec![
+            (0, 4_000_000),
+            (500_000, 1_000_000),
+            (2_500_000, 3_000_000),
+            (0, 4_000_000)
+        ]
+    );
+    let overlapping = r#"{"version":1,"source":"local","ops":[
+        {"op":"cut","clip":"c1","from_ms":1000,"to_ms":2500},
+        {"op":"cut","clip":"c1","from_ms":2000,"to_ms":3000}]}"#;
+    assert!(check(overlapping).unwrap_err()[0].contains("overlap"));
+    let whole = r#"{"version":1,"source":"local","ops":[
+        {"op":"cut","clip":"c1","from_ms":0,"to_ms":4000}]}"#;
+    assert!(check(whole).unwrap_err()[0].contains("drop it instead"));
+}
+
+#[test]
 fn every_problem_is_reported_at_once() {
     let json = r#"{"version": 2, "source": "ai", "ops": [
         {"op": "drop", "clip": "c9"},
@@ -203,7 +236,15 @@ fn the_shipped_schema_names_every_op() {
         .collect();
     assert_eq!(
         ops,
-        ["order", "trim", "drop", "split", "transition", "emphasis"]
+        [
+            "order",
+            "trim",
+            "drop",
+            "split",
+            "cut",
+            "transition",
+            "emphasis"
+        ]
     );
 }
 
@@ -222,6 +263,14 @@ fn op() -> impl Strategy<Value = PlanOp> {
         clip.clone()
             .prop_map(|clip| PlanOp::Drop { clip, reason: None }),
         (clip.clone(), -100i64..12_000).prop_map(|(clip, at_ms)| PlanOp::Split { clip, at_ms }),
+        (clip.clone(), -100i64..5_000, 0i64..5_000).prop_map(|(clip, from_ms, to_ms)| {
+            PlanOp::Cut {
+                clip,
+                from_ms,
+                to_ms,
+                reason: None,
+            }
+        }),
         (
             clip,
             prop_oneof![Just("crossfade"), Just("push"), Just("spin")],

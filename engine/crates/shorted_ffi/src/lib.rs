@@ -5,6 +5,7 @@
 pub mod api;
 #[cfg(target_vendor = "apple")]
 mod audio_output;
+mod derush;
 pub mod error;
 #[cfg(target_vendor = "apple")]
 pub mod frame_composer;
