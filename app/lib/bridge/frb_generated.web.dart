@@ -8,6 +8,7 @@
 
 import 'api.dart';
 import 'api/clips.dart';
+import 'api/export.dart';
 import 'api/media.dart';
 import 'api/preview.dart';
 import 'api/projects.dart';
@@ -54,6 +55,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ErrorCode dco_decode_box_autoadd_error_code(dynamic raw);
 
   @protected
+  ExportSettings dco_decode_box_autoadd_export_settings(dynamic raw);
+
+  @protected
   ClipEdge dco_decode_clip_edge(dynamic raw);
 
   @protected
@@ -61,6 +65,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ErrorCode dco_decode_error_code(dynamic raw);
+
+  @protected
+  ExportSettings dco_decode_export_settings(dynamic raw);
 
   @protected
   double dco_decode_f_64(dynamic raw);
@@ -168,6 +175,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ErrorCode sse_decode_box_autoadd_error_code(SseDeserializer deserializer);
 
   @protected
+  ExportSettings sse_decode_box_autoadd_export_settings(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   ClipEdge sse_decode_clip_edge(SseDeserializer deserializer);
 
   @protected
@@ -175,6 +187,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ErrorCode sse_decode_error_code(SseDeserializer deserializer);
+
+  @protected
+  ExportSettings sse_decode_export_settings(SseDeserializer deserializer);
 
   @protected
   double sse_decode_f_64(SseDeserializer deserializer);
@@ -301,6 +316,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_export_settings(
+    ExportSettings self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_clip_edge(ClipEdge self, SseSerializer serializer);
 
   @protected
@@ -308,6 +329,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_error_code(ErrorCode self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_export_settings(
+    ExportSettings self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_f_64(double self, SseSerializer serializer);

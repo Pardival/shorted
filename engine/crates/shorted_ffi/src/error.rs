@@ -18,6 +18,8 @@ pub enum EngineError {
     UnsupportedMedia,
     #[error("the chosen file is not the missing one")]
     DifferentMedia,
+    #[error("the video could not be written")]
+    ExportFailed,
     #[error("project storage failed")]
     Store(#[from] shorted_store::session::StoreError),
 }
@@ -38,6 +40,8 @@ pub enum ErrorCode {
     UnsupportedMedia,
     /// A relink pointed at a different file.
     DifferentMedia,
+    /// The video could not be written.
+    ExportFailed,
 }
 
 impl EngineError {
@@ -48,6 +52,7 @@ impl EngineError {
             Self::Logging(_) | Self::Internal(_) => ErrorCode::Internal,
             Self::UnsupportedMedia => ErrorCode::UnsupportedMedia,
             Self::DifferentMedia => ErrorCode::DifferentMedia,
+            Self::ExportFailed => ErrorCode::ExportFailed,
             Self::Store(error) => match error {
                 StoreError::Io(_) | StoreError::WriterStopped => ErrorCode::Storage,
                 StoreError::NewerVersion { .. } => ErrorCode::NewerProject,

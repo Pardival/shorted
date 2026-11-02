@@ -44,4 +44,7 @@ enum ErrorCode {
 
   /// A relink pointed at a different file.
   differentMedia,
+
+  /// The video could not be written.
+  exportFailed,
 }

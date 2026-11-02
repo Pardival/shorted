@@ -60,5 +60,16 @@
   "relink": "Relier",
   "importFailed": "{count, plural, =1{1 fichier n'a pas pu être importé.} other{{count} fichiers n'ont pas pu être importés.}}",
   "errorDifferentMedia": "Ce n'est pas le fichier manquant.",
-  "split": "Couper"
+  "split": "Couper",
+  "exportTitle": "Exporter votre short",
+  "exportResolution": "Résolution",
+  "exportFrameRate": "Images par seconde",
+  "exportStart": "Exporter la vidéo",
+  "exportCancel": "Annuler l'export",
+  "exportDone": "Vidéo enregistrée.",
+  "exportProgress": "Export {percent} %",
+  "exportSilentNote": "Le son n'est pas encore exporté.",
+  "exportEmpty": "Ajoutez d'abord des clips à la timeline.",
+  "exportTooLong": "Ce short dépasse la limite de 2:00.",
+  "errorExportFailed": "La vidéo n'a pas pu être écrite. Vérifiez l'espace libre et le dossier choisi."
 }

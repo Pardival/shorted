@@ -4,6 +4,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:shorted/bridge/api/media.dart';
 import 'package:shorted/bridge/api/projects.dart';
 import 'package:shorted/bridge/error.dart';
+import 'package:shorted/bridge/runtime.dart';
 import 'package:shorted/features/project/project_gateway.dart';
 
 PlatformInt64 big(int value) => PlatformInt64Util.from(value);
@@ -164,6 +165,22 @@ class FakeGateway implements ProjectGateway {
   }
 
   final clipCalls = <String>[];
+  final exportEvents = StreamController<TaskEvent>();
+  final exports = <String>[];
+  final cancelled = <BigInt>[];
+
+  @override
+  Stream<TaskEvent> export(
+    String path, {
+    required int width,
+    required int fps,
+  }) {
+    exports.add('$path $width $fps');
+    return exportEvents.stream;
+  }
+
+  @override
+  void cancelTask(BigInt id) => cancelled.add(id);
 
   @override
   Future<ProjectView> splitClip(String id, int timeUs) async {

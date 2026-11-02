@@ -116,5 +116,23 @@
       }
     }
   },
-  "split": "Split"
+  "split": "Split",
+  "exportTitle": "Export your short",
+  "exportResolution": "Resolution",
+  "exportFrameRate": "Frame rate",
+  "exportStart": "Export video",
+  "exportCancel": "Cancel export",
+  "exportDone": "Video saved.",
+  "exportProgress": "Exporting {percent} %",
+  "exportSilentNote": "Sound is not exported yet.",
+  "exportEmpty": "Add clips to the timeline first.",
+  "exportTooLong": "This short is over the 2:00 limit.",
+  "errorExportFailed": "The video could not be written. Check the free space and the chosen folder.",
+  "@exportProgress": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  }
 }

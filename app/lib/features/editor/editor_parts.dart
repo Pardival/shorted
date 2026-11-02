@@ -10,6 +10,7 @@ import '../../design_system/components.dart';
 import '../../design_system/tokens.g.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../clips/clips_panel.dart';
+import '../export/export_panel.dart';
 import '../project/project_dialogs.dart';
 import '../preview/preview_controller.dart';
 import '../project/project_providers.dart';
@@ -381,11 +382,13 @@ class SectionPanel extends StatelessWidget {
     required this.section,
     required this.projectId,
     required this.media,
+    required this.durationUs,
   });
 
   final EditorSection section;
   final String projectId;
   final List<MediaItemView> media;
+  final int durationUs;
 
   @override
   Widget build(BuildContext context) {
@@ -397,6 +400,10 @@ class SectionPanel extends StatelessWidget {
           key: const ValueKey(EditorSection.clips),
           projectId: projectId,
           media: media,
+        ),
+        EditorSection.export => ExportPanel(
+          key: const ValueKey(EditorSection.export),
+          durationUs: durationUs,
         ),
         _ => Center(
           key: ValueKey(section),

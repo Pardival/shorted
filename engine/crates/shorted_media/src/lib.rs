@@ -4,6 +4,8 @@
 
 #[cfg(target_vendor = "apple")]
 pub mod apple;
+#[cfg(target_vendor = "apple")]
+pub mod apple_writer;
 
 use std::path::Path;
 
@@ -20,6 +22,8 @@ pub enum MediaError {
     OpenFailed,
     #[error("decoding failed")]
     DecodeFailed,
+    #[error("encoding failed")]
+    EncodeFailed,
 }
 
 /// Facts about a video file. Sizes are as stored; `rotation_degrees` says how to display them.

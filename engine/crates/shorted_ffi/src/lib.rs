@@ -4,6 +4,8 @@
 
 pub mod api;
 pub mod error;
+#[cfg(target_vendor = "apple")]
+pub mod frame_composer;
 #[allow(clippy::unwrap_used, clippy::expect_used)] // Generated code.
 mod frb_generated;
 pub mod logging;
