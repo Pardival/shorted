@@ -7,8 +7,8 @@ use objc2::rc::{Retained, autoreleasepool};
 use objc2::runtime::AnyObject;
 use objc2::runtime::Bool;
 use objc2_av_foundation::{
-    AVAssetReader, AVAssetReaderStatus, AVAssetReaderTrackOutput, AVAssetTrack, AVMediaTypeVideo,
-    AVURLAsset,
+    AVAssetReader, AVAssetReaderStatus, AVAssetReaderTrackOutput, AVAssetTrack, AVMediaTypeAudio,
+    AVMediaTypeVideo, AVURLAsset,
 };
 use objc2_core_foundation::CFRetained;
 use objc2_core_media::{CMSampleBuffer, CMTime, CMTimeRange, kCMTimePositiveInfinity};
@@ -26,6 +26,9 @@ use crate::{DecodedFrame, MediaBackend, MediaError, MediaInfo, VideoDecoder};
 
 const BGRA_FOURCC: u32 = 0x4247_5241;
 const TIMESCALE: i32 = 1_000_000;
+const LINEAR_PCM_FOURCC: u32 = 0x6C70_636D;
+const AUDIO_SAMPLE_RATE: u32 = 48_000;
+const AUDIO_CHANNELS: u32 = 2;
 
 pub struct AppleBackend;
 
@@ -243,4 +246,92 @@ impl VideoDecoder for AppleDecoder {
     fn seek(&mut self, time_us: i64) -> Result<(), MediaError> {
         autoreleasepool(|_| self.start_at(time_us))
     }
+}
+
+/// True if the file has a sound track.
+pub fn has_audio(path: &Path) -> bool {
+    autoreleasepool(|_| {
+        let url = NSURL::fileURLWithPath(&NSString::from_str(&path.to_string_lossy()));
+        // SAFETY: valid URL, no options; the media type is an AVFoundation static.
+        unsafe {
+            let asset = AVURLAsset::URLAssetWithURL_options(&url, None);
+            let Some(media_type) = AVMediaTypeAudio else {
+                return false;
+            };
+            #[allow(deprecated)]
+            let tracks = asset.tracksWithMediaType(media_type);
+            tracks.firstObject().is_some()
+        }
+    })
+}
+
+fn pcm_settings() -> Retained<NSDictionary<NSString, AnyObject>> {
+    // Values of AVFAudio's keys, a framework the bindings here do not cover.
+    let keys: Vec<Retained<NSString>> = [
+        "AVFormatIDKey",
+        "AVSampleRateKey",
+        "AVNumberOfChannelsKey",
+        "AVLinearPCMBitDepthKey",
+        "AVLinearPCMIsFloatKey",
+        "AVLinearPCMIsBigEndianKey",
+        "AVLinearPCMIsNonInterleaved",
+    ]
+    .map(NSString::from_str)
+    .into();
+    let format = NSNumber::new_u32(LINEAR_PCM_FOURCC);
+    let rate = NSNumber::new_u32(AUDIO_SAMPLE_RATE);
+    let channels = NSNumber::new_u32(AUDIO_CHANNELS);
+    let bits = NSNumber::new_u32(32);
+    let yes = NSNumber::new_bool(true);
+    let no = NSNumber::new_bool(false);
+    let values: [&AnyObject; 7] = [&format, &rate, &channels, &bits, &yes, &no, &no];
+    let references: Vec<&NSString> = keys.iter().map(|key| &**key).collect();
+    NSDictionary::from_slices(&references, &values)
+}
+
+/// Decodes the whole sound track to interleaved stereo float at 48 kHz. Empty without a track.
+pub fn decode_audio(path: &Path) -> Result<Vec<f32>, MediaError> {
+    autoreleasepool(|_| {
+        let url = NSURL::fileURLWithPath(&NSString::from_str(&path.to_string_lossy()));
+        // SAFETY: objects are configured before reading starts; each block buffer holds
+        // `length` bytes, and the output vector has room for them.
+        unsafe {
+            let asset = AVURLAsset::URLAssetWithURL_options(&url, None);
+            let media_type = AVMediaTypeAudio.ok_or(MediaError::OpenFailed)?;
+            #[allow(deprecated)]
+            let tracks = asset.tracksWithMediaType(media_type);
+            let Some(track) = tracks.firstObject() else {
+                return Ok(Vec::new());
+            };
+            let reader = AVAssetReader::assetReaderWithAsset_error(&asset)
+                .map_err(|_| MediaError::OpenFailed)?;
+            let settings = pcm_settings();
+            let output = AVAssetReaderTrackOutput::assetReaderTrackOutputWithTrack_outputSettings(
+                &track,
+                Some(&settings),
+            );
+            reader.addOutput(&output);
+            if !reader.startReading() {
+                return Err(MediaError::OpenFailed);
+            }
+            let mut samples: Vec<f32> = Vec::new();
+            while let Some(sample) = output.copyNextSampleBuffer() {
+                let Some(block) = sample.data_buffer() else {
+                    continue;
+                };
+                let length = block.data_length();
+                let start = samples.len();
+                samples.resize(start + length / size_of::<f32>(), 0.0);
+                let target = std::ptr::NonNull::new(samples[start..].as_mut_ptr().cast());
+                let target = target.ok_or(MediaError::DecodeFailed)?;
+                if block.copy_data_bytes(0, length, target) != 0 {
+                    return Err(MediaError::DecodeFailed);
+                }
+            }
+            if reader.status() == AVAssetReaderStatus::Failed {
+                return Err(MediaError::DecodeFailed);
+            }
+            Ok(samples)
+        }
+    })
 }

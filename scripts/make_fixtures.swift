@@ -1,5 +1,6 @@
 // Generates licence-clear H.264 test clips (macOS). Usage: swift scripts/make_fixtures.swift <dir>
 import AVFoundation
+import CoreMedia
 import CoreVideo
 
 struct Fixture {
@@ -107,5 +108,91 @@ func write(_ fixture: Fixture, to directory: URL) throws {
   print(url.path)
 }
 
+/// 2 s of black video with a 440 Hz tone, for the audio path.
+func writeWithSound(to directory: URL) throws {
+  let url = directory.appendingPathComponent("h264_audio_440hz.mov")
+  try? FileManager.default.removeItem(at: url)
+  let writer = try AVAssetWriter(outputURL: url, fileType: .mov)
+  let video = AVAssetWriterInput(
+    mediaType: .video,
+    outputSettings: [
+      AVVideoCodecKey: AVVideoCodecType.h264, AVVideoWidthKey: 640, AVVideoHeightKey: 360,
+    ])
+  let adaptor = AVAssetWriterInputPixelBufferAdaptor(
+    assetWriterInput: video,
+    sourcePixelBufferAttributes: [
+      kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
+      kCVPixelBufferWidthKey as String: 640,
+      kCVPixelBufferHeightKey as String: 360,
+    ])
+  let audio = AVAssetWriterInput(
+    mediaType: .audio,
+    outputSettings: [
+      AVFormatIDKey: kAudioFormatMPEG4AAC, AVSampleRateKey: 48_000, AVNumberOfChannelsKey: 2,
+      AVEncoderBitRateKey: 128_000,
+    ])
+  writer.add(video)
+  writer.add(audio)
+  writer.startWriting()
+  writer.startSession(atSourceTime: .zero)
+
+  var description = AudioStreamBasicDescription(
+    mSampleRate: 48_000, mFormatID: kAudioFormatLinearPCM,
+    mFormatFlags: kAudioFormatFlagIsFloat | kAudioFormatFlagIsPacked, mBytesPerPacket: 8,
+    mFramesPerPacket: 1, mBytesPerFrame: 8, mChannelsPerFrame: 2, mBitsPerChannel: 32,
+    mReserved: 0)
+  var format: CMAudioFormatDescription?
+  CMAudioFormatDescriptionCreate(
+    allocator: nil, asbd: &description, layoutSize: 0, layout: nil, magicCookieSize: 0,
+    magicCookie: nil, extensions: nil, formatDescriptionOut: &format)
+
+  let chunk = 4800
+  for index in 0..<20 {
+    while !video.isReadyForMoreMediaData || !audio.isReadyForMoreMediaData {
+      Thread.sleep(forTimeInterval: 0.001)
+    }
+    var pixels: CVPixelBuffer?
+    CVPixelBufferPoolCreatePixelBuffer(nil, adaptor.pixelBufferPool!, &pixels)
+    CVPixelBufferLockBaseAddress(pixels!, [])
+    memset(
+      CVPixelBufferGetBaseAddress(pixels!), 0,
+      CVPixelBufferGetBytesPerRow(pixels!) * CVPixelBufferGetHeight(pixels!))
+    CVPixelBufferUnlockBaseAddress(pixels!, [])
+    _ = adaptor.append(pixels!, withPresentationTime: CMTime(value: Int64(index), timescale: 10))
+
+    var samples = [Float](repeating: 0, count: chunk * 2)
+    for frame in 0..<chunk {
+      let t = Double(index * chunk + frame) / 48_000
+      let value = Float(sin(2 * Double.pi * 440 * t) * 0.5)
+      samples[frame * 2] = value
+      samples[frame * 2 + 1] = value
+    }
+    let bytes = samples.count * MemoryLayout<Float>.size
+    var block: CMBlockBuffer?
+    CMBlockBufferCreateWithMemoryBlock(
+      allocator: nil, memoryBlock: nil, blockLength: bytes, blockAllocator: nil,
+      customBlockSource: nil, offsetToData: 0, dataLength: bytes,
+      flags: kCMBlockBufferAssureMemoryNowFlag, blockBufferOut: &block)
+    samples.withUnsafeBytes {
+      _ = CMBlockBufferReplaceDataBytes(
+        with: $0.baseAddress!, blockBuffer: block!, offsetIntoDestination: 0, dataLength: bytes)
+    }
+    var sample: CMSampleBuffer?
+    CMAudioSampleBufferCreateReadyWithPacketDescriptions(
+      allocator: nil, dataBuffer: block!, formatDescription: format!, sampleCount: chunk,
+      presentationTimeStamp: CMTime(value: Int64(index * chunk), timescale: 48_000),
+      packetDescriptions: nil, sampleBufferOut: &sample)
+    guard audio.append(sample!) else { throw writer.error ?? CocoaError(.fileWriteUnknown) }
+  }
+  video.markAsFinished()
+  audio.markAsFinished()
+  let done = DispatchSemaphore(value: 0)
+  writer.finishWriting { done.signal() }
+  done.wait()
+  if let error = writer.error { throw error }
+  print(url.path)
+}
+
 let directory = URL(fileURLWithPath: CommandLine.arguments[1])
 for fixture in fixtures { try write(fixture, to: directory) }
+try writeWithSound(to: directory)

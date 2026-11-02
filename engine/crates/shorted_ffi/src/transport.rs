@@ -1,9 +1,11 @@
 //! Shared state of the preview: what to show and at which time.
 
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::Instant;
 
+use shorted_audio::mixer::SAMPLE_RATE;
 use shorted_core::model::Project;
 
 pub(crate) struct Transport {
@@ -12,7 +14,10 @@ pub(crate) struct Transport {
     /// Changes with each edit, so that a paused frame is redrawn.
     pub revision: u64,
     position_us: i64,
+    generation: u64,
     playing_since: Option<Instant>,
+    /// Frames the sound output has played since `play`. It paces the video when present.
+    pub audio_frames: Option<Arc<AtomicU64>>,
 }
 
 static TRANSPORT: Mutex<Transport> = Mutex::new(Transport {
@@ -20,7 +25,9 @@ static TRANSPORT: Mutex<Transport> = Mutex::new(Transport {
     folder: PathBuf::new(),
     revision: 0,
     position_us: 0,
+    generation: 0,
     playing_since: None,
+    audio_frames: None,
 });
 
 pub(crate) fn transport() -> MutexGuard<'static, Transport> {
@@ -39,13 +46,30 @@ impl Transport {
         let duration = self.duration_us();
         let elapsed = self
             .playing_since
-            .map_or(0, |since| since.elapsed().as_micros() as i64);
+            .map_or(0, |since| match &self.audio_frames {
+                Some(frames) => {
+                    frames.load(Ordering::Relaxed) as i64 * 1_000_000 / i64::from(SAMPLE_RATE)
+                }
+                None => since.elapsed().as_micros() as i64,
+            });
         let position = self.position_us + elapsed;
         if position >= duration && self.playing_since.is_some() {
             self.playing_since = None;
             self.position_us = duration;
         }
         position.clamp(0, duration)
+    }
+
+    fn reset_audio_clock(&mut self) {
+        if let Some(frames) = &self.audio_frames {
+            frames.store(0, Ordering::Relaxed);
+        }
+        self.generation += 1;
+    }
+
+    /// Where playback started, and a number that changes on every jump.
+    pub fn playback_start(&self) -> (i64, u64) {
+        (self.position_us, self.generation)
     }
 
     pub fn play(&mut self) {
@@ -56,6 +80,7 @@ impl Transport {
         if self.position_us() >= self.duration_us() {
             self.position_us = 0;
         }
+        self.reset_audio_clock();
         self.playing_since = Some(Instant::now());
     }
 
@@ -72,6 +97,7 @@ impl Transport {
         self.position_us = time_us.clamp(0, self.duration_us());
         if self.playing_since.is_some() {
             self.playing_since = Some(Instant::now());
+            self.reset_audio_clock();
         }
     }
 }
@@ -100,6 +126,27 @@ pub(crate) fn clear() {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn the_audio_clock_paces_playback_when_there_is_one() {
+        let project = super::Arc::new(project());
+        let frames = super::Arc::new(super::AtomicU64::new(0));
+        let mut state = Transport {
+            project: Some(project),
+            folder: PathBuf::new(),
+            revision: 0,
+            position_us: 0,
+            generation: 0,
+            playing_since: None,
+            audio_frames: Some(frames.clone()),
+        };
+        state.play();
+        frames.store(24_000, super::Ordering::Relaxed);
+        assert_eq!(state.position_us(), 500_000);
+        state.set_position(0);
+        assert_eq!(state.position_us(), 0);
+        assert_eq!(frames.load(super::Ordering::Relaxed), 0);
+    }
+
     use shorted_core::model::Project;
     use uuid::Uuid;
 
@@ -119,7 +166,9 @@ mod tests {
             folder: PathBuf::new(),
             revision: 0,
             position_us: 0,
+            generation: 0,
             playing_since: None,
+            audio_frames: None,
         };
         state.set_position(-5);
         assert_eq!(state.position_us(), 0);
@@ -143,7 +192,9 @@ mod tests {
             folder: PathBuf::new(),
             revision: 0,
             position_us: 0,
+            generation: 0,
             playing_since: None,
+            audio_frames: None,
         };
         state.set_position(1_000);
         assert_eq!(state.position_us(), 0);

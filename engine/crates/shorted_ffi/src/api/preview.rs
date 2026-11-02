@@ -10,6 +10,8 @@ pub fn preview_seek(time_us: i64) {
 
 #[flutter_rust_bridge::frb(sync)]
 pub fn preview_play() {
+    #[cfg(target_vendor = "apple")]
+    crate::audio_output::ensure_started();
     transport().play();
 }
 

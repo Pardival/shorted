@@ -119,8 +119,8 @@ fn video_probe(path: &Path) -> Result<MediaProbe, EngineError> {
         height: info.height,
         rotation: info.rotation_degrees,
         fps: info.nominal_fps,
-        // Audio and colour details come with the full probe (T-0301).
-        has_audio: false,
+        has_audio: shorted_media::apple::has_audio(path),
+        // Colour details come with the full probe (T-0301).
         codec: String::new(),
         color: ColorRange::Sdr,
     })

@@ -12,3 +12,6 @@ workspace = true
 [dependencies]
 shorted_core = { path = "../shorted_core" }
 shorted_media = { path = "../shorted_media" }
+
+[dev-dependencies]
+uuid = "1.29.0"
