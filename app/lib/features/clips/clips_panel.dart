@@ -234,6 +234,7 @@ class _ClipsPanelState extends ConsumerState<ClipsPanel> {
                   children: [
                     SecondaryButton(
                       label: l10n.addMedia,
+                      icon: Icons.add_photo_alternate_outlined,
                       onPressed: _pickFiles,
                     ),
                     const SizedBox(height: ShortedSpace.s),
@@ -281,11 +282,11 @@ class _ClipsPanelState extends ConsumerState<ClipsPanel> {
                       ],
                     ),
                     if (isDesktop && media.isNotEmpty)
-                      Align(
-                        alignment: AlignmentDirectional.centerStart,
-                        child: TextButton.icon(
-                          icon: const Icon(Icons.drive_folder_upload_outlined),
-                          label: Text(l10n.collectMedia),
+                      Padding(
+                        padding: const EdgeInsets.only(top: ShortedSpace.s),
+                        child: SecondaryButton(
+                          icon: Icons.drive_folder_upload_outlined,
+                          label: l10n.collectMedia,
                           onPressed: () => _guard(() async {
                             await _editor.apply(
                               (gateway) => gateway.collectMedia(),

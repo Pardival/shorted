@@ -609,8 +609,7 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
   /// Several elements selected: what applies to all of them at once (T-1206).
   Widget _groupTools(AppLocalizations l10n, List<String> ids) {
     void clear() => ref.read(overlayGroupProvider.notifier).clear();
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    return ToolStrip(
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: ShortedSpace.s),
@@ -644,8 +643,7 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
     Future<void> run(
       Future<ProjectView> Function(ProjectGateway gateway) action,
     ) => _guard(() => _editor.apply(action));
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    return ToolStrip(
       children: [
         ShortedIconButton(
           icon: Icons.animation,
@@ -821,8 +819,7 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
               ),
             ),
           if (range != null)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            ToolStrip(
               children: [
                 ShortedIconButton(
                   icon: Icons.vertical_split_outlined,
@@ -863,8 +860,7 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
           else if (overlay != null)
             _overlayTools(l10n, overlay)
           else if (_audioItem case final sound?)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            ToolStrip(
               children: [
                 ShortedIconButton(
                   icon: Icons.graphic_eq,
@@ -883,8 +879,7 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
               ],
             )
           else if (clip != null)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            ToolStrip(
               children: [
                 ShortedIconButton(
                   icon: Icons.content_cut,

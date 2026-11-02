@@ -1,3 +1,4 @@
+import 'package:flutter/rendering.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -508,5 +509,57 @@ void main() {
       expect(tester.takeException(), isNull, reason: '$size');
       expect(find.text('Enregistré'), findsOneWidget);
     }
+  });
+
+  testWidgets('no button label wraps, in any language, on phone or desktop', (
+    tester,
+  ) async {
+    addTearDown(tester.platformDispatcher.clearLocalesTestValue);
+    var checked = 0;
+    for (final locale in const ['en', 'fr', 'es', 'pt']) {
+      tester.platformDispatcher.localesTestValue = [Locale(locale)];
+      for (final size in const [Size(390, 844), Size(1440, 900)]) {
+        for (final section in const [
+          'clips',
+          'audio',
+          'captions',
+          'enhance',
+          'export',
+        ]) {
+          final project = FakeProject('p1', 'Mine')..clips.add('c1');
+          final gateway = FakeGateway()..projects.add(project);
+          await gateway.open('p1');
+          await gateway.importFiles(const ['/a.mov']);
+          await open(
+            tester,
+            '/editor/p1/$section',
+            size: size,
+            gateway: gateway,
+          );
+          final where = '$locale $size $section';
+          expect(tester.takeException(), isNull, reason: where);
+          final labels = find.descendant(
+            of: find.byWidgetPredicate((widget) => widget is ButtonStyleButton),
+            matching: find.byType(RichText),
+          );
+          for (final element in labels.evaluate()) {
+            final paragraph = element.renderObject! as RenderParagraph;
+            if (!paragraph.attached || paragraph.text.toPlainText().isEmpty) {
+              continue;
+            }
+            final line = paragraph.getFullHeightForCaret(
+              const TextPosition(offset: 0),
+            );
+            checked++;
+            expect(
+              paragraph.size.height,
+              lessThan(line * 1.5),
+              reason: '$where: "${paragraph.text.toPlainText()}" wraps',
+            );
+          }
+        }
+      }
+    }
+    expect(checked, greaterThan(100), reason: 'buttons were looked at');
   });
 }
