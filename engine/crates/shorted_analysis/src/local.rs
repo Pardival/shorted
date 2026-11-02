@@ -11,6 +11,27 @@ use crate::speech::{Range, SpeechConfig, dead_ranges, merge, speech_ranges, with
 const MIN_CUT_US: i64 = 300_000;
 
 pub const REASON_SILENCE: &str = "silence";
+pub const REASON_DUPLICATE: &str = "duplicate";
+
+/// Adds every earlier take of a sentence said again later to what its clip can lose.
+pub fn add_duplicate_takes(project: &Project, analyses: &mut [ClipAnalysis]) {
+    for (clip, range) in crate::takes::duplicate_takes(project) {
+        let Some(analysis) = analyses.iter_mut().find(|a| a.clip == clip) else {
+            continue;
+        };
+        let Some(item) = project.timeline.clips.iter().find(|c| c.id == clip) else {
+            continue;
+        };
+        let clamped = (
+            range.0.max(item.source_in_us),
+            range.1.min(item.source_out_us),
+        );
+        if clamped.1 > clamped.0 {
+            analysis.removable.push((clamped, REASON_DUPLICATE));
+            analysis.removable.sort_by_key(|(range, _)| *range);
+        }
+    }
+}
 
 pub fn defect_reason(defect: Defect) -> &'static str {
     match defect {
@@ -114,11 +135,16 @@ fn subtract(range: Range, holes: &[Range]) -> Vec<Range> {
     pieces
 }
 
-/// The reason of the first stretch inside `range`.
+/// The reason of the first stretch inside `range`; a retake says more than its silences.
 fn reason_for(range: Range, removable: &[(Range, &'static str)]) -> &'static str {
-    removable
-        .iter()
-        .find(|((a, b), _)| *a < range.1 && *b > range.0)
+    let inside = || {
+        removable
+            .iter()
+            .filter(move |((a, b), _)| *a < range.1 && *b > range.0)
+    };
+    inside()
+        .find(|(_, why)| *why == REASON_DUPLICATE)
+        .or_else(|| inside().next())
         .map_or(REASON_SILENCE, |(_, why)| why)
 }
 
@@ -138,7 +164,13 @@ pub fn local_plan(project: &Project, analyses: &[ClipAnalysis], aliases: &Aliase
             0,
         );
         let reason = |range| Some(reason_for(range, &analysis.removable).to_string());
-        if gone.first() == Some(&(start, end)) {
+        // A clip whose every word goes has nothing left worth keeping, only its silences.
+        let speechless = !analysis.speech.is_empty()
+            && analysis.speech.iter().all(|(a, b)| {
+                let (a, b) = ((*a).max(start), (*b).min(end));
+                b <= a || gone.iter().any(|(x, y)| *x <= a && *y >= b)
+            });
+        if gone.first() == Some(&(start, end)) || speechless {
             ops.push(PlanOp::Drop {
                 clip: alias.into(),
                 reason: reason((start, end)),

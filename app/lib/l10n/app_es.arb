@@ -285,5 +285,6 @@
   "decisionTrimmed": "Clip {clip}: {seconds} s recortados",
   "decisionCut": "Clip {clip}: {seconds} s quitados del medio",
   "arrangeBeforeAfter": "{before} de material → {after}",
-  "arranging": "Analizando clips… {percent} %"
+  "arranging": "Analizando clips… {percent} %",
+  "reasonDuplicate": "repetido más adelante"
 }

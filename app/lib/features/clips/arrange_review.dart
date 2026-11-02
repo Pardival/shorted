@@ -17,6 +17,7 @@ String reasonText(AppLocalizations l10n, String? reason) => switch (reason) {
   'shake' => l10n.reasonShake,
   'dark' => l10n.reasonDark,
   'bright' => l10n.reasonBright,
+  'duplicate' => l10n.reasonDuplicate,
   final other => other,
 };
 

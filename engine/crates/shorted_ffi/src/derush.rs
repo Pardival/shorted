@@ -7,7 +7,7 @@ use std::sync::{Mutex, MutexGuard, PoisonError};
 use serde::{Deserialize, Serialize};
 use shorted_ai::plan::{validate, Aliases, ValidPlan};
 use shorted_analysis::frames::{FrameConfig, FrameMetrics};
-use shorted_analysis::local::{analyse_clip, local_plan, ClipAnalysis};
+use shorted_analysis::local::{add_duplicate_takes, analyse_clip, local_plan, ClipAnalysis};
 use shorted_analysis::speech::{Range, SpeechConfig};
 use shorted_core::model::{Id, MediaKind, MediaRef, Project};
 use uuid::Uuid;
@@ -173,6 +173,7 @@ pub(crate) fn plan_locally(
             &FrameConfig::default(),
         ));
     }
+    add_duplicate_takes(project, &mut analyses);
     let aliases = Aliases::of(project);
     let plan = local_plan(project, &analyses, &aliases);
     validate(&plan, project, &aliases, &mut || -> Id { Uuid::now_v7() }).map_err(|errors| {

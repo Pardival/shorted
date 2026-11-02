@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shorted/bridge/api/arrange.dart';
 import 'package:shorted/bridge/runtime.dart';
 import 'package:shorted/features/clips/arrange_review.dart';
+import 'package:shorted/l10n/generated/app_localizations.dart';
 
 import '../../shorted_app_test.dart' show open;
 import '../project/fake_gateway.dart';
@@ -87,5 +88,20 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(ArrangeReview), findsNothing);
     expect(find.textContaining('drag its edges'), findsOneWidget);
+  });
+
+  testWidgets('a retake is worded as said again later', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(
+          builder: (context) =>
+              Text(reasonText(AppLocalizations.of(context), 'duplicate')),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('said again later'), findsOneWidget);
   });
 }

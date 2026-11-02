@@ -285,5 +285,6 @@
   "decisionTrimmed": "Clip {clip} : {seconds} s rognées",
   "decisionCut": "Clip {clip} : {seconds} s retirées au milieu",
   "arrangeBeforeAfter": "{before} de rushs → {after}",
-  "arranging": "Analyse des clips… {percent} %"
+  "arranging": "Analyse des clips… {percent} %",
+  "reasonDuplicate": "redit plus loin"
 }

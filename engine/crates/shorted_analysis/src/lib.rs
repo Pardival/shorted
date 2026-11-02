@@ -5,6 +5,7 @@
 pub mod frames;
 pub mod local;
 pub mod speech;
+pub mod takes;
 
 /// Name of this crate, used by the workspace smoke tests.
 pub const CRATE_NAME: &str = "shorted_analysis";
