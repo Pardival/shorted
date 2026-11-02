@@ -236,7 +236,13 @@ fn full_project() -> Project {
     project.timeline.overlays = vec![
         overlay(50, OverlayKind::Image { asset: id(11) }),
         overlay(51, OverlayKind::AnimatedImage { asset: id(13) }),
-        overlay(52, OverlayKind::Video { media: id(10) }),
+        overlay(
+            52,
+            OverlayKind::Video {
+                media: id(10),
+                source_in_us: 0,
+            },
+        ),
         overlay(
             53,
             OverlayKind::Text {
@@ -425,7 +431,10 @@ fn references_and_duplicates_are_rejected() {
         ModelError::UnknownId(id(999))
     );
     assert_eq!(
-        rejected(|p| p.timeline.overlays[0].kind = OverlayKind::Video { media: id(999) }),
+        rejected(|p| p.timeline.overlays[0].kind = OverlayKind::Video {
+            media: id(999),
+            source_in_us: 0
+        }),
         ModelError::UnknownId(id(999))
     );
 }
