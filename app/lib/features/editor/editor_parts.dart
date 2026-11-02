@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../bridge/api/media.dart';
 import '../../bridge/api/projects.dart';
 import '../../design_system/components.dart';
 import '../../design_system/tokens.g.dart';
 import '../../l10n/generated/app_localizations.dart';
+import '../clips/clips_panel.dart';
 import '../timeline/timeline_layout.dart';
 import '../timeline/timeline_view.dart';
 import 'editor_section.dart';
@@ -231,26 +233,40 @@ class _TimelineAreaState extends State<TimelineArea> {
 
 /// Tools of the active section; only this part animates when the section changes.
 class SectionPanel extends StatelessWidget {
-  const SectionPanel({super.key, required this.section});
+  const SectionPanel({
+    super.key,
+    required this.section,
+    required this.projectId,
+    required this.media,
+  });
 
   final EditorSection section;
+  final String projectId;
+  final List<MediaItemView> media;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return AnimatedSwitcher(
       duration: ShortedMotion.section,
-      child: Center(
-        key: ValueKey(section),
-        child: Padding(
-          padding: const EdgeInsets.all(ShortedSpace.l),
-          child: Text(
-            l10n.toolsPlaceholder(section.label(l10n)),
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: ShortedColors.textMuted),
+      child: switch (section) {
+        EditorSection.clips => ClipsPanel(
+          key: const ValueKey(EditorSection.clips),
+          projectId: projectId,
+          media: media,
+        ),
+        _ => Center(
+          key: ValueKey(section),
+          child: Padding(
+            padding: const EdgeInsets.all(ShortedSpace.l),
+            child: Text(
+              l10n.toolsPlaceholder(section.label(l10n)),
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: ShortedColors.textMuted),
+            ),
           ),
         ),
-      ),
+      },
     );
   }
 }

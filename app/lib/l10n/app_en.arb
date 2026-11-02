@@ -94,5 +94,26 @@
         "type": "String"
       }
     }
+  },
+  "addMedia": "Add videos and photos",
+  "dropMedia": "or drop files here",
+  "placeInOrder": "Place in this order ({count})",
+  "mediaOffline": "Media offline",
+  "relink": "Relink",
+  "importFailed": "{count, plural, =1{1 file could not be imported.} other{{count} files could not be imported.}}",
+  "errorDifferentMedia": "This is not the missing file.",
+  "@placeInOrder": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@importFailed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }

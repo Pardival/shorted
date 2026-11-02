@@ -52,5 +52,12 @@
   "errorGeneric": "Un problème est survenu. Réessayez.",
   "errorStorage": "Le projet n'a pas pu être enregistré ou lu. Vérifiez l'espace libre sur votre appareil.",
   "errorNewerProject": "Ce projet vient d'une version plus récente de Shorted. Mettez l'app à jour pour l'ouvrir.",
-  "errorDamagedProject": "Ce fichier de projet est endommagé et ne peut pas être ouvert."
+  "errorDamagedProject": "Ce fichier de projet est endommagé et ne peut pas être ouvert.",
+  "addMedia": "Ajouter des vidéos et des photos",
+  "dropMedia": "ou déposez des fichiers ici",
+  "placeInOrder": "Placer dans cet ordre ({count})",
+  "mediaOffline": "Média hors ligne",
+  "relink": "Relier",
+  "importFailed": "{count, plural, =1{1 fichier n'a pas pu être importé.} other{{count} fichiers n'ont pas pu être importés.}}",
+  "errorDifferentMedia": "Ce n'est pas le fichier manquant."
 }

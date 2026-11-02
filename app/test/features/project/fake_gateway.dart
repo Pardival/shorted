@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
+import 'package:shorted/bridge/api/media.dart';
 import 'package:shorted/bridge/api/projects.dart';
 import 'package:shorted/bridge/error.dart';
 import 'package:shorted/features/project/project_gateway.dart';
@@ -12,6 +13,8 @@ class FakeProject {
 
   final String id;
   String title;
+  final media = <MediaItemView>[];
+  final clips = <String>[];
   final titles = <String>[];
   final redone = <String>[];
 }
@@ -100,10 +103,16 @@ class FakeGateway implements ProjectGateway {
         TrackView(
           kind: TrackKindView.video,
           items: [
-            TrackItemView(id: 'c1', startUs: big(0), endUs: big(4000000)),
+            for (final (index, clip) in project.clips.indexed)
+              TrackItemView(
+                id: clip,
+                startUs: big(index * 1000000),
+                endUs: big((index + 1) * 1000000),
+              ),
           ],
         ),
       ],
+      media: project.media,
     );
   }
 
@@ -125,4 +134,46 @@ class FakeGateway implements ProjectGateway {
 
   @override
   Stream<SaveStateView> saveEvents() => saves.stream;
+
+  /// Paths containing `bad` fail, like a corrupt file.
+  @override
+  Future<int> importFiles(List<String> paths) async {
+    var failed = 0;
+    for (final path in paths) {
+      if (path.contains('bad')) {
+        failed++;
+      } else {
+        opened!.media.add(
+          MediaItemView(
+            id: path,
+            name: path,
+            kind: MediaKindView.video,
+            durationUs: big(1000000),
+            offline: path.contains('gone'),
+          ),
+        );
+      }
+    }
+    return failed;
+  }
+
+  @override
+  Future<ProjectView> placeClips(List<String> mediaIds) async {
+    opened!.clips.addAll(mediaIds);
+    return view();
+  }
+
+  @override
+  Future<ProjectView> relink(String mediaId, String path) async {
+    final media = opened!.media;
+    final index = media.indexWhere((m) => m.id == mediaId);
+    media[index] = MediaItemView(
+      id: mediaId,
+      name: path,
+      kind: MediaKindView.video,
+      durationUs: big(1000000),
+      offline: false,
+    );
+    return view();
+  }
 }

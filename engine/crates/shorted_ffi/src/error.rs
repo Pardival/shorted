@@ -14,6 +14,10 @@ pub enum EngineError {
     Logging(String),
     #[error("internal failure")]
     Internal(String),
+    #[error("the file cannot be used")]
+    UnsupportedMedia,
+    #[error("the chosen file is not the missing one")]
+    DifferentMedia,
     #[error("project storage failed")]
     Store(#[from] shorted_store::session::StoreError),
 }
@@ -30,6 +34,10 @@ pub enum ErrorCode {
     DamagedProject,
     /// An edit was refused: invalid values, or nothing is open.
     InvalidEdit,
+    /// The file type is not supported, or the file cannot be decoded.
+    UnsupportedMedia,
+    /// A relink pointed at a different file.
+    DifferentMedia,
 }
 
 impl EngineError {
@@ -38,6 +46,8 @@ impl EngineError {
             Self::Cancelled => ErrorCode::Cancelled,
             Self::Io(_) => ErrorCode::Storage,
             Self::Logging(_) | Self::Internal(_) => ErrorCode::Internal,
+            Self::UnsupportedMedia => ErrorCode::UnsupportedMedia,
+            Self::DifferentMedia => ErrorCode::DifferentMedia,
             Self::Store(error) => match error {
                 StoreError::Io(_) | StoreError::WriterStopped => ErrorCode::Storage,
                 StoreError::NewerVersion { .. } => ErrorCode::NewerProject,

@@ -101,4 +101,17 @@ class EditorController extends AsyncNotifier<EditorState> {
     await _gateway.rename(projectId, title);
     _show(await _gateway.view());
   }
+
+  /// Returns how many files failed.
+  Future<int> importFiles(List<String> paths) async {
+    final failed = await _gateway.importFiles(paths);
+    _show(await _gateway.view());
+    return failed;
+  }
+
+  Future<void> placeClips(List<String> mediaIds) async =>
+      _show(await _gateway.placeClips(mediaIds));
+
+  Future<void> relink(String mediaId, String path) async =>
+      _show(await _gateway.relink(mediaId, path));
 }

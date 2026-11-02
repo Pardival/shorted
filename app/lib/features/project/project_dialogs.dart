@@ -11,6 +11,7 @@ String errorMessage(AppLocalizations l10n, Object error) {
     ErrorCode.storage => l10n.errorStorage,
     ErrorCode.newerProject => l10n.errorNewerProject,
     ErrorCode.damagedProject => l10n.errorDamagedProject,
+    ErrorCode.differentMedia => l10n.errorDifferentMedia,
     _ => l10n.errorGeneric,
   };
 }

@@ -38,4 +38,10 @@ enum ErrorCode {
 
   /// An edit was refused: invalid values, or nothing is open.
   invalidEdit,
+
+  /// The file type is not supported, or the file cannot be decoded.
+  unsupportedMedia,
+
+  /// A relink pointed at a different file.
+  differentMedia,
 }

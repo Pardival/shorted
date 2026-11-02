@@ -103,13 +103,19 @@ class EditorShell extends ConsumerWidget {
     );
   }
 
+  Widget _panel(EditorState state) => SectionPanel(
+    section: section,
+    projectId: projectId,
+    media: state.view.media,
+  );
+
   Widget _phone(BuildContext context, EditorState state, Widget transport) {
     return Column(
       children: [
         const Expanded(flex: 5, child: PreviewArea()),
         transport,
         TimelineArea(height: _phoneTimelineHeight, view: state.view),
-        Expanded(flex: 3, child: SectionPanel(section: section)),
+        Expanded(flex: 3, child: _panel(state)),
         SectionBar(selected: section, onSelect: (s) => _select(context, s)),
       ],
     );
@@ -131,7 +137,7 @@ class EditorShell extends ConsumerWidget {
                 child: Row(
                   children: [
                     const Expanded(child: PreviewArea()),
-                    SizedBox(width: 280, child: SectionPanel(section: section)),
+                    SizedBox(width: 280, child: _panel(state)),
                     if (inspector) const Inspector(),
                   ],
                 ),

@@ -4,6 +4,7 @@
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
 import 'api.dart';
+import 'api/media.dart';
 import 'api/projects.dart';
 
 import 'dart:async';
@@ -46,6 +47,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool dco_decode_bool(dynamic raw);
 
   @protected
+  ErrorCode dco_decode_box_autoadd_error_code(dynamic raw);
+
+  @protected
   EngineFailure dco_decode_engine_failure(dynamic raw);
 
   @protected
@@ -61,6 +65,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PlatformInt64 dco_decode_i_64(dynamic raw);
 
   @protected
+  ImportOutcome dco_decode_import_outcome(dynamic raw);
+
+  @protected
+  List<String> dco_decode_list_String(dynamic raw);
+
+  @protected
+  List<ImportOutcome> dco_decode_list_import_outcome(dynamic raw);
+
+  @protected
+  List<MediaItemView> dco_decode_list_media_item_view(dynamic raw);
+
+  @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
   @protected
@@ -73,7 +89,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<TrackView> dco_decode_list_track_view(dynamic raw);
 
   @protected
+  MediaItemView dco_decode_media_item_view(dynamic raw);
+
+  @protected
+  MediaKindView dco_decode_media_kind_view(dynamic raw);
+
+  @protected
   String? dco_decode_opt_String(dynamic raw);
+
+  @protected
+  ErrorCode? dco_decode_opt_box_autoadd_error_code(dynamic raw);
 
   @protected
   ProjectSummary dco_decode_project_summary(dynamic raw);
@@ -133,6 +158,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool sse_decode_bool(SseDeserializer deserializer);
 
   @protected
+  ErrorCode sse_decode_box_autoadd_error_code(SseDeserializer deserializer);
+
+  @protected
   EngineFailure sse_decode_engine_failure(SseDeserializer deserializer);
 
   @protected
@@ -146,6 +174,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   PlatformInt64 sse_decode_i_64(SseDeserializer deserializer);
+
+  @protected
+  ImportOutcome sse_decode_import_outcome(SseDeserializer deserializer);
+
+  @protected
+  List<String> sse_decode_list_String(SseDeserializer deserializer);
+
+  @protected
+  List<ImportOutcome> sse_decode_list_import_outcome(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<MediaItemView> sse_decode_list_media_item_view(
+    SseDeserializer deserializer,
+  );
 
   @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
@@ -164,7 +208,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<TrackView> sse_decode_list_track_view(SseDeserializer deserializer);
 
   @protected
+  MediaItemView sse_decode_media_item_view(SseDeserializer deserializer);
+
+  @protected
+  MediaKindView sse_decode_media_kind_view(SseDeserializer deserializer);
+
+  @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
+
+  @protected
+  ErrorCode? sse_decode_opt_box_autoadd_error_code(
+    SseDeserializer deserializer,
+  );
 
   @protected
   ProjectSummary sse_decode_project_summary(SseDeserializer deserializer);
@@ -230,6 +285,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_bool(bool self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_error_code(
+    ErrorCode self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_engine_failure(EngineFailure self, SseSerializer serializer);
 
   @protected
@@ -243,6 +304,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_import_outcome(ImportOutcome self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_String(List<String> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_import_outcome(
+    List<ImportOutcome> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_media_item_view(
+    List<MediaItemView> self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_list_prim_u_8_strict(
@@ -269,7 +348,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_media_item_view(MediaItemView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_media_kind_view(MediaKindView self, SseSerializer serializer);
+
+  @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_error_code(
+    ErrorCode? self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_project_summary(

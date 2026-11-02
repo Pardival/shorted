@@ -233,6 +233,18 @@ fn overlay(item: &OverlayItem, media: &HashSet<Id>) -> Result<(), ModelError> {
     Ok(())
 }
 
+/// Paths from a project file are untrusted: a copy must stay inside the project folder.
+fn media_location(location: &MediaLocation) -> Result<(), ModelError> {
+    if let MediaLocation::ProjectCopy { rel_path } = location {
+        let inside = !rel_path.is_empty()
+            && !rel_path.starts_with(['/', '\\'])
+            && !rel_path.contains(':')
+            && rel_path.split(['/', '\\']).all(|part| part != "..");
+        check(inside, "media path")?;
+    }
+    Ok(())
+}
+
 impl Project {
     /// Checks the whole document. Called on load and by commands that replace whole values.
     pub fn validate(&self) -> Result<(), ModelError> {
@@ -271,6 +283,9 @@ impl Project {
         let audio = unique(timeline.audio.iter().map(|a| a.id))?;
         unique(timeline.overlays.iter().map(|o| o.id))?;
 
+        for item in &self.media {
+            media_location(&item.location)?;
+        }
         for item in &timeline.clips {
             clip(item, &media)?;
         }

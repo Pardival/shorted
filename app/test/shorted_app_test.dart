@@ -49,7 +49,7 @@ void main() {
     expect(find.text('Your first short starts here'), findsOneWidget);
     await tester.tap(find.text('New short'));
     await tester.pumpAndSettle();
-    expect(find.text('Clips tools arrive with their tickets.'), findsOneWidget);
+    expect(find.text('Add videos and photos'), findsOneWidget);
     expect(find.text('Untitled short'), findsOneWidget);
     expect(gateway.projects, hasLength(1));
   });
@@ -149,7 +149,7 @@ void main() {
 
   testWidgets('an unknown section falls back to Clips', (tester) async {
     await open(tester, '/editor/p1/nope');
-    expect(find.text('Clips tools arrive with their tickets.'), findsOneWidget);
+    expect(find.text('Add videos and photos'), findsOneWidget);
   });
 
   testWidgets('layout follows the 600 and 1024 breakpoints', (tester) async {

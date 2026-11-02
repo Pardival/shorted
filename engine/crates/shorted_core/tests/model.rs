@@ -402,6 +402,21 @@ fn invalid_values_are_rejected() {
             p.timeline.overlays[0].path.as_mut().unwrap().samples[1].t_us = 0
         }),
         ("colour", |p| p.captions.emphasis_color = "red".into()),
+        ("media path", |p| {
+            p.media[0].location = MediaLocation::ProjectCopy {
+                rel_path: "../../etc/passwd".into(),
+            };
+        }),
+        ("media path", |p| {
+            p.media[0].location = MediaLocation::ProjectCopy {
+                rel_path: "/etc/passwd".into(),
+            };
+        }),
+        ("media path", |p| {
+            p.media[0].location = MediaLocation::ProjectCopy {
+                rel_path: "C:\\x".into(),
+            };
+        }),
         ("canvas", |p| p.canvas.width = 1920),
         ("word range", |p| {
             p.timeline.clips[0].transcript.as_mut().unwrap().segments[0].words[0].end_us = -1

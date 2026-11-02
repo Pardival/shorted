@@ -52,5 +52,12 @@
   "errorGeneric": "Algo deu errado. Tente novamente.",
   "errorStorage": "Não foi possível salvar ou ler o projeto. Verifique o espaço livre no dispositivo.",
   "errorNewerProject": "Este projeto foi feito em uma versão mais recente do Shorted. Atualize o app para abri-lo.",
-  "errorDamagedProject": "Este arquivo de projeto está danificado e não pode ser aberto."
+  "errorDamagedProject": "Este arquivo de projeto está danificado e não pode ser aberto.",
+  "addMedia": "Adicionar vídeos e fotos",
+  "dropMedia": "ou solte arquivos aqui",
+  "placeInOrder": "Colocar nesta ordem ({count})",
+  "mediaOffline": "Mídia offline",
+  "relink": "Revincular",
+  "importFailed": "{count, plural, =1{Não foi possível importar 1 arquivo.} other{Não foi possível importar {count} arquivos.}}",
+  "errorDifferentMedia": "Este não é o arquivo que está faltando."
 }
