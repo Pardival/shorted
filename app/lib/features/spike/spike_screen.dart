@@ -22,7 +22,7 @@ const _window = Duration(seconds: 15);
 const _budgetMs = 16.0;
 const _chipSize = 96.0;
 
-enum SpikeMode { zeroCopy, pixelCopy }
+enum SpikeMode { zeroCopy, pixelCopy, zeroCopyVideo, zeroCopyVideoRotated }
 
 /// From the frames' own timestamps: batches make their count unreliable against a wall clock.
 double _framesPerSecond(List<FrameTiming> frames) {
@@ -74,11 +74,19 @@ class _SpikeScreenState extends State<SpikeScreen>
 
   void _onTimings(List<FrameTiming> timings) => _frameTimes.addAll(timings);
 
-  Future<Map<String, Object>> _measure(SpikeMode mode) async {
+  /// Clips must sit in the app's support folder: the macOS sandbox hides other paths.
+  String? _clipFor(SpikeMode mode, String support) => switch (mode) {
+    SpikeMode.zeroCopyVideo => '$support/h264_1080p60.mov',
+    SpikeMode.zeroCopyVideoRotated => '$support/h264_1080p60_rotated.mov',
+    _ => null,
+  };
+
+  Future<Map<String, Object>> _measure(SpikeMode mode, String? clip) async {
     final id = await _channel.invokeMethod<int>('start', {
       'width': _renderWidth,
       'height': _renderHeight,
-      'zeroCopy': mode == SpikeMode.zeroCopy,
+      'zeroCopy': mode != SpikeMode.pixelCopy,
+      'clip': ?clip,
     });
     setState(() {
       _mode = mode;
@@ -137,8 +145,11 @@ class _SpikeScreenState extends State<SpikeScreen>
   Future<void> _run() async {
     SchedulerBinding.instance.addTimingsCallback(_onTimings);
     final results = <Map<String, Object>>[];
+    final support = await getApplicationSupportDirectory();
     for (final mode in SpikeMode.values) {
-      results.add(await _measure(mode));
+      final clip = _clipFor(mode, support.path);
+      if (clip != null && !File(clip).existsSync()) continue;
+      results.add(await _measure(mode, clip));
     }
     SchedulerBinding.instance.removeTimingsCallback(_onTimings);
     final view = PlatformDispatcher.instance.views.first;
@@ -155,7 +166,6 @@ class _SpikeScreenState extends State<SpikeScreen>
       'refreshRate': view.display.refreshRate,
       'results': results,
     };
-    final support = await getApplicationSupportDirectory();
     final file = File('${support.path}/spike-report.json');
     await file.writeAsString(
       const JsonEncoder.withIndent('  ').convert(report),
@@ -170,7 +180,9 @@ class _SpikeScreenState extends State<SpikeScreen>
     final l10n = AppLocalizations.of(context);
     final mode = _mode;
     final modeName = switch (mode) {
-      SpikeMode.zeroCopy => l10n.spikeZeroCopy,
+      SpikeMode.zeroCopy ||
+      SpikeMode.zeroCopyVideo ||
+      SpikeMode.zeroCopyVideoRotated => l10n.spikeZeroCopy,
       SpikeMode.pixelCopy => l10n.spikePixelCopy,
       null => '',
     };

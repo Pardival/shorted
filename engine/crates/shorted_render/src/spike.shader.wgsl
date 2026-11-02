@@ -1,4 +1,4 @@
-struct Globals { time: f32, aspect: f32 };
+struct Globals { time: f32, aspect: f32, uv_scale: vec2<f32>, rotated: f32 };
 @group(0) @binding(0) var<uniform> globals: Globals;
 @group(0) @binding(1) var text_texture: texture_2d<f32>;
 @group(0) @binding(2) var text_sampler: sampler;
@@ -22,6 +22,20 @@ fn background_fs(in: BackgroundOut) -> @location(0) vec4<f32> {
     let grain = fract(sin(dot(in.uv + t, vec2<f32>(12.9898, 78.233))) * 43758.5453);
     let base = vec3<f32>(0.12 + 0.1 * wave, 0.16 + 0.12 * in.uv.y, 0.3 + 0.15 * wave);
     return vec4<f32>(base + grain * 0.04, 1.0);
+}
+
+@group(1) @binding(0) var video_texture: texture_2d<f32>;
+@group(1) @binding(1) var video_sampler: sampler;
+
+// Centre-crops the clip to fill the frame, applying its rotation metadata.
+@fragment
+fn video_fs(in: BackgroundOut) -> @location(0) vec4<f32> {
+    var uv = vec2<f32>(in.uv.x, 1.0 - in.uv.y);
+    if (globals.rotated > 0.5) {
+        uv = vec2<f32>(uv.y, 1.0 - uv.x);
+    }
+    let cropped = (uv - 0.5) * globals.uv_scale + 0.5;
+    return vec4<f32>(textureSample(video_texture, video_sampler, cropped).rgb, 1.0);
 }
 
 struct QuadInstance {
