@@ -400,7 +400,11 @@ class _TimelineViewState extends State<TimelineView> {
         return;
       }
     }
-    final item = _current.itemAt(track, time);
+    final item = _current.itemAt(
+      track,
+      time,
+      lane: _current.laneAt(position.dy, index, track.lanes),
+    );
     setState(() => _selectedId = item?.id);
     widget.onSelect?.call(item);
   }

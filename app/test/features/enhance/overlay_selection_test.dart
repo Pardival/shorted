@@ -16,7 +16,12 @@ const _start = TransformView(
   flip: false,
 );
 
-Future<FakeGateway> _editor(WidgetTester tester, {bool locked = false}) async {
+Future<FakeGateway> _editor(
+  WidgetTester tester, {
+  bool locked = false,
+  OverlayView? second,
+  OverlayBoxView? secondBox,
+}) async {
   final project = FakeProject('p1', 'Mine')..clips.add('c1');
   project.overlays.add(
     OverlayView(
@@ -38,6 +43,7 @@ Future<FakeGateway> _editor(WidgetTester tester, {bool locked = false}) async {
       transform: _start,
     ),
   );
+  if (second != null) project.overlays.add(second);
   final gateway = FakeGateway()
     ..projects.add(project)
     ..boxes = [
@@ -49,6 +55,7 @@ Future<FakeGateway> _editor(WidgetTester tester, {bool locked = false}) async {
         height: 360,
         rotation: 0,
       ),
+      ?secondBox,
     ];
   await open(
     tester,
@@ -184,5 +191,59 @@ void main() {
     await tester.tap(find.text('OK'));
     await tester.pumpAndSettle();
     expect(gateway.overlayCalls.last, endsWith('#123456FF'));
+  });
+
+  testWidgets('a long press groups elements; the group moves and goes as one', (
+    tester,
+  ) async {
+    final gateway = await _editor(
+      tester,
+      second: OverlayView(
+        colorable: true,
+        color: null,
+        path: null,
+        keyframes: const [],
+        animIn: null,
+        animLoop: null,
+        animOut: null,
+        text: null,
+        id: 'o8',
+        kind: OverlayKindView.shape,
+        startUs: big(0),
+        endUs: big(3000000),
+        locked: false,
+        hidden: false,
+        hasAnimation: false,
+        transform: const TransformView(
+          x: 540,
+          y: 400,
+          scale: 1,
+          rotation: 0,
+          opacity: 1,
+          flip: false,
+        ),
+      ),
+      secondBox: OverlayBoxView(
+        id: 'o8',
+        centerX: 540,
+        centerY: 400,
+        width: 200,
+        height: 200,
+        rotation: 0,
+      ),
+    );
+    await tester.tapAt(_at(tester, 540, 960));
+    await tester.pumpAndSettle();
+    await tester.longPressAt(_at(tester, 540, 400));
+    await tester.pumpAndSettle();
+    expect(find.text('2 selected'), findsOneWidget);
+
+    await tester.dragFrom(_at(tester, 540, 400), const Offset(40, 0));
+    await tester.pumpAndSettle();
+    expect(gateway.overlayCalls.last, startsWith('move o8,o9 '));
+
+    await tester.tap(find.byTooltip('Delete').first);
+    await tester.pumpAndSettle();
+    expect(gateway.overlayCalls.last, anyOf('delete o8,o9', 'delete o9,o8'));
   });
 }

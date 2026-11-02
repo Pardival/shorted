@@ -13,6 +13,7 @@ class TimelineItem {
     this.locked = false,
     this.animated = false,
     this.keyframes = const [],
+    this.lane = 0,
   });
 
   final String id;
@@ -30,6 +31,41 @@ class TimelineItem {
 
   /// Times holding keyframes, on the timeline.
   final List<int> keyframes;
+
+  /// Overlapping elements sit one under the other: the row of the track this one is on.
+  final int lane;
+
+  TimelineItem inLane(int lane) => TimelineItem(
+    id: id,
+    startUs: startUs,
+    endUs: endUs,
+    mediaId: mediaId,
+    sourceInUs: sourceInUs,
+    speed: speed,
+    locked: locked,
+    animated: animated,
+    keyframes: keyframes,
+    lane: lane,
+  );
+}
+
+/// Puts each item on the first row free at its start, so none hides another (T-1206).
+/// Items must be sorted by start.
+List<TimelineItem> inLanes(List<TimelineItem> items) {
+  final ends = <int>[];
+  return [
+    for (final item in items)
+      () {
+        var lane = ends.indexWhere((end) => end <= item.startUs);
+        if (lane < 0) {
+          lane = ends.length;
+          ends.add(item.endUs);
+        } else {
+          ends[lane] = item.endUs;
+        }
+        return item.inLane(lane);
+      }(),
+  ];
 }
 
 class TimelineTrack {
@@ -57,6 +93,9 @@ class TimelineTrack {
 
   /// Overlays may overlap in time, so their ends are not in order.
   bool get overlapping => kind == TrackKind.widgets;
+
+  /// Rows the track is split into.
+  int get lanes => items.fold(0, (most, item) => math.max(most, item.lane + 1));
 }
 
 /// Time to pixels and back. Pure, so that gestures and painting share one definition.
@@ -123,6 +162,13 @@ class TimelineLayout {
 
   double maxScrollY(int trackCount, double viewportHeight) =>
       collapsed ? 0 : math.max(0, contentHeight(trackCount) - viewportHeight);
+
+  /// The row of a split track under `y`.
+  int laneAt(double y, int index, int lanes) {
+    if (lanes <= 1) return 0;
+    final share = heightOfTrack(index) / lanes;
+    return ((y - topOfTrack(index)) / share).floor().clamp(0, lanes - 1);
+  }
 
   int? trackAt(double y, int trackCount) {
     if (y < rulerHeight) return null;
@@ -204,8 +250,9 @@ class TimelineLayout {
     }
   }
 
-  /// The item under `timeUs`; among overlapping overlays, the one that starts last.
-  TimelineItem? itemAt(TimelineTrack track, int timeUs) {
+  /// The item under `timeUs`, on `lane` when given; among overlapping overlays, the one
+  /// that starts last.
+  TimelineItem? itemAt(TimelineTrack track, int timeUs, {int? lane}) {
     TimelineItem? found;
     for (final item in visible(
       track.items,
@@ -213,6 +260,7 @@ class TimelineLayout {
       timeUs + 1,
       overlapping: track.overlapping,
     )) {
+      if (lane != null && item.lane != lane) continue;
       found = item;
       if (!track.overlapping) break;
     }

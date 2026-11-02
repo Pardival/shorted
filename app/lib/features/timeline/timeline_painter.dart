@@ -230,11 +230,14 @@ class TimelinePainter extends CustomPainter {
       toUs,
       overlapping: track.overlapping,
     )) {
+      final lanes = track.lanes;
+      final share = lanes > 1 ? height / lanes : height;
+      final laneTop = top + share * (lanes > 1 ? item.lane : 0);
       final rect = Rect.fromLTRB(
         layout.xForTime(item.startUs),
-        top + _itemGap,
+        laneTop + _itemGap,
         layout.xForTime(item.endUs),
-        top + height - _itemGap,
+        laneTop + share - _itemGap,
       );
       final shape = RRect.fromRectAndRadius(rect, _itemRadius);
       canvas.drawRRect(shape, fill);

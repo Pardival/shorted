@@ -14,7 +14,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'projects.dart';
 import 'transcribe.dart';
 
-// These functions are ignored because they are not marked as `pub`: `boxes`, `curve`, `edit_path`, `find`, `keys_at`, `natural_size`, `new_overlay`, `overlay_views`, `own_transform`, `preset_view`, `text_look`, `text_view`
+// These functions are ignored because they are not marked as `pub`: `boxes`, `curve`, `delete_command`, `duplicate_command`, `edit_path`, `find`, `group_command`, `keys_at`, `move_command`, `natural_size`, `new_overlay`, `overlay_views`, `own_transform`, `preset_view`, `text_look`, `text_view`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`
 
 /// The elements on screen at `time_us`, as the renderer places them, top first.
@@ -236,6 +236,20 @@ Future<ProjectView> duplicateOverlay({required String id}) =>
 
 Future<ProjectView> deleteOverlay({required String id}) =>
     RustLib.instance.api.crateApiOverlaysDeleteOverlay(id: id);
+
+/// Moves the selected elements together, by canvas units.
+Future<ProjectView> moveOverlays({
+  required List<String> ids,
+  required double dx,
+  required double dy,
+}) =>
+    RustLib.instance.api.crateApiOverlaysMoveOverlays(ids: ids, dx: dx, dy: dy);
+
+Future<ProjectView> duplicateOverlays({required List<String> ids}) =>
+    RustLib.instance.api.crateApiOverlaysDuplicateOverlays(ids: ids);
+
+Future<ProjectView> deleteOverlays({required List<String> ids}) =>
+    RustLib.instance.api.crateApiOverlaysDeleteOverlays(ids: ids);
 
 enum AnimSlotView { in_, loop, out }
 

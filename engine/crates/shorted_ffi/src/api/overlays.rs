@@ -1059,6 +1059,75 @@ pub async fn delete_overlay(id: String) -> Result<ProjectView, EngineFailure> {
     })
 }
 
+/// Several elements as one edit (T-1206); locked ones are left where they are.
+fn group_command(
+    project: &Project,
+    ids: &[String],
+    label: &str,
+    each: impl Fn(&OverlayItem) -> Vec<Command>,
+) -> Result<Command, EngineError> {
+    let mut commands = Vec::new();
+    for id in ids {
+        let item = find(project, parse(id)?)?;
+        if !item.locked {
+            commands.extend(each(item));
+        }
+    }
+    Ok(Command::Group {
+        label: label.into(),
+        commands,
+    })
+}
+
+fn move_command(
+    project: &Project,
+    ids: &[String],
+    dx: f32,
+    dy: f32,
+) -> Result<Command, EngineError> {
+    group_command(project, ids, "move overlays", |item| {
+        let mut base = item.base;
+        base.position.x += dx;
+        base.position.y += dy;
+        vec![Command::UpdateOverlayTransform { id: item.id, base }]
+    })
+}
+
+fn duplicate_command(project: &Project, ids: &[String]) -> Result<Command, EngineError> {
+    group_command(project, ids, "duplicate overlays", |item| {
+        let mut copy = item.clone();
+        copy.id = Uuid::now_v7();
+        copy.base.position.x += DUPLICATE_OFFSET;
+        copy.base.position.y += DUPLICATE_OFFSET;
+        vec![Command::AddOverlay {
+            overlay: Box::new(copy),
+        }]
+    })
+}
+
+fn delete_command(project: &Project, ids: &[String]) -> Result<Command, EngineError> {
+    group_command(project, ids, "delete overlays", |item| {
+        vec![Command::DeleteOverlay { id: item.id }]
+    })
+}
+
+/// Moves the selected elements together, by canvas units.
+pub async fn move_overlays(
+    ids: Vec<String>,
+    dx: f32,
+    dy: f32,
+) -> Result<ProjectView, EngineFailure> {
+    edit(move |project| move_command(project, &ids, dx, dy))
+}
+
+pub async fn duplicate_overlays(ids: Vec<String>) -> Result<ProjectView, EngineFailure> {
+    edit(move |project| duplicate_command(project, &ids))
+}
+
+pub async fn delete_overlays(ids: Vec<String>) -> Result<ProjectView, EngineFailure> {
+    edit(move |project| delete_command(project, &ids))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1071,6 +1140,46 @@ mod tests {
         let id = item.id;
         project.timeline.overlays.push(item);
         (project, id)
+    }
+
+    #[test]
+    fn three_elements_move_as_one_undo_step_and_locked_ones_stay() {
+        let json = include_str!("../../../../fixtures/projects/v1_full.json");
+        let original = Project::from_json(json).unwrap();
+        let mut project = original.clone();
+        project.timeline.overlays[2].locked = true;
+        let ids: Vec<String> = project.timeline.overlays[..3]
+            .iter()
+            .map(|item| item.id.to_string())
+            .collect();
+        let before = project.clone();
+        let command = move_command(&project, &ids, 10.0, -5.0).unwrap();
+        let Command::Group { commands, .. } = &command else {
+            panic!("not one step");
+        };
+        assert_eq!(commands.len(), 2, "the locked one is left");
+        let inverse = command.apply(&mut project).unwrap();
+        let moved = &project.timeline.overlays[0];
+        assert_eq!(
+            moved.base.position.x,
+            before.timeline.overlays[0].base.position.x + 10.0
+        );
+        assert_eq!(project.timeline.overlays[2], before.timeline.overlays[2]);
+        inverse.apply(&mut project).unwrap();
+        assert_eq!(project, before);
+
+        let count = project.timeline.overlays.len();
+        duplicate_command(&project, &ids[..2])
+            .unwrap()
+            .apply(&mut project)
+            .unwrap();
+        assert_eq!(project.timeline.overlays.len(), count + 2);
+        delete_command(&project, &ids[..2])
+            .unwrap()
+            .apply(&mut project)
+            .unwrap();
+        assert_eq!(project.timeline.overlays.len(), count);
+        project.validate().unwrap();
     }
 
     #[test]

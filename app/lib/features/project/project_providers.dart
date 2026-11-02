@@ -110,6 +110,25 @@ class SelectedOverlay extends Notifier<String?> {
 final selectedOverlayProvider =
     NotifierProvider.autoDispose<SelectedOverlay, String?>(SelectedOverlay.new);
 
+/// Elements selected together with Shift or a long press (T-1206). Empty for one alone.
+class OverlayGroup extends Notifier<Set<String>> {
+  @override
+  Set<String> build() => const {};
+
+  void clear() => state = const {};
+
+  /// Adds `id`, with the element selected so far, or takes it out.
+  void toggle(String id, String? current) {
+    final next = {...state};
+    if (current != null) next.add(current);
+    if (!next.remove(id)) next.add(id);
+    state = next;
+  }
+}
+
+final overlayGroupProvider =
+    NotifierProvider.autoDispose<OverlayGroup, Set<String>>(OverlayGroup.new);
+
 /// The sound (music, voice) selected on the timeline (T-1204).
 class SelectedSound extends Notifier<String?> {
   @override

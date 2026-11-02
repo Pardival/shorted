@@ -239,6 +239,11 @@ abstract interface class ProjectGateway {
   });
   Future<ProjectView> duplicateOverlay(String id);
 
+  /// Several elements as one edit (T-1206).
+  Future<ProjectView> moveOverlays(List<String> ids, double dx, double dy);
+  Future<ProjectView> duplicateOverlays(List<String> ids);
+  Future<ProjectView> deleteOverlays(List<String> ids);
+
   /// A shape's fill or a picture's tint; null gives a picture its own colours (T-1205).
   Future<ProjectView> setOverlayColor(String id, String? color);
   Future<ProjectView> deleteOverlay(String id);
@@ -679,6 +684,18 @@ class EngineGateway implements ProjectGateway {
   @override
   Future<ProjectView> setOverlayColor(String id, String? color) =>
       overlays.setOverlayColor(id: id, color: color);
+
+  @override
+  Future<ProjectView> moveOverlays(List<String> ids, double dx, double dy) =>
+      overlays.moveOverlays(ids: ids, dx: dx, dy: dy);
+
+  @override
+  Future<ProjectView> duplicateOverlays(List<String> ids) =>
+      overlays.duplicateOverlays(ids: ids);
+
+  @override
+  Future<ProjectView> deleteOverlays(List<String> ids) =>
+      overlays.deleteOverlays(ids: ids);
 
   @override
   Future<ProjectView> duplicateOverlay(String id) =>

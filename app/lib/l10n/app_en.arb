@@ -541,5 +541,14 @@
   },
   "elementColour": "Colour",
   "originalColours": "Original colours",
-  "customColour": "Any colour"
+  "customColour": "Any colour",
+  "selectedCount": "{count} selected",
+  "clearSelection": "Clear selection",
+  "@selectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

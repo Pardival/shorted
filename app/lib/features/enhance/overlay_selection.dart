@@ -87,9 +87,19 @@ Offset _toBox(OverlayBoxView box, Offset point) {
 enum _Mode { move, scale, rotate }
 
 class _Gesture {
-  _Gesture(this.id, this.mode, this.start, this.box, this.origin);
+  _Gesture(
+    this.id,
+    this.mode,
+    this.start,
+    this.box,
+    this.origin, {
+    this.group = const {},
+  });
 
   final String id;
+
+  /// The others moving with it, and where each one started.
+  final Map<String, TransformView> group;
   final _Mode mode;
   final TransformView start;
   final OverlayBoxView box;
@@ -382,10 +392,30 @@ class _OverlaySelectionState extends ConsumerState<OverlaySelection>
       }
       return;
     }
+    final current = ref.read(selectedOverlayProvider);
+    if (hit != null && HardwareKeyboard.instance.isShiftPressed) {
+      ref.read(overlayGroupProvider.notifier).toggle(hit, current);
+    } else {
+      ref.read(overlayGroupProvider.notifier).clear();
+    }
     ref.read(selectedOverlayProvider.notifier).set(hit);
     _captionTap?.cancel();
     if (hit == null) {
       _captionTap = Timer(kDoubleTapTimeout, () => _emphasise(point));
+    }
+  }
+
+  /// A long press adds an element to the selection, or takes it out (T-1206).
+  void _longPress(LongPressStartDetails details) {
+    final point = details.localPosition / _scale;
+    for (final candidate in _boxes) {
+      if (!boxContains(candidate, point)) continue;
+      HapticFeedback.selectionClick();
+      ref
+          .read(overlayGroupProvider.notifier)
+          .toggle(candidate.id, ref.read(selectedOverlayProvider));
+      ref.read(selectedOverlayProvider.notifier).set(candidate.id);
+      return;
     }
   }
 
@@ -530,7 +560,24 @@ class _OverlaySelectionState extends ConsumerState<OverlaySelection>
                   .overlayTransformAt(target.id, widget.playheadUs.value) ??
               overlay.transform
         : overlay.transform;
-    _gesture = _Gesture(target.id, mode, start, target, point);
+    final group = ref.read(overlayGroupProvider);
+    final together =
+        mode == _Mode.move &&
+        group.contains(target.id) &&
+        !ref.read(keyframeModeProvider);
+    _gesture = _Gesture(
+      target.id,
+      mode,
+      start,
+      target,
+      point,
+      group: {
+        if (together)
+          for (final other in group.map(_overlay).nonNulls)
+            if (other.id != target.id && !other.locked)
+              other.id: other.transform,
+      },
+    );
   }
 
   void _update(ScaleUpdateDetails details) {
@@ -586,6 +633,14 @@ class _OverlaySelectionState extends ConsumerState<OverlaySelection>
       gateway.previewOverlayKey(gesture.id, widget.playheadUs.value, next);
     } else {
       gateway.previewOverlayTransform(gesture.id, next);
+      final dx = next.x - start.x;
+      final dy = next.y - start.y;
+      for (final MapEntry(key: id, value: from) in gesture.group.entries) {
+        gateway.previewOverlayTransform(
+          id,
+          _with(from, x: from.x + dx, y: from.y + dy),
+        );
+      }
     }
     setState(() {
       _shown = next;
@@ -622,6 +677,13 @@ class _OverlaySelectionState extends ConsumerState<OverlaySelection>
     });
     if (gesture == null || shown == null) return;
     final l10n = AppLocalizations.of(context);
+    if (gesture.group.isNotEmpty) {
+      final ids = [gesture.id, ...gesture.group.keys];
+      final dx = shown.x - gesture.start.x;
+      final dy = shown.y - gesture.start.y;
+      await _applyPath((gateway) => gateway.moveOverlays(ids, dx, dy));
+      return;
+    }
     try {
       final keyed = ref.read(keyframeModeProvider);
       final atUs = widget.playheadUs.value;
@@ -642,6 +704,7 @@ class _OverlaySelectionState extends ConsumerState<OverlaySelection>
     // Rebuilt after every edit, so a moved or deleted element is redrawn at once.
     ref.watch(editorProvider(widget.projectId));
     final selected = ref.watch(selectedOverlayProvider);
+    final group = ref.watch(overlayGroupProvider);
     final editingPath = ref.watch(pathEditingProvider);
     ref.watch(recordingPathProvider);
     final gateway = ref.read(projectGatewayProvider);
@@ -684,6 +747,7 @@ class _OverlaySelectionState extends ConsumerState<OverlaySelection>
             child: GestureDetector(
               behavior: HitTestBehavior.translucent,
               onTapUp: _tap,
+              onLongPressStart: _longPress,
               onScaleStart: _start,
               onScaleUpdate: _update,
               onScaleEnd: _end,
@@ -692,8 +756,13 @@ class _OverlaySelectionState extends ConsumerState<OverlaySelection>
                 builder: (context, time, _) {
                   OverlayBoxView? shown;
                   OverlayBoxView? typing;
+                  final grouped = <OverlayBoxView>[];
                   for (final candidate in gateway.overlayBoxes(time)) {
                     if (candidate.id == selected) shown = candidate;
+                    if (candidate.id != selected &&
+                        group.contains(candidate.id)) {
+                      grouped.add(candidate);
+                    }
                     if (candidate.id == _editing) typing = candidate;
                   }
                   final selection = CustomPaint(
@@ -704,6 +773,7 @@ class _OverlaySelectionState extends ConsumerState<OverlaySelection>
                       guides: _guides,
                       curve: curve,
                       points: _recorder == null ? pathPoints : const [],
+                      others: grouped,
                     ),
                   );
                   final caption = _captionEditing;
@@ -735,9 +805,13 @@ class SelectionPainter extends CustomPainter {
     this.guides = const {},
     this.curve = const [],
     this.points = const [],
+    this.others = const [],
   });
 
   final OverlayBoxView? box;
+
+  /// The other elements of a group selection, outlined.
+  final List<OverlayBoxView> others;
   final double scale;
   final Set<Guide> guides;
 
@@ -749,6 +823,24 @@ class SelectionPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     _paintGuides(canvas, size);
     _paintPath(canvas);
+    final outline = Paint()
+      ..color = ShortedColors.overlay
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    for (final other in others) {
+      canvas.save();
+      canvas.translate(other.centerX * scale, other.centerY * scale);
+      canvas.rotate(other.rotation * math.pi / 180);
+      canvas.drawRect(
+        Rect.fromCenter(
+          center: Offset.zero,
+          width: other.width * scale,
+          height: other.height * scale,
+        ),
+        outline,
+      );
+      canvas.restore();
+    }
     final shown = box;
     if (shown == null) return;
     final width = shown.width * scale;
@@ -857,6 +949,7 @@ class SelectionPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(SelectionPainter old) =>
+      old.others.length != others.length ||
       old.scale != scale ||
       old.guides != guides ||
       old.curve != curve ||

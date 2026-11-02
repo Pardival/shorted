@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../bridge/api/look.dart';
@@ -605,6 +606,40 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
     );
   }
 
+  /// Several elements selected: what applies to all of them at once (T-1206).
+  Widget _groupTools(AppLocalizations l10n, List<String> ids) {
+    void clear() => ref.read(overlayGroupProvider.notifier).clear();
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: ShortedSpace.s),
+          child: Text(l10n.selectedCount(ids.length)),
+        ),
+        ShortedIconButton(
+          icon: Icons.copy_outlined,
+          tooltip: l10n.duplicate,
+          onPressed: () =>
+              _guard(() => _editor.apply((g) => g.duplicateOverlays(ids))),
+        ),
+        ShortedIconButton(
+          icon: Icons.delete_outline,
+          tooltip: l10n.delete,
+          onPressed: () {
+            clear();
+            ref.read(selectedOverlayProvider.notifier).set(null);
+            _guard(() => _editor.apply((g) => g.deleteOverlays(ids)));
+          },
+        ),
+        ShortedIconButton(
+          icon: Icons.close,
+          tooltip: l10n.clearSelection,
+          onPressed: clear,
+        ),
+      ],
+    );
+  }
+
   Widget _overlayTools(AppLocalizations l10n, OverlayView overlay) {
     Future<void> run(
       Future<ProjectView> Function(ProjectGateway gateway) action,
@@ -683,6 +718,10 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
     );
   }
 
+  /// Elements that overlap get rows of their own on the Widgets track.
+  List<TimelineItem> _lanesFor(TrackKindView kind, List<TimelineItem> items) =>
+      kind == TrackKindView.widgets ? inLanes(items) : items;
+
   bool _hasSound(String clipId) =>
       widget.view.sound.clips.any((clip) => clip.clipId == clipId);
 
@@ -717,7 +756,7 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
           muted: track.muted,
           locked: track.locked,
           hidden: track.hidden,
-          items: [
+          items: _lanesFor(track.kind, [
             for (final item in track.items)
               TimelineItem(
                 id: item.id,
@@ -733,7 +772,7 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
                     key.timeUs.toInt(),
                 ],
               ),
-          ],
+          ]),
         ),
     ];
     for (final track in widget.view.tracks) {
@@ -753,6 +792,7 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
     final range = _range;
     final selectedOverlay = ref.watch(selectedOverlayProvider);
     final overlay = _overlay(selectedOverlay);
+    final group = ref.watch(overlayGroupProvider);
     final picked = ref.watch(selectedKeyframeProvider);
     final pathEditing = ref.watch(pathEditingProvider);
     KeyframeView? keyframe;
@@ -816,6 +856,8 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
               overlay: overlay,
               run: (action) => _guard(() => _editor.apply(action)),
             )
+          else if (group.length > 1)
+            _groupTools(l10n, group.toList())
           else if (overlay != null && keyframe != null)
             _keyframeTools(l10n, overlay, keyframe)
           else if (overlay != null)
@@ -947,6 +989,14 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
               zoomRequests: widget.zoomRequests,
               onSelect: (item) {
                 _stopCropping();
+                final groups = ref.read(overlayGroupProvider.notifier);
+                if (item != null &&
+                    _overlay(item.id) != null &&
+                    HardwareKeyboard.instance.isShiftPressed) {
+                  groups.toggle(item.id, ref.read(selectedOverlayProvider));
+                } else {
+                  groups.clear();
+                }
                 setState(() {
                   _clip = item != null && _isClip(item) ? item : null;
                   _audioItem = item != null && _isSound(item) ? item.id : null;

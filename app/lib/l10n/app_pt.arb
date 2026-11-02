@@ -334,5 +334,7 @@
   "inspectorHint": "Seleciona um clip, um som ou um elemento na linha do tempo ou no vídeo: as suas definições aparecem aqui.",
   "elementColour": "Cor",
   "originalColours": "Cores originais",
-  "customColour": "Outra cor"
+  "customColour": "Outra cor",
+  "selectedCount": "{count} selecionados",
+  "clearSelection": "Limpar seleção"
 }

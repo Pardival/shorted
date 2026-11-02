@@ -334,5 +334,7 @@
   "inspectorHint": "Sélectionne un clip, un son ou un élément sur la timeline ou la vidéo : ses réglages s'affichent ici.",
   "elementColour": "Couleur",
   "originalColours": "Couleurs d'origine",
-  "customColour": "Autre couleur"
+  "customColour": "Autre couleur",
+  "selectedCount": "{count} sélectionnés",
+  "clearSelection": "Tout désélectionner"
 }

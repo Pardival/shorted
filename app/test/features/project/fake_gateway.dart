@@ -620,6 +620,20 @@ class FakeGateway implements ProjectGateway {
   Future<ProjectView> duplicateOverlay(String id) => _overlay('duplicate $id');
 
   @override
+  Future<ProjectView> moveOverlays(List<String> ids, double dx, double dy) =>
+      _overlay('move ${ids.join(',')} ${dx.round()} ${dy.round()}');
+
+  @override
+  Future<ProjectView> duplicateOverlays(List<String> ids) =>
+      _overlay('duplicate ${ids.join(',')}');
+
+  @override
+  Future<ProjectView> deleteOverlays(List<String> ids) {
+    opened!.overlays.removeWhere((overlay) => ids.contains(overlay.id));
+    return _overlay('delete ${ids.join(',')}');
+  }
+
+  @override
   Future<ProjectView> setOverlayColor(String id, String? color) =>
       _overlay('colour $id $color');
 
