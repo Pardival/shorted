@@ -243,7 +243,9 @@ void main() {
     expect(find.byTooltip('Split'), findsOneWidget);
     expect(find.byTooltip('Slow zoom'), findsNothing);
 
-    await tester.tapAt(timeline + const Offset(148.0, 40));
+    // The tools take room above the timeline, so it has moved.
+    final moved = tester.getTopLeft(find.byType(TimelineView));
+    await tester.tapAt(moved + const Offset(148, 40));
     await tester.pump(const Duration(milliseconds: 400));
     await tester.tap(find.byTooltip('Slow zoom'));
     await tester.pumpAndSettle();
