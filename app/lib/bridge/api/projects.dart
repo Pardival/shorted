@@ -5,6 +5,7 @@
 
 import '../error.dart';
 import '../frb_generated.dart';
+import 'audio.dart';
 import 'media.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
@@ -105,6 +106,7 @@ class ProjectView {
   final bool canRedo;
   final List<TrackView> tracks;
   final List<MediaItemView> media;
+  final SoundView sound;
 
   const ProjectView({
     required this.id,
@@ -114,6 +116,7 @@ class ProjectView {
     required this.canRedo,
     required this.tracks,
     required this.media,
+    required this.sound,
   });
 
   @override
@@ -124,7 +127,8 @@ class ProjectView {
       canUndo.hashCode ^
       canRedo.hashCode ^
       tracks.hashCode ^
-      media.hashCode;
+      media.hashCode ^
+      sound.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -137,7 +141,8 @@ class ProjectView {
           canUndo == other.canUndo &&
           canRedo == other.canRedo &&
           tracks == other.tracks &&
-          media == other.media;
+          media == other.media &&
+          sound == other.sound;
 }
 
 enum SaveStateView { saving, saved, failed }

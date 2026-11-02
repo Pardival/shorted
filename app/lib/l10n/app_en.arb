@@ -119,6 +119,29 @@
   "crop": "Crop",
   "resetCrop": "Reset crop",
   "slowZoom": "Slow zoom",
+  "originalSound": "Original sound",
+  "addAudio": "Add audio",
+  "addAudioTrack": "Add audio track",
+  "chooseAudioRole": "What is this sound?",
+  "roleVoice": "Voice",
+  "roleMusic": "Music",
+  "roleEffect": "Sound effect",
+  "clipNumber": "Clip {number}",
+  "volume": "Volume",
+  "fadeIn": "Fade in",
+  "fadeOut": "Fade out",
+  "mute": "Mute",
+  "loopAudio": "Loop",
+  "renameTrack": "Rename track",
+  "removeTrack": "Remove track",
+  "removeTrackBody": "This track still holds sound. You can undo this.",
+  "@clipNumber": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
   "split": "Split",
   "exportTitle": "Export your short",
   "exportResolution": "Resolution",

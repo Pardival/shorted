@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
+import 'package:shorted/bridge/api/audio.dart';
 import 'package:shorted/bridge/api/media.dart';
 import 'package:shorted/bridge/api/projects.dart';
 import 'package:shorted/bridge/error.dart';
@@ -17,6 +18,7 @@ class FakeProject {
   final media = <MediaItemView>[];
   final clips = <String>[];
   final stills = <String>{};
+  final audioTracks = <AudioTrackView>[];
   final titles = <String>[];
   final redone = <String>[];
 }
@@ -118,6 +120,19 @@ class FakeGateway implements ProjectGateway {
         ),
       ],
       media: project.media,
+      sound: SoundView(
+        clips: [
+          for (final clip in project.clips)
+            ClipSoundView(
+              clipId: clip,
+              volume: 1,
+              muted: false,
+              fadeInUs: big(0),
+              fadeOutUs: big(0),
+            ),
+        ],
+        tracks: project.audioTracks,
+      ),
     );
   }
 
@@ -147,6 +162,63 @@ class FakeGateway implements ProjectGateway {
   final cropCommits = <String>[];
   final cropResets = <String>[];
   final slowZooms = <String>[];
+  final audioCalls = <String>[];
+
+  Future<ProjectView> _audio(String call) async {
+    audioCalls.add(call);
+    return view();
+  }
+
+  @override
+  Future<String?> importOne(String path) async => 'media-$path';
+
+  @override
+  Future<ProjectView> addAudio(
+    String mediaId,
+    AudioRoleView role,
+    int startUs,
+  ) => _audio('add $mediaId ${role.name} $startUs');
+
+  @override
+  Future<ProjectView> setClipSound(
+    String id, {
+    required double volume,
+    required bool muted,
+    required int fadeInUs,
+    required int fadeOutUs,
+  }) => _audio('clip $id $volume $muted $fadeInUs $fadeOutUs');
+
+  @override
+  Future<ProjectView> setAudioSound(
+    String id, {
+    required double volume,
+    required int fadeInUs,
+    required int fadeOutUs,
+  }) => _audio('sound $id $volume $fadeInUs $fadeOutUs');
+
+  @override
+  Future<ProjectView> setAudioLoop(String id, {required bool looped}) =>
+      _audio('loop $id $looped');
+
+  @override
+  Future<ProjectView> deleteAudio(String id) => _audio('delete $id');
+
+  @override
+  Future<ProjectView> addAudioTrack() => _audio('add track');
+
+  @override
+  Future<ProjectView> removeAudioTrack(String id) => _audio('remove $id');
+
+  @override
+  Future<ProjectView> renameAudioTrack(String id, String name) =>
+      _audio('rename $id $name');
+
+  @override
+  Future<ProjectView> setAudioTrackMuted(String? id, {required bool muted}) =>
+      _audio('mute $id $muted');
+
+  @override
+  Future<Uint8List> peaks(String mediaId) async => Uint8List(0);
 
   @override
   Future<ProjectView> toggleSlowZoom(String id) async {

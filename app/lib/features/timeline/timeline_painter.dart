@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import '../../design_system/tokens.g.dart';
 import 'filmstrips.dart';
 import 'timeline_layout.dart';
+import 'waveforms.dart';
 
 const _itemRadius = Radius.circular(ShortedRadius.s);
 const _itemGap = 2.0;
+const _waveformStep = 2.0;
 
 Color _trackColor(TrackKind kind) => switch (kind) {
   TrackKind.widgets => ShortedColors.overlay,
@@ -24,7 +26,8 @@ class TimelinePainter extends CustomPainter {
     required this.textDirection,
     this.dragPreview,
     this.filmstrips,
-  }) : super(repaint: filmstrips);
+    this.waveforms,
+  }) : super(repaint: Listenable.merge([filmstrips, waveforms]));
 
   final TimelineLayout layout;
   final List<TimelineTrack> tracks;
@@ -35,6 +38,7 @@ class TimelinePainter extends CustomPainter {
   /// A range being dragged, drawn over its track until the edit is committed.
   final (int, int, int)? dragPreview;
   final Filmstrips? filmstrips;
+  final Waveforms? waveforms;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -79,6 +83,36 @@ class TimelinePainter extends CustomPainter {
         formatTimecode(t),
         Offset(x + 3, 2),
         ShortedColors.textMuted,
+      );
+    }
+  }
+
+  void _paintWaveform(
+    Canvas canvas,
+    TimelineItem item,
+    Rect rect,
+    double viewportWidth,
+  ) {
+    final mediaId = item.mediaId;
+    final peaks = waveforms;
+    if (mediaId == null || peaks == null) return;
+    final bar = Paint()
+      ..color = ShortedColors.bg
+      ..strokeWidth = 1;
+    final left = rect.left.clamp(layout.headerWidth, viewportWidth);
+    final right = rect.right.clamp(layout.headerWidth, viewportWidth);
+    final middle = rect.center.dy;
+    for (var x = left; x < right; x += _waveformStep) {
+      final from = layout.timeForX(x) - item.startUs + item.sourceInUs;
+      final to =
+          layout.timeForX(x + _waveformStep) - item.startUs + item.sourceInUs;
+      final level = peaks.level(mediaId, from, to);
+      if (level == null) return;
+      final reach = level * rect.height / 2;
+      canvas.drawLine(
+        Offset(x, middle - reach),
+        Offset(x, middle + reach),
+        bar,
       );
     }
   }
@@ -140,7 +174,11 @@ class TimelinePainter extends CustomPainter {
       );
       final shape = RRect.fromRectAndRadius(rect, _itemRadius);
       canvas.drawRRect(shape, fill);
-      _paintFilmstrip(canvas, item, shape, size.width);
+      if (track.kind == TrackKind.video) {
+        _paintFilmstrip(canvas, item, shape, size.width);
+      } else {
+        _paintWaveform(canvas, item, rect, size.width);
+      }
       if (item.id == selectedId) {
         canvas.drawRRect(
           shape,
@@ -212,7 +250,8 @@ class TimelinePainter extends CustomPainter {
       old.durationUs != durationUs ||
       old.selectedId != selectedId ||
       old.dragPreview != dragPreview ||
-      old.filmstrips != filmstrips;
+      old.filmstrips != filmstrips ||
+      old.waveforms != waveforms;
 }
 
 /// Driven by `playheadUs` directly, so no widget rebuilds during a scrub.

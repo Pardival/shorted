@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../bridge/api/media.dart';
 import '../../bridge/api/projects.dart';
 import '../../design_system/components.dart';
 import '../../design_system/tokens.g.dart';
 import '../../l10n/generated/app_localizations.dart';
+import '../audio/audio_panel.dart';
 import '../clips/clips_panel.dart';
 import '../export/export_panel.dart';
 import '../project/project_dialogs.dart';
@@ -17,6 +17,7 @@ import '../project/project_providers.dart';
 import '../timeline/filmstrips.dart';
 import '../timeline/timeline_layout.dart';
 import '../timeline/timeline_view.dart';
+import '../timeline/waveforms.dart';
 import 'editor_section.dart';
 
 class EditorTopBar extends StatelessWidget {
@@ -327,9 +328,12 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
     ref.read(projectGatewayProvider).filmstrip,
   );
 
+  late final _waveforms = Waveforms(ref.read(projectGatewayProvider).peaks);
+
   @override
   void dispose() {
     _filmstrips.dispose();
+    _waveforms.dispose();
     super.dispose();
   }
 
@@ -418,7 +422,12 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
     for (final track in widget.view.tracks) {
       for (final item in track.items) {
         final mediaId = item.mediaId;
-        if (mediaId != null) _filmstrips.request(mediaId);
+        if (mediaId == null) continue;
+        if (track.kind == TrackKindView.video) {
+          _filmstrips.request(mediaId);
+        } else {
+          _waveforms.request(mediaId);
+        }
       }
     }
     final clip = _clip;
@@ -479,6 +488,7 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
               durationUs: widget.view.durationUs.toInt(),
               playheadUs: widget.playheadUs,
               filmstrips: _filmstrips,
+              waveforms: _waveforms,
               onSelect: (item) {
                 _stopCropping();
                 setState(() {
@@ -503,14 +513,12 @@ class SectionPanel extends StatelessWidget {
     super.key,
     required this.section,
     required this.projectId,
-    required this.media,
-    required this.durationUs,
+    required this.view,
   });
 
   final EditorSection section;
   final String projectId;
-  final List<MediaItemView> media;
-  final int durationUs;
+  final ProjectView view;
 
   @override
   Widget build(BuildContext context) {
@@ -521,11 +529,15 @@ class SectionPanel extends StatelessWidget {
         EditorSection.clips => ClipsPanel(
           key: const ValueKey(EditorSection.clips),
           projectId: projectId,
-          media: media,
+          media: view.media,
+        ),
+        EditorSection.audio => AudioPanel(
+          key: const ValueKey(EditorSection.audio),
+          view: view,
         ),
         EditorSection.export => ExportPanel(
           key: const ValueKey(EditorSection.export),
-          durationUs: durationUs,
+          durationUs: view.durationUs.toInt(),
         ),
         _ => Center(
           key: ValueKey(section),

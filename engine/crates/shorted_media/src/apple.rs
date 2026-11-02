@@ -266,6 +266,23 @@ pub fn has_audio(path: &Path) -> bool {
     })
 }
 
+/// Length of a sound file with at least one audio track.
+pub fn audio_duration_us(path: &Path) -> Result<i64, MediaError> {
+    if !has_audio(path) {
+        return Err(MediaError::OpenFailed);
+    }
+    autoreleasepool(|_| {
+        let url = NSURL::fileURLWithPath(&NSString::from_str(&path.to_string_lossy()));
+        // SAFETY: valid URL, no options; a plain property read.
+        unsafe {
+            let asset = AVURLAsset::URLAssetWithURL_options(&url, None);
+            #[allow(deprecated)]
+            let duration = asset.duration();
+            Ok(seconds_to_us(duration.seconds()))
+        }
+    })
+}
+
 fn pcm_settings() -> Retained<NSDictionary<NSString, AnyObject>> {
     // Values of AVFAudio's keys, a framework the bindings here do not cover.
     let keys: Vec<Retained<NSString>> = [

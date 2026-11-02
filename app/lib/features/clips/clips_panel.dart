@@ -89,7 +89,10 @@ class _ClipsPanelState extends ConsumerState<ClipsPanel> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final media = widget.media;
+    final media = [
+      for (final item in widget.media)
+        if (item.kind != MediaKindView.audio) item,
+    ];
     return DropTarget(
       onDragEntered: (_) => setState(() => _dragging = true),
       onDragExited: (_) => setState(() => _dragging = false),

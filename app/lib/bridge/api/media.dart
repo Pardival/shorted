@@ -5,12 +5,13 @@
 
 import '../error.dart';
 import '../frb_generated.dart';
+import 'audio.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 import 'projects.dart';
 
-// These functions are ignored because they are not marked as `pub`: `clip_for`, `decode_strip`, `display_name`, `encode_strip`, `image_probe`, `import_one`, `location_for`, `make_media`, `make_strip`, `media_views`, `resolve`, `send_still`, `send_strip`, `strip_cache`, `thumbnail_size`, `thumbnail_times`, `video_probe`
+// These functions are ignored because they are not marked as `pub`: `audio_probe`, `clip_for`, `decode_strip`, `display_name`, `encode_strip`, `image_probe`, `import_one`, `location_for`, `make_media`, `make_strip`, `media_views`, `resolve`, `send_still`, `send_strip`, `strip_cache`, `thumbnail_size`, `thumbnail_times`, `video_probe`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `eq`
 
 /// Imports files one by one: a bad file fails alone.

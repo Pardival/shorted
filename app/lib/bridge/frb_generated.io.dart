@@ -4,6 +4,7 @@
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
 import 'api.dart';
+import 'api/audio.dart';
 import 'api/clips.dart';
 import 'api/export.dart';
 import 'api/media.dart';
@@ -52,6 +53,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String dco_decode_String(dynamic raw);
 
   @protected
+  AudioItemView dco_decode_audio_item_view(dynamic raw);
+
+  @protected
+  AudioRoleView dco_decode_audio_role_view(dynamic raw);
+
+  @protected
+  AudioTrackView dco_decode_audio_track_view(dynamic raw);
+
+  @protected
   bool dco_decode_bool(dynamic raw);
 
   @protected
@@ -65,6 +75,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ClipEdge dco_decode_clip_edge(dynamic raw);
+
+  @protected
+  ClipSoundView dco_decode_clip_sound_view(dynamic raw);
 
   @protected
   EngineFailure dco_decode_engine_failure(dynamic raw);
@@ -92,6 +105,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<String> dco_decode_list_String(dynamic raw);
+
+  @protected
+  List<AudioItemView> dco_decode_list_audio_item_view(dynamic raw);
+
+  @protected
+  List<AudioTrackView> dco_decode_list_audio_track_view(dynamic raw);
+
+  @protected
+  List<ClipSoundView> dco_decode_list_clip_sound_view(dynamic raw);
 
   @protected
   List<ImportOutcome> dco_decode_list_import_outcome(dynamic raw);
@@ -134,6 +156,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SaveStateView dco_decode_save_state_view(dynamic raw);
+
+  @protected
+  SoundView dco_decode_sound_view(dynamic raw);
 
   @protected
   TaskEvent dco_decode_task_event(dynamic raw);
@@ -189,6 +214,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String sse_decode_String(SseDeserializer deserializer);
 
   @protected
+  AudioItemView sse_decode_audio_item_view(SseDeserializer deserializer);
+
+  @protected
+  AudioRoleView sse_decode_audio_role_view(SseDeserializer deserializer);
+
+  @protected
+  AudioTrackView sse_decode_audio_track_view(SseDeserializer deserializer);
+
+  @protected
   bool sse_decode_bool(SseDeserializer deserializer);
 
   @protected
@@ -204,6 +238,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ClipEdge sse_decode_clip_edge(SseDeserializer deserializer);
+
+  @protected
+  ClipSoundView sse_decode_clip_sound_view(SseDeserializer deserializer);
 
   @protected
   EngineFailure sse_decode_engine_failure(SseDeserializer deserializer);
@@ -231,6 +268,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer);
+
+  @protected
+  List<AudioItemView> sse_decode_list_audio_item_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<AudioTrackView> sse_decode_list_audio_track_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<ClipSoundView> sse_decode_list_clip_sound_view(
+    SseDeserializer deserializer,
+  );
 
   @protected
   List<ImportOutcome> sse_decode_list_import_outcome(
@@ -283,6 +335,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SaveStateView sse_decode_save_state_view(SseDeserializer deserializer);
+
+  @protected
+  SoundView sse_decode_sound_view(SseDeserializer deserializer);
 
   @protected
   TaskEvent sse_decode_task_event(SseDeserializer deserializer);
@@ -345,6 +400,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_String(String self, SseSerializer serializer);
 
   @protected
+  void sse_encode_audio_item_view(AudioItemView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_audio_role_view(AudioRoleView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_audio_track_view(
+    AudioTrackView self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_bool(bool self, SseSerializer serializer);
 
   @protected
@@ -364,6 +431,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_clip_edge(ClipEdge self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_clip_sound_view(ClipSoundView self, SseSerializer serializer);
 
   @protected
   void sse_encode_engine_failure(EngineFailure self, SseSerializer serializer);
@@ -394,6 +464,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_audio_item_view(
+    List<AudioItemView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_audio_track_view(
+    List<AudioTrackView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_clip_sound_view(
+    List<ClipSoundView> self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_list_import_outcome(
@@ -460,6 +548,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_save_state_view(SaveStateView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_sound_view(SoundView self, SseSerializer serializer);
 
   @protected
   void sse_encode_task_event(TaskEvent self, SseSerializer serializer);

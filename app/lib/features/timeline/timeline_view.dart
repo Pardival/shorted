@@ -6,6 +6,7 @@ import '../../design_system/tokens.g.dart';
 import 'timeline_layout.dart';
 import 'filmstrips.dart';
 import 'timeline_painter.dart';
+import 'waveforms.dart';
 
 const _headerWidth = 88.0;
 const _rulerHeight = 24.0;
@@ -30,6 +31,7 @@ class TimelineView extends StatefulWidget {
     this.onTrim,
     this.onMove,
     this.filmstrips,
+    this.waveforms,
   });
 
   final List<TimelineTrack> tracks;
@@ -45,6 +47,7 @@ class TimelineView extends StatefulWidget {
   /// The selected item dragged to a new position among its track.
   final void Function(TimelineItem item, int toIndex)? onMove;
   final Filmstrips? filmstrips;
+  final Waveforms? waveforms;
 
   @override
   State<TimelineView> createState() => _TimelineViewState();
@@ -240,6 +243,7 @@ class _TimelineViewState extends State<TimelineView> {
                   textDirection: Directionality.of(context),
                   dragPreview: _dragPreview,
                   filmstrips: widget.filmstrips,
+                  waveforms: widget.waveforms,
                 ),
               ),
             ),

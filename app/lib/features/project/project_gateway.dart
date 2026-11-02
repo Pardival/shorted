@@ -1,4 +1,7 @@
+import 'package:flutter/foundation.dart';
+
 import '../../bridge/api.dart' as tasks;
+import '../../bridge/api/audio.dart' as audio;
 import '../../bridge/api/clips.dart' as clips;
 import '../../bridge/api/export.dart' as exporter;
 import '../../bridge/api/media.dart' as media;
@@ -42,6 +45,32 @@ abstract interface class ProjectGateway {
   Future<ProjectView> commitCrop(String id);
   Future<ProjectView> resetCrop(String id);
   Future<ProjectView> toggleSlowZoom(String id);
+  Future<String?> importOne(String path);
+  Future<ProjectView> addAudio(
+    String mediaId,
+    audio.AudioRoleView role,
+    int startUs,
+  );
+  Future<ProjectView> setClipSound(
+    String id, {
+    required double volume,
+    required bool muted,
+    required int fadeInUs,
+    required int fadeOutUs,
+  });
+  Future<ProjectView> setAudioSound(
+    String id, {
+    required double volume,
+    required int fadeInUs,
+    required int fadeOutUs,
+  });
+  Future<ProjectView> setAudioLoop(String id, {required bool looped});
+  Future<ProjectView> deleteAudio(String id);
+  Future<ProjectView> addAudioTrack();
+  Future<ProjectView> removeAudioTrack(String id);
+  Future<ProjectView> renameAudioTrack(String id, String name);
+  Future<ProjectView> setAudioTrackMuted(String? id, {required bool muted});
+  Future<Uint8List> peaks(String mediaId);
   void cancelTask(BigInt id);
 }
 
@@ -154,6 +183,72 @@ class EngineGateway implements ProjectGateway {
 
   @override
   Future<ProjectView> toggleSlowZoom(String id) => clips.toggleSlowZoom(id: id);
+
+  @override
+  Future<String?> importOne(String path) async {
+    final outcomes = await media.importFiles(paths: [path]);
+    return outcomes.single.mediaId;
+  }
+
+  @override
+  Future<ProjectView> addAudio(
+    String mediaId,
+    audio.AudioRoleView role,
+    int startUs,
+  ) => audio.addAudio(mediaId: mediaId, role: role, startUs: startUs);
+
+  @override
+  Future<ProjectView> setClipSound(
+    String id, {
+    required double volume,
+    required bool muted,
+    required int fadeInUs,
+    required int fadeOutUs,
+  }) => audio.setClipSound(
+    id: id,
+    volume: volume,
+    muted: muted,
+    fadeInUs: fadeInUs,
+    fadeOutUs: fadeOutUs,
+  );
+
+  @override
+  Future<ProjectView> setAudioSound(
+    String id, {
+    required double volume,
+    required int fadeInUs,
+    required int fadeOutUs,
+  }) => audio.setAudioSound(
+    id: id,
+    volume: volume,
+    fadeInUs: fadeInUs,
+    fadeOutUs: fadeOutUs,
+  );
+
+  @override
+  Future<ProjectView> setAudioLoop(String id, {required bool looped}) =>
+      audio.setAudioLoop(id: id, looped: looped);
+
+  @override
+  Future<ProjectView> deleteAudio(String id) => audio.deleteAudio(id: id);
+
+  @override
+  Future<ProjectView> addAudioTrack() => audio.addAudioTrack();
+
+  @override
+  Future<ProjectView> removeAudioTrack(String id) =>
+      audio.removeAudioTrack(id: id);
+
+  @override
+  Future<ProjectView> renameAudioTrack(String id, String name) =>
+      audio.renameAudioTrack(id: id, name: name);
+
+  @override
+  Future<ProjectView> setAudioTrackMuted(String? id, {required bool muted}) =>
+      audio.setAudioTrackMuted(id: id, muted: muted);
+
+  @override
+  Future<Uint8List> peaks(String mediaId) => audio.mediaPeaks(mediaId: mediaId);
 
   @override
   Stream<media.ThumbnailView> filmstrip(String mediaId) =>

@@ -135,6 +135,14 @@ pub enum Command {
         id: Id,
         ducking: Option<Ducking>,
     },
+    SetAudioLoop {
+        id: Id,
+        looped: bool,
+    },
+    SetAudioRole {
+        id: Id,
+        role: AudioRole,
+    },
     SetClipAudio {
         id: Id,
         audio: ClipAudio,
@@ -621,6 +629,8 @@ fn mutate(command: &Command, project: &mut Project) -> Result<Command, ModelErro
             item.source_out_us = source_out_us;
         })?,
         SetVolume { id, volume } => edit_audio(project, id, |item| item.volume = volume)?,
+        SetAudioLoop { id, looped } => edit_audio(project, id, |item| item.loop_ = looped)?,
+        SetAudioRole { id, role } => edit_audio(project, id, |item| item.role = role)?,
         SetFades {
             id,
             fade_in_us,

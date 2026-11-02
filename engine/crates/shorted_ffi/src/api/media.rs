@@ -135,6 +135,28 @@ fn video_probe(path: &Path) -> Result<MediaProbe, EngineError> {
     })
 }
 
+#[cfg(target_vendor = "apple")]
+fn audio_probe(path: &Path) -> Result<MediaProbe, EngineError> {
+    let duration_us =
+        shorted_media::apple::audio_duration_us(path).map_err(|_| EngineError::UnsupportedMedia)?;
+    Ok(MediaProbe {
+        duration_us,
+        width: 0,
+        height: 0,
+        rotation: 0,
+        fps: 0.0,
+        has_audio: true,
+        codec: String::new(),
+        color: ColorRange::Sdr,
+    })
+}
+
+/// No decoder on this platform yet (T-0401).
+#[cfg(not(target_vendor = "apple"))]
+fn audio_probe(_path: &Path) -> Result<MediaProbe, EngineError> {
+    Err(EngineError::UnsupportedMedia)
+}
+
 /// No decoder on this platform yet (T-0401).
 #[cfg(not(target_vendor = "apple"))]
 fn video_probe(_path: &Path) -> Result<MediaProbe, EngineError> {
@@ -162,6 +184,7 @@ fn make_media(path: &Path, folder: &Path) -> Result<MediaRef, EngineError> {
     let kind = classify(path).ok_or(EngineError::UnsupportedMedia)?;
     let probe = match kind {
         MediaKind::Video => video_probe(path)?,
+        MediaKind::Audio => audio_probe(path)?,
         _ => image_probe(path)?,
     };
     let content_hash = content_hash(path).map_err(shorted_store::session::StoreError::from)?;

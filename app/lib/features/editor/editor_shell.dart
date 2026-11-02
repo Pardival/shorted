@@ -116,12 +116,8 @@ class _EditorShellState extends ConsumerState<EditorShell> {
     );
   }
 
-  Widget _panel(EditorState state) => SectionPanel(
-    section: section,
-    projectId: projectId,
-    media: state.view.media,
-    durationUs: state.view.durationUs.toInt(),
-  );
+  Widget _panel(EditorState state) =>
+      SectionPanel(section: section, projectId: projectId, view: state.view);
 
   Widget _phone(BuildContext context, EditorState state, Widget transport) {
     return Column(

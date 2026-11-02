@@ -21,7 +21,7 @@ pub enum ClipEdge {
     End,
 }
 
-fn parse(id: &str) -> Result<Id, EngineError> {
+pub(crate) fn parse(id: &str) -> Result<Id, EngineError> {
     id.parse()
         .map_err(|_| EngineError::Internal("bad clip id".into()))
 }
@@ -42,7 +42,7 @@ fn locate(project: &Project, id: Id) -> Result<(usize, &ClipItem, i64), EngineEr
 }
 
 /// Builds a command from the project, runs it, and returns the new view.
-fn edit(
+pub(crate) fn edit(
     build: impl FnOnce(&Project) -> Result<Command, EngineError> + Send + 'static,
 ) -> Result<ProjectView, EngineFailure> {
     on_command_thread(move || {

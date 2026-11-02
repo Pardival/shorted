@@ -303,7 +303,7 @@ void main() {
     await tester.pumpAndSettle();
     resize(tester, const Size(390, 844));
     await tester.pumpAndSettle();
-    expect(find.text('Audio tools arrive with their tickets.'), findsOneWidget);
+    expect(find.text('Original sound'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
