@@ -26,4 +26,8 @@ pub enum ModelError {
     DuplicateId(Id),
     #[error("unknown id {0}")]
     UnknownId(Id),
+    #[error("position {index} is out of range")]
+    OutOfRange { index: usize },
+    #[error("no gesture is in progress")]
+    NoGesture,
 }

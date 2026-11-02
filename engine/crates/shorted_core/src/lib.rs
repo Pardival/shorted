@@ -2,6 +2,8 @@
 
 #![deny(unsafe_op_in_unsafe_fn)]
 
+pub mod command;
+pub mod editor;
 pub mod error;
 pub mod model;
 pub mod validate;
