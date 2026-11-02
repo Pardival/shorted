@@ -9,10 +9,11 @@ use shorted_audio::mixer::{CHANNELS, SAMPLE_RATE};
 use shorted_core::command::{Command, TrackKind};
 use shorted_core::model::*;
 use shorted_core::validate::MAX_AUDIO_TRACKS;
+use shorted_store::session::StoreError;
 use uuid::Uuid;
 
 use crate::api::clips::{edit, parse};
-use crate::api::media::resolve;
+use crate::api::media::{make_media, resolve};
 use crate::api::projects::{on_command_thread, view_of, with_active, ProjectView, TrackKindView};
 use crate::error::{EngineError, EngineFailure};
 use crate::transport::transport;
@@ -401,31 +402,23 @@ pub async fn set_track_flags(
 }
 
 /// Starts recording the microphone into the project (FR-AUD-03).
-#[cfg(target_vendor = "apple")]
 pub async fn start_voice_over() -> Result<(), EngineFailure> {
-    let folder = transport().folder.clone();
-    let media = folder.join("media");
-    std::fs::create_dir_all(&media)
-        .map_err(shorted_store::session::StoreError::from)
-        .map_err(EngineError::from)?;
-    crate::recorder::start(media.join(format!("voice-{}.wav", Uuid::now_v7())))?;
-    Ok(())
+    Ok(begin_recording()?)
 }
 
 /// Stops recording and places the take on the Voice-over track at `start_us`.
-#[cfg(target_vendor = "apple")]
 pub async fn stop_voice_over(start_us: i64) -> Result<ProjectView, EngineFailure> {
-    let take = crate::recorder::stop();
+    let take = finish_recording();
     on_command_thread(move || {
         with_active(|session| {
             let Some(path) = take else {
                 return Ok(view_of(session));
             };
-            let folder = crate::api::projects::active_folder(session.project().id)
-                .ok_or_else(|| shorted_store::session::StoreError::from(no_folder()))?;
-            let media = crate::api::media::make_media(&path, &folder).map_err(|error| {
+            let unsaved = || StoreError::from(std::io::Error::other("voice-over not saved"));
+            let folder = active_folder(session.project().id).ok_or_else(unsaved)?;
+            let media = make_media(&path, &folder).map_err(|error| {
                 tracing::error!(%error, "voice-over not imported");
-                shorted_store::session::StoreError::from(no_folder())
+                unsaved()
             })?;
             let mut item = audio_item(&media, AudioRole::VoiceOver, start_us.max(0), Uuid::nil());
             item.track = AudioTrackRef::VoiceOver;
@@ -443,44 +436,47 @@ pub async fn stop_voice_over(start_us: i64) -> Result<ProjectView, EngineFailure
     })
 }
 
-#[cfg(target_vendor = "apple")]
-fn no_folder() -> std::io::Error {
-    std::io::Error::other("voice-over not saved")
-}
-
 /// The microphone's level while recording, from 0 to 1.
-#[cfg(target_vendor = "apple")]
 #[flutter_rust_bridge::frb(sync)]
 pub fn voice_level() -> f32 {
-    crate::recorder::level()
+    recording_level()
 }
 
 #[cfg(target_vendor = "apple")]
-#[flutter_rust_bridge::frb(sync)]
-pub fn pause_voice_over(paused: bool) {
-    crate::recorder::set_paused(paused);
+fn begin_recording() -> Result<(), EngineError> {
+    let folder = transport().folder.clone();
+    let media = folder.join("media");
+    std::fs::create_dir_all(&media)
+        .map_err(StoreError::from)
+        .map_err(EngineError::from)?;
+    crate::recorder::start(media.join(format!("voice-{}.wav", Uuid::now_v7())))
+}
+
+#[cfg(target_vendor = "apple")]
+fn finish_recording() -> Option<std::path::PathBuf> {
+    crate::recorder::stop()
+}
+
+#[cfg(target_vendor = "apple")]
+fn recording_level() -> f32 {
+    crate::recorder::level()
 }
 
 /// No microphone capture on this platform yet.
 #[cfg(not(target_vendor = "apple"))]
-pub async fn start_voice_over() -> Result<(), EngineFailure> {
-    Err(EngineError::Internal("no microphone capture here".into()).into())
+fn begin_recording() -> Result<(), EngineError> {
+    Err(EngineError::Internal("no microphone capture here".into()))
 }
 
 #[cfg(not(target_vendor = "apple"))]
-pub async fn stop_voice_over(_start_us: i64) -> Result<ProjectView, EngineFailure> {
-    Err(EngineError::Internal("no microphone capture here".into()).into())
+fn finish_recording() -> Option<std::path::PathBuf> {
+    None
 }
 
 #[cfg(not(target_vendor = "apple"))]
-#[flutter_rust_bridge::frb(sync)]
-pub fn voice_level() -> f32 {
+fn recording_level() -> f32 {
     0.0
 }
-
-#[cfg(not(target_vendor = "apple"))]
-#[flutter_rust_bridge::frb(sync)]
-pub fn pause_voice_over(_paused: bool) {}
 
 /// Loudest absolute sample of each span, scaled to a byte.
 fn peaks(samples: &[f32]) -> Vec<u8> {
