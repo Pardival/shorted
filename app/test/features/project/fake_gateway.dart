@@ -885,6 +885,11 @@ class FakeGateway implements ProjectGateway {
   @override
   int exportSizeEstimate(int width, int fps, int durationUs) => 5 * 1000 * 1000;
 
+  var supports4k = true;
+
+  @override
+  bool exportSupports4k() => supports4k;
+
   var modelReady = false;
   final speechEvents = StreamController<TaskEvent>.broadcast();
   final speechCalls = <String>[];

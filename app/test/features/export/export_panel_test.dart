@@ -74,6 +74,15 @@ void main() {
     expect(find.text('Export video'), findsOneWidget);
   });
 
+  testWidgets('4K is offered where the encoder takes it', (tester) async {
+    final gateway = await pump(tester, 4000000);
+    await tester.tap(find.text('4K'));
+    await tester.pump();
+    await tester.tap(find.text('Export video'));
+    await tester.pump();
+    expect(gateway.exports.single, '/out/short.mp4 2160 30');
+  });
+
   testWidgets('a failure gives a human message', (tester) async {
     final gateway = await pump(tester, 4000000);
     await tester.tap(find.text('Export video'));

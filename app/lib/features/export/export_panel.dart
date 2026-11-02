@@ -14,6 +14,7 @@ import '../project/project_dialogs.dart';
 import '../project/project_providers.dart';
 
 const _widths = {720: '720p', 1080: '1080p'};
+const _uhdWidth = 2160;
 const _frameRates = [30, 60];
 const _maxDurationUs = 120000000;
 
@@ -157,7 +158,11 @@ class _ExportPanelState extends ConsumerState<ExportPanel> {
           ),
           _choice(
             label: l10n.exportResolution,
-            options: _widths,
+            options: {
+              ..._widths,
+              if (ref.read(projectGatewayProvider).exportSupports4k())
+                _uhdWidth: '4K',
+            },
             selected: _width,
             onSelected: (value) => setState(() => _width = value),
           ),

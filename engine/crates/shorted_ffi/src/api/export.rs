@@ -186,6 +186,40 @@ pub fn export_size_estimate(settings: ExportSettings, duration_us: i64) -> i64 {
     (bits / 8.0 * duration_us as f64 / 1e6) as i64
 }
 
+/// Short side of a 4K export.
+const UHD_WIDTH: u32 = 2160;
+
+/// Whether this device's encoder takes 2160 × 3840 (T-1207): asked once, by opening one.
+#[flutter_rust_bridge::frb(sync)]
+pub fn export_supports_4k() -> bool {
+    use std::sync::OnceLock;
+    static SUPPORTED: OnceLock<bool> = OnceLock::new();
+    *SUPPORTED.get_or_init(probe_4k)
+}
+
+#[cfg(target_vendor = "apple")]
+fn probe_4k() -> bool {
+    use shorted_media::apple_writer::AppleEncoder;
+
+    let (width, height) = output_size(UHD_WIDTH);
+    let file = std::env::temp_dir().join(format!("shorted-4k-{}.mp4", std::process::id()));
+    let opened = AppleEncoder::new(&file, width, height, bits_per_second(width, height, 30));
+    let supported = match opened {
+        Ok(encoder) => {
+            encoder.cancel();
+            true
+        }
+        Err(_) => false,
+    };
+    let _ = std::fs::remove_file(&file);
+    supported
+}
+
+#[cfg(not(target_vendor = "apple"))]
+fn probe_4k() -> bool {
+    false
+}
+
 /// The code an export ends on when the project cannot be exported as it is.
 #[flutter_rust_bridge::frb(sync)]
 pub fn export_blocked(duration_us: i64) -> Option<ErrorCode> {
@@ -231,6 +265,53 @@ mod tests {
     fn sound_chunks_stop_at_the_limit() {
         assert_eq!(audio_chunk(0, 5_000), 0..1_024);
         assert_eq!(audio_chunk(4_096, 5_000), 4_096..5_000);
+    }
+
+    /// A 4K export comes out at full resolution (T-1207).
+    #[cfg(target_vendor = "apple")]
+    #[test]
+    fn a_4k_export_has_the_full_resolution() {
+        use shorted_core::model::{MediaKind, MediaLocation};
+        use shorted_media::MediaBackend;
+
+        let clip = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../fixtures/media/h264_audio_440hz.mov"
+        );
+        if !Path::new(clip).exists() || !export_supports_4k() {
+            return;
+        }
+        let json = include_str!("../../../../fixtures/projects/v1_full.json");
+        let mut project = Project::from_json(json).unwrap();
+        project.timeline.transitions.clear();
+        project.timeline.clips.truncate(1);
+        project.timeline.audio.clear();
+        project.timeline.overlays.clear();
+        project.captions.sources.clear();
+        let id = project.timeline.clips[0].media_id;
+        let media = project.media.iter_mut().find(|m| m.id == id).unwrap();
+        media.kind = MediaKind::Video;
+        media.location = MediaLocation::External {
+            abs_path: clip.into(),
+            bookmark: None,
+        };
+        let entry = &mut project.timeline.clips[0];
+        entry.speed = 1.0;
+        entry.source_in_us = 0;
+        entry.source_out_us = 500_000;
+        let output =
+            std::env::temp_dir().join(format!("shorted-4k-out-{}.mp4", std::process::id()));
+        let settings = ExportSettings {
+            width: UHD_WIDTH,
+            fps: 30,
+        };
+        crate::runtime::with_test_context(|task| {
+            run_export(&project, Path::new("/"), &output, settings, task)
+        })
+        .unwrap();
+        let info = shorted_media::apple::AppleBackend.probe(&output).unwrap();
+        std::fs::remove_file(&output).unwrap();
+        assert_eq!((info.width, info.height), (2160, 3840));
     }
 
     /// Real clip, real mix, real encoder. The fixture comes from scripts/make_fixtures.swift.

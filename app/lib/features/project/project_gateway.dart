@@ -172,6 +172,9 @@ abstract interface class ProjectGateway {
   Future<void> writeSrt(String path);
   Future<media.ThumbnailView?> cover(String projectId);
   int exportSizeEstimate(int width, int fps, int durationUs);
+
+  /// Whether this device can encode 2160 × 3840 (T-1207).
+  bool exportSupports4k();
   Future<int> cacheBytes();
   Future<void> clearCaches();
   Future<ProjectView> setClipSpeed(String id, double speed);
@@ -903,6 +906,9 @@ class EngineGateway implements ProjectGateway {
   @override
   Future<media.ThumbnailView?> cover(String projectId) =>
       media.projectCover(root: root, id: projectId);
+
+  @override
+  bool exportSupports4k() => exporter.exportSupports4K();
 
   @override
   int exportSizeEstimate(int width, int fps, int durationUs) =>

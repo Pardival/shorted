@@ -9,7 +9,7 @@ import '../runtime.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `audio_chunk`, `audio_target`, `bits_per_second`, `frame_count`, `frame_time_us`, `output_size`, `run_export`
+// These functions are ignored because they are not marked as `pub`: `audio_chunk`, `audio_target`, `bits_per_second`, `frame_count`, `frame_time_us`, `output_size`, `probe_4k`, `run_export`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`
 
 /// Starts exporting the open project. The first event carries the id for `cancel_task`.
@@ -29,6 +29,10 @@ PlatformInt64 exportSizeEstimate({
   settings: settings,
   durationUs: durationUs,
 );
+
+/// Whether this device's encoder takes 2160 × 3840 (T-1207): asked once, by opening one.
+bool exportSupports4K() =>
+    RustLib.instance.api.crateApiExportExportSupports4K();
 
 /// The code an export ends on when the project cannot be exported as it is.
 ErrorCode? exportBlocked({required PlatformInt64 durationUs}) =>
