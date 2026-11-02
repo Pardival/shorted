@@ -37,6 +37,7 @@ abstract interface class ProjectGateway {
     required int deltaUs,
   });
   Stream<TaskEvent> export(String path, {required int width, required int fps});
+  Stream<media.ThumbnailView> filmstrip(String mediaId);
   void cancelTask(BigInt id);
 }
 
@@ -136,6 +137,10 @@ class EngineGateway implements ProjectGateway {
     path: path,
     settings: exporter.ExportSettings(width: width, fps: fps),
   );
+
+  @override
+  Stream<media.ThumbnailView> filmstrip(String mediaId) =>
+      media.mediaFilmstrip(mediaId: mediaId);
 
   @override
   void cancelTask(BigInt id) => tasks.cancelTask(taskId: id);

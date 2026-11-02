@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../design_system/tokens.g.dart';
+import 'filmstrips.dart';
 import 'timeline_layout.dart';
 
 const _itemRadius = Radius.circular(ShortedRadius.s);
@@ -22,7 +23,8 @@ class TimelinePainter extends CustomPainter {
     required this.selectedId,
     required this.textDirection,
     this.dragPreview,
-  });
+    this.filmstrips,
+  }) : super(repaint: filmstrips);
 
   final TimelineLayout layout;
   final List<TimelineTrack> tracks;
@@ -32,6 +34,7 @@ class TimelinePainter extends CustomPainter {
 
   /// A range being dragged, drawn over its track until the edit is committed.
   final (int, int, int)? dragPreview;
+  final Filmstrips? filmstrips;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -80,6 +83,39 @@ class TimelinePainter extends CustomPainter {
     }
   }
 
+  void _paintFilmstrip(
+    Canvas canvas,
+    TimelineItem item,
+    RRect shape,
+    double viewportWidth,
+  ) {
+    final mediaId = item.mediaId;
+    final strips = filmstrips;
+    if (mediaId == null || strips == null) return;
+    final rect = shape.outerRect;
+    canvas.save();
+    canvas.clipRRect(shape);
+    var x = rect.left;
+    while (x < rect.right && x < viewportWidth) {
+      final offsetUs = layout.timeForX(x) - item.startUs;
+      final timeUs = item.sourceInUs + (offsetUs * item.speed).round();
+      final frame = strips.at(mediaId, timeUs);
+      if (frame == null) break;
+      final image = frame.image;
+      final width = rect.height * image.width / image.height;
+      if (x + width > layout.headerWidth) {
+        canvas.drawImageRect(
+          image,
+          Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+          Rect.fromLTWH(x, rect.top, width, rect.height),
+          Paint()..filterQuality = FilterQuality.low,
+        );
+      }
+      x += width;
+    }
+    canvas.restore();
+  }
+
   void _paintTrack(
     Canvas canvas,
     Size size,
@@ -104,6 +140,7 @@ class TimelinePainter extends CustomPainter {
       );
       final shape = RRect.fromRectAndRadius(rect, _itemRadius);
       canvas.drawRRect(shape, fill);
+      _paintFilmstrip(canvas, item, shape, size.width);
       if (item.id == selectedId) {
         canvas.drawRRect(
           shape,
@@ -174,7 +211,8 @@ class TimelinePainter extends CustomPainter {
       old.tracks != tracks ||
       old.durationUs != durationUs ||
       old.selectedId != selectedId ||
-      old.dragPreview != dragPreview;
+      old.dragPreview != dragPreview ||
+      old.filmstrips != filmstrips;
 }
 
 /// Driven by `playheadUs` directly, so no widget rebuilds during a scrub.

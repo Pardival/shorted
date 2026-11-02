@@ -1,6 +1,7 @@
 //! Media of the open project: import, placing on the timeline, offline state and relink.
 
 use std::path::{Path, PathBuf};
+use std::thread;
 
 use shorted_core::command::Command;
 use shorted_core::model::*;
@@ -11,9 +12,17 @@ use uuid::Uuid;
 
 use crate::api::projects::{active_folder, on_command_thread, view_of, with_active, ProjectView};
 use crate::error::{EngineError, EngineFailure, ErrorCode};
+use crate::frb_generated::StreamSink;
+use crate::transport::transport;
 
 /// FR-CLIP-03.
 const IMAGE_DURATION_US: i64 = 3_000_000;
+const THUMBNAIL_HEIGHT: u32 = 96;
+const THUMBNAIL_STEP_US: i64 = 1_000_000;
+const MAX_THUMBNAILS: i64 = 120;
+const MAX_THUMBNAIL_WIDTH: u32 = 256;
+const STRIP_HEADER_BYTES: usize = 8;
+const FRAME_HEADER_BYTES: usize = 8;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum MediaKindView {
@@ -287,4 +296,223 @@ pub async fn relink_media(id: String, path: String) -> Result<ProjectView, Engin
             Ok(view_of(session))
         })
     })
+}
+
+pub struct ThumbnailView {
+    pub time_us: i64,
+    pub width: u32,
+    pub height: u32,
+    pub rgba: Vec<u8>,
+}
+
+fn thumbnail_size(probe: &MediaProbe) -> (u32, u32) {
+    let (width, height) = if probe.rotation.rem_euclid(180) == 90 {
+        (probe.height, probe.width)
+    } else {
+        (probe.width, probe.height)
+    };
+    let scaled = u64::from(width) * u64::from(THUMBNAIL_HEIGHT) / u64::from(height.max(1));
+    (
+        (scaled as u32).clamp(1, MAX_THUMBNAIL_WIDTH),
+        THUMBNAIL_HEIGHT,
+    )
+}
+
+fn thumbnail_times(duration_us: i64) -> Vec<i64> {
+    let step = THUMBNAIL_STEP_US.max(duration_us / MAX_THUMBNAILS);
+    (0..MAX_THUMBNAILS)
+        .map(|index| index * step)
+        .take_while(|time| *time < duration_us.max(1))
+        .collect()
+}
+
+fn encode_strip(frames: &[ThumbnailView]) -> Vec<u8> {
+    let mut bytes = Vec::new();
+    let (width, height) = frames.first().map_or((0, 0), |f| (f.width, f.height));
+    bytes.extend(width.to_le_bytes());
+    bytes.extend(height.to_le_bytes());
+    for frame in frames {
+        bytes.extend(frame.time_us.to_le_bytes());
+        bytes.extend(&frame.rgba);
+    }
+    bytes
+}
+
+/// Reads a cached strip. The file sits in a folder anyone can edit, so sizes are checked, and a
+/// file that does not add up counts as no cache.
+fn decode_strip(bytes: &[u8], width: u32, height: u32) -> Option<Vec<ThumbnailView>> {
+    let header = bytes.get(..STRIP_HEADER_BYTES)?;
+    if header[..4] != width.to_le_bytes() || header[4..] != height.to_le_bytes() {
+        return None;
+    }
+    let pixels = width as usize * height as usize * 4;
+    let body = &bytes[STRIP_HEADER_BYTES..];
+    let record = FRAME_HEADER_BYTES + pixels;
+    if body.is_empty() || !body.len().is_multiple_of(record) {
+        return None;
+    }
+    let frames = body.chunks_exact(record).map(|chunk| ThumbnailView {
+        time_us: i64::from_le_bytes(chunk[..FRAME_HEADER_BYTES].try_into().unwrap_or_default()),
+        width,
+        height,
+        rgba: chunk[FRAME_HEADER_BYTES..].to_vec(),
+    });
+    Some(frames.collect())
+}
+
+#[cfg(target_vendor = "apple")]
+fn make_strip(
+    path: &Path,
+    probe: &MediaProbe,
+    (width, height): (u32, u32),
+    sink: &StreamSink<ThumbnailView>,
+) -> Result<Vec<ThumbnailView>, EngineError> {
+    let mut frames = Vec::new();
+    let times = thumbnail_times(probe.duration_us);
+    let size = (width as usize, height as usize);
+    shorted_media::apple::filmstrip(path, times, probe.rotation, size, |time_us, rgba| {
+        let sent = sink.add(ThumbnailView {
+            time_us,
+            width,
+            height,
+            rgba: rgba.clone(),
+        });
+        frames.push(ThumbnailView {
+            time_us,
+            width,
+            height,
+            rgba,
+        });
+        sent.is_ok()
+    })
+    .map_err(|_| EngineError::UnsupportedMedia)?;
+    Ok(frames)
+}
+
+/// No decoder on this platform yet (T-0401).
+#[cfg(not(target_vendor = "apple"))]
+fn make_strip(
+    _path: &Path,
+    _probe: &MediaProbe,
+    _size: (u32, u32),
+    _sink: &StreamSink<ThumbnailView>,
+) -> Result<Vec<ThumbnailView>, EngineError> {
+    Ok(Vec::new())
+}
+
+/// The hash comes from the project file, so it must not be able to name a path.
+fn strip_cache(media: &MediaRef, folder: &Path) -> Option<PathBuf> {
+    let hash = &media.content_hash;
+    (!hash.is_empty() && hash.chars().all(|c| c.is_ascii_alphanumeric()))
+        .then(|| folder.join("cache").join(format!("filmstrip-{hash}.bin")))
+}
+
+fn send_strip(media: &MediaRef, folder: &Path, sink: &StreamSink<ThumbnailView>) {
+    let Some(path) = resolve(media, folder) else {
+        return;
+    };
+    let (width, height) = thumbnail_size(&media.probe);
+    let cache = strip_cache(media, folder);
+    let cached = cache.as_ref().and_then(|file| std::fs::read(file).ok());
+    if let Some(frames) = cached.and_then(|bytes| decode_strip(&bytes, width, height)) {
+        for frame in frames {
+            if sink.add(frame).is_err() {
+                return;
+            }
+        }
+        return;
+    }
+    let frames = match make_strip(&path, &media.probe, (width, height), sink) {
+        Ok(frames) if frames.len() == thumbnail_times(media.probe.duration_us).len() => frames,
+        Ok(_) => return,
+        Err(error) => {
+            tracing::warn!(%error, "no filmstrip for this clip");
+            return;
+        }
+    };
+    let Some(cache) = cache else {
+        return;
+    };
+    // Losing the cache only costs decoding again.
+    let written = cache
+        .parent()
+        .map_or(Ok(()), std::fs::create_dir_all)
+        .and_then(|()| std::fs::write(&cache, encode_strip(&frames)));
+    if let Err(error) = written {
+        tracing::warn!(%error, "filmstrip not cached");
+    }
+}
+
+/// Streams the thumbnails of a video, in time order, from a thread of its own.
+pub fn media_filmstrip(media_id: String, sink: StreamSink<ThumbnailView>) {
+    let (project, folder) = {
+        let state = transport();
+        (state.project.clone(), state.folder.clone())
+    };
+    let media = project.and_then(|project| {
+        project
+            .media
+            .iter()
+            .find(|media| media.id.to_string() == media_id && media.kind == MediaKind::Video)
+            .cloned()
+    });
+    let Some(media) = media else {
+        return;
+    };
+    let started = thread::Builder::new()
+        .name("shorted-filmstrip".into())
+        .spawn(move || send_strip(&media, &folder, &sink));
+    if let Err(error) = started {
+        tracing::error!(%error, "filmstrip not started");
+    }
+}
+
+#[cfg(test)]
+mod filmstrip_tests {
+    use super::*;
+
+    fn frame(time_us: i64) -> ThumbnailView {
+        ThumbnailView {
+            time_us,
+            width: 2,
+            height: 1,
+            rgba: vec![7; 8],
+        }
+    }
+
+    #[test]
+    fn a_hash_cannot_leave_the_cache_folder() {
+        let json = include_str!("../../../../fixtures/projects/v1_full.json");
+        let mut media = Project::from_json(json).unwrap().media.remove(0);
+        media.content_hash = "abc123".into();
+        let file = strip_cache(&media, Path::new("/p")).unwrap();
+        assert_eq!(file, Path::new("/p/cache/filmstrip-abc123.bin"));
+        media.content_hash = "../../evil".into();
+        assert!(strip_cache(&media, Path::new("/p")).is_none());
+    }
+
+    #[test]
+    fn strips_survive_the_cache() {
+        let bytes = encode_strip(&[frame(0), frame(1_000_000)]);
+        let strip = decode_strip(&bytes, 2, 1).unwrap();
+        assert_eq!(strip.len(), 2);
+        assert_eq!(strip[1].time_us, 1_000_000);
+        assert_eq!(strip[1].rgba, vec![7; 8]);
+    }
+
+    #[test]
+    fn damaged_or_foreign_caches_are_ignored() {
+        let bytes = encode_strip(&[frame(0)]);
+        assert!(decode_strip(&bytes[..bytes.len() - 1], 2, 1).is_none());
+        assert!(decode_strip(&bytes, 4, 1).is_none());
+        assert!(decode_strip(&[], 2, 1).is_none());
+        assert!(decode_strip(&bytes[..STRIP_HEADER_BYTES], 2, 1).is_none());
+    }
+
+    #[test]
+    fn times_stay_inside_the_clip_and_their_number_is_bounded() {
+        assert_eq!(thumbnail_times(2_500_000), [0, 1_000_000, 2_000_000]);
+        assert_eq!(thumbnail_times(0), [0]);
+        assert_eq!(thumbnail_times(3_600_000_000).len(), 120);
+    }
 }

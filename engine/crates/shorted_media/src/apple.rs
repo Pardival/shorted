@@ -2,6 +2,7 @@
 //! pixel buffers that the renderer can sample without a CPU copy.
 
 use std::path::Path;
+use std::ptr;
 
 use objc2::rc::{Retained, autoreleasepool};
 use objc2::runtime::AnyObject;
@@ -20,9 +21,9 @@ use objc2_foundation::{
     NSData, NSDictionary, NSNumber, NSString, NSURL, NSURLBookmarkCreationOptions,
     NSURLBookmarkResolutionOptions,
 };
-use objc2_io_surface::IOSurfaceRef;
+use objc2_io_surface::{IOSurfaceLockOptions, IOSurfaceRef};
 
-use crate::{DecodedFrame, MediaBackend, MediaError, MediaInfo, VideoDecoder};
+use crate::{DecodedFrame, MediaBackend, MediaError, MediaInfo, VideoDecoder, thumbnail_rgba};
 
 const BGRA_FOURCC: u32 = 0x4247_5241;
 const TIMESCALE: i32 = 1_000_000;
@@ -334,4 +335,93 @@ pub fn decode_audio(path: &Path) -> Result<Vec<f32>, MediaError> {
             Ok(samples)
         }
     })
+}
+
+/// Decodes a frame at each of `times_us` into a thumbnail, stopping when `each` returns false.
+/// Sits on the decoder's own seek, so a thumbnail costs one keyframe decode.
+pub fn filmstrip(
+    path: &Path,
+    times_us: impl IntoIterator<Item = i64>,
+    rotation_degrees: i32,
+    size: (usize, usize),
+    mut each: impl FnMut(i64, Vec<u8>) -> bool,
+) -> Result<(), MediaError> {
+    let mut decoder = AppleBackend.open_decoder(path)?;
+    for time_us in times_us {
+        decoder.seek(time_us)?;
+        let Some(frame) = decoder.next_frame()? else {
+            break;
+        };
+        let surface = frame.surface().ok_or(MediaError::DecodeFailed)?;
+        let options = IOSurfaceLockOptions::ReadOnly;
+        // SAFETY: the surface is alive; the seed is optional. The slice covers the locked
+        // surface, and is not used after the unlock.
+        let pixels = unsafe {
+            if surface.lock(options, ptr::null_mut()) != 0 {
+                return Err(MediaError::DecodeFailed);
+            }
+            let (stride, height) = (surface.bytes_per_row(), surface.height());
+            let bytes = std::slice::from_raw_parts(
+                surface.base_address().as_ptr().cast::<u8>(),
+                stride * height,
+            );
+            let pixels = thumbnail_rgba(
+                bytes,
+                stride,
+                (surface.width(), height),
+                rotation_degrees,
+                size,
+            );
+            surface.unlock(options, ptr::null_mut());
+            pixels
+        };
+        if !each(frame.pts_us(), pixels) {
+            break;
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod filmstrip_tests {
+    use super::*;
+
+    /// The fixtures come from scripts/make_fixtures.swift.
+    #[test]
+    fn real_clips_give_thumbnails_that_change_over_time() {
+        let root = concat!(env!("CARGO_MANIFEST_DIR"), "/../../fixtures/media/");
+        for (clip, rotation) in [("h264_1080p60.mov", 0), ("h264_1080p60_rotated.mov", 90)] {
+            let path = Path::new(root).join(clip);
+            if !path.exists() {
+                return;
+            }
+            let mut strips = Vec::new();
+            filmstrip(&path, [0, 1_000_000], rotation, (54, 96), |time, rgba| {
+                assert_eq!(rgba.len(), 54 * 96 * 4);
+                strips.push((time, rgba));
+                true
+            })
+            .unwrap();
+            assert_eq!(strips.len(), 2, "{clip}");
+            assert!(strips[1].0 >= 1_000_000, "{clip}");
+            assert!(strips[0].1.chunks(4).any(|p| p[..3] != [0, 0, 0]), "{clip}");
+            assert_ne!(strips[0].1, strips[1].1, "{clip}");
+        }
+    }
+
+    #[test]
+    fn a_consumer_can_stop_the_strip() {
+        let root = concat!(env!("CARGO_MANIFEST_DIR"), "/../../fixtures/media/");
+        let path = Path::new(root).join("h264_1080p60.mov");
+        if !path.exists() {
+            return;
+        }
+        let mut seen = 0;
+        filmstrip(&path, [0, 1_000_000, 2_000_000], 0, (4, 4), |_, _| {
+            seen += 1;
+            false
+        })
+        .unwrap();
+        assert_eq!(seen, 1);
+    }
 }

@@ -7,11 +7,19 @@ class TimelineItem {
     required this.id,
     required this.startUs,
     required this.endUs,
+    this.mediaId,
+    this.sourceInUs = 0,
+    this.speed = 1,
   });
 
   final String id;
   final int startUs;
   final int endUs;
+
+  /// Set for clips: what their filmstrip shows.
+  final String? mediaId;
+  final int sourceInUs;
+  final double speed;
 }
 
 class TimelineTrack {

@@ -41,6 +41,10 @@ pub struct TrackItemView {
     pub id: String,
     pub start_us: i64,
     pub end_us: i64,
+    /// Set for clips, so that their filmstrip can follow trims and speed.
+    pub media_id: Option<String>,
+    pub source_in_us: i64,
+    pub speed: f32,
 }
 
 pub struct TrackView {
@@ -267,6 +271,9 @@ fn track_view(session: &ProjectSession) -> Vec<TrackView> {
         id: id.to_string(),
         start_us,
         end_us,
+        media_id: None,
+        source_in_us: 0,
+        speed: 1.0,
     };
     let mut overlays: Vec<TrackItemView> = timeline
         .overlays
@@ -295,7 +302,13 @@ fn track_view(session: &ProjectSession) -> Vec<TrackView> {
             name: None,
             items: clip_positions(project)
                 .into_iter()
-                .map(|(id, start, end)| item(id, start, end))
+                .zip(&timeline.clips)
+                .map(|((id, start, end), clip)| TrackItemView {
+                    media_id: Some(clip.media_id.to_string()),
+                    source_in_us: clip.source_in_us,
+                    speed: clip.speed,
+                    ..item(id, start, end)
+                })
                 .collect(),
         },
         TrackView {

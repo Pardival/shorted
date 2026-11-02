@@ -147,14 +147,28 @@ class TrackItemView {
   final PlatformInt64 startUs;
   final PlatformInt64 endUs;
 
+  /// Set for clips, so that their filmstrip can follow trims and speed.
+  final String? mediaId;
+  final PlatformInt64 sourceInUs;
+  final double speed;
+
   const TrackItemView({
     required this.id,
     required this.startUs,
     required this.endUs,
+    this.mediaId,
+    required this.sourceInUs,
+    required this.speed,
   });
 
   @override
-  int get hashCode => id.hashCode ^ startUs.hashCode ^ endUs.hashCode;
+  int get hashCode =>
+      id.hashCode ^
+      startUs.hashCode ^
+      endUs.hashCode ^
+      mediaId.hashCode ^
+      sourceInUs.hashCode ^
+      speed.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -163,7 +177,10 @@ class TrackItemView {
           runtimeType == other.runtimeType &&
           id == other.id &&
           startUs == other.startUs &&
-          endUs == other.endUs;
+          endUs == other.endUs &&
+          mediaId == other.mediaId &&
+          sourceInUs == other.sourceInUs &&
+          speed == other.speed;
 }
 
 enum TrackKindView { widgets, video, captions, voiceOver, audio }

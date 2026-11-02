@@ -14,6 +14,7 @@ import '../export/export_panel.dart';
 import '../project/project_dialogs.dart';
 import '../preview/preview_controller.dart';
 import '../project/project_providers.dart';
+import '../timeline/filmstrips.dart';
 import '../timeline/timeline_layout.dart';
 import '../timeline/timeline_view.dart';
 import 'editor_section.dart';
@@ -275,6 +276,16 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
   /// The selected clip, for the tools. Other tracks get their tools with their tickets.
   TimelineItem? _clip;
 
+  late final _filmstrips = Filmstrips(
+    ref.read(projectGatewayProvider).filmstrip,
+  );
+
+  @override
+  void dispose() {
+    _filmstrips.dispose();
+    super.dispose();
+  }
+
   EditorController get _editor =>
       ref.read(editorProvider(widget.view.id).notifier);
 
@@ -320,10 +331,19 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
                 id: item.id,
                 startUs: item.startUs.toInt(),
                 endUs: item.endUs.toInt(),
+                mediaId: item.mediaId,
+                sourceInUs: item.sourceInUs.toInt(),
+                speed: item.speed,
               ),
           ],
         ),
     ];
+    for (final track in widget.view.tracks) {
+      for (final item in track.items) {
+        final mediaId = item.mediaId;
+        if (mediaId != null) _filmstrips.request(mediaId);
+      }
+    }
     final clip = _clip;
     return SizedBox(
       height: widget.height,
@@ -360,6 +380,7 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
               tracks: tracks,
               durationUs: widget.view.durationUs.toInt(),
               playheadUs: widget.playheadUs,
+              filmstrips: _filmstrips,
               onSelect: (item) => setState(() {
                 _clip = item != null && _isClip(item) ? item : null;
               }),

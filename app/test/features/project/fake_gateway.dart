@@ -106,6 +106,8 @@ class FakeGateway implements ProjectGateway {
           items: [
             for (final (index, clip) in project.clips.indexed)
               TrackItemView(
+                sourceInUs: big(0),
+                speed: 1,
                 id: clip,
                 startUs: big(index * 1000000),
                 endUs: big((index + 1) * 1000000),
@@ -135,6 +137,9 @@ class FakeGateway implements ProjectGateway {
 
   @override
   Stream<SaveStateView> saveEvents() => saves.stream;
+
+  @override
+  Stream<ThumbnailView> filmstrip(String mediaId) => const Stream.empty();
 
   /// Paths containing `bad` fail, like a corrupt file.
   @override

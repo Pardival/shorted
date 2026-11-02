@@ -43,6 +43,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   RustStreamSink<TaskEvent> dco_decode_StreamSink_task_event_Sse(dynamic raw);
 
   @protected
+  RustStreamSink<ThumbnailView> dco_decode_StreamSink_thumbnail_view_Sse(
+    dynamic raw,
+  );
+
+  @protected
   RustStreamSink<BigInt> dco_decode_StreamSink_u_64_Sse(dynamic raw);
 
   @protected
@@ -68,6 +73,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ExportSettings dco_decode_export_settings(dynamic raw);
+
+  @protected
+  double dco_decode_f_32(dynamic raw);
 
   @protected
   double dco_decode_f_64(dynamic raw);
@@ -127,6 +135,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   TaskEvent dco_decode_task_event(dynamic raw);
 
   @protected
+  ThumbnailView dco_decode_thumbnail_view(dynamic raw);
+
+  @protected
   TrackItemView dco_decode_track_item_view(dynamic raw);
 
   @protected
@@ -161,6 +172,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  RustStreamSink<ThumbnailView> sse_decode_StreamSink_thumbnail_view_Sse(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   RustStreamSink<BigInt> sse_decode_StreamSink_u_64_Sse(
     SseDeserializer deserializer,
   );
@@ -190,6 +206,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ExportSettings sse_decode_export_settings(SseDeserializer deserializer);
+
+  @protected
+  double sse_decode_f_32(SseDeserializer deserializer);
 
   @protected
   double sse_decode_f_64(SseDeserializer deserializer);
@@ -259,6 +278,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   TaskEvent sse_decode_task_event(SseDeserializer deserializer);
 
   @protected
+  ThumbnailView sse_decode_thumbnail_view(SseDeserializer deserializer);
+
+  @protected
   TrackItemView sse_decode_track_item_view(SseDeserializer deserializer);
 
   @protected
@@ -294,6 +316,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_StreamSink_task_event_Sse(
     RustStreamSink<TaskEvent> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_StreamSink_thumbnail_view_Sse(
+    RustStreamSink<ThumbnailView> self,
     SseSerializer serializer,
   );
 
@@ -335,6 +363,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     ExportSettings self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_f_32(double self, SseSerializer serializer);
 
   @protected
   void sse_encode_f_64(double self, SseSerializer serializer);
@@ -416,6 +447,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_task_event(TaskEvent self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_thumbnail_view(ThumbnailView self, SseSerializer serializer);
 
   @protected
   void sse_encode_track_item_view(TrackItemView self, SseSerializer serializer);

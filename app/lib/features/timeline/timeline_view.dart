@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 
 import '../../design_system/tokens.g.dart';
 import 'timeline_layout.dart';
+import 'filmstrips.dart';
 import 'timeline_painter.dart';
 
 const _headerWidth = 88.0;
@@ -28,6 +29,7 @@ class TimelineView extends StatefulWidget {
     this.onSelect,
     this.onTrim,
     this.onMove,
+    this.filmstrips,
   });
 
   final List<TimelineTrack> tracks;
@@ -42,6 +44,7 @@ class TimelineView extends StatefulWidget {
 
   /// The selected item dragged to a new position among its track.
   final void Function(TimelineItem item, int toIndex)? onMove;
+  final Filmstrips? filmstrips;
 
   @override
   State<TimelineView> createState() => _TimelineViewState();
@@ -236,6 +239,7 @@ class _TimelineViewState extends State<TimelineView> {
                   selectedId: _selectedId,
                   textDirection: Directionality.of(context),
                   dragPreview: _dragPreview,
+                  filmstrips: widget.filmstrips,
                 ),
               ),
             ),
