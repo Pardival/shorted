@@ -8,6 +8,7 @@ pub mod error;
 mod frb_generated;
 pub mod logging;
 pub mod runtime;
+pub mod spike;
 
 /// Name of this crate, used by the workspace smoke tests.
 pub const CRATE_NAME: &str = "shorted_ffi";

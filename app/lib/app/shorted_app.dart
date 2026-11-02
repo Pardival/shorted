@@ -7,10 +7,14 @@ class ShortedApp extends StatelessWidget {
     super.key,
     required this.engineVersion,
     required this.counter,
+    this.home,
   });
 
   final String engineVersion;
   final Stream<int> counter;
+
+  /// Replaces the placeholder screen; used by measurement builds.
+  final Widget? home;
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +23,9 @@ class ShortedApp extends StatelessWidget {
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       theme: ThemeData.dark(useMaterial3: true),
-      home: PlaceholderScreen(engineVersion: engineVersion, counter: counter),
+      home:
+          home ??
+          PlaceholderScreen(engineVersion: engineVersion, counter: counter),
     );
   }
 }

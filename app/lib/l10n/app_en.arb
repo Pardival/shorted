@@ -20,5 +20,24 @@
         "type": "int"
       }
     }
+  },
+  "spikeTitle": "Texture spike",
+  "spikeZeroCopy": "Zero copy",
+  "spikePixelCopy": "Pixel copy",
+  "spikeMeasuring": "Measuring: {mode}",
+  "spikeReportSaved": "Report saved: {path}",
+  "@spikeMeasuring": {
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      }
+    }
+  },
+  "@spikeReportSaved": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
   }
 }
