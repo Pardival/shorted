@@ -68,6 +68,7 @@ impl Transport {
     }
 
     /// Where playback started, and a number that changes on every jump.
+    #[cfg(target_vendor = "apple")]
     pub fn playback_start(&self) -> (i64, u64) {
         (self.position_us, self.generation)
     }
