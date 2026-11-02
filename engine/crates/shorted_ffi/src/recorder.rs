@@ -154,10 +154,6 @@ pub fn start(path: PathBuf) -> Result<(), EngineError> {
     }
 }
 
-pub fn set_paused(paused: bool) {
-    PAUSED.store(paused, Ordering::Relaxed);
-}
-
 /// The loudest sample of the last callback, from 0 to 1.
 pub fn level() -> f32 {
     f32::from_bits(LEVEL_BITS.load(Ordering::Relaxed))
