@@ -8,6 +8,7 @@ import 'waveforms.dart';
 const _itemRadius = Radius.circular(ShortedRadius.s);
 const _itemGap = 2.0;
 const _waveformStep = 2.0;
+const _rangeTint = 0.25;
 
 Color _trackColor(TrackKind kind) => switch (kind) {
   TrackKind.widgets => ShortedColors.overlay,
@@ -27,6 +28,7 @@ class TimelinePainter extends CustomPainter {
     this.dragPreview,
     this.filmstrips,
     this.waveforms,
+    this.rangeUs,
   }) : super(repaint: Listenable.merge([filmstrips, waveforms]));
 
   final TimelineLayout layout;
@@ -39,6 +41,7 @@ class TimelinePainter extends CustomPainter {
   final (int, int, int)? dragPreview;
   final Filmstrips? filmstrips;
   final Waveforms? waveforms;
+  final (int, int)? rangeUs;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -61,6 +64,7 @@ class TimelinePainter extends CustomPainter {
       _paintTrack(canvas, size, tracks[index], index, fromUs, toUs);
     }
     _paintDrag(canvas);
+    _paintRange(canvas, size);
     canvas.restore();
 
     _paintHeaders(canvas);
@@ -85,6 +89,21 @@ class TimelinePainter extends CustomPainter {
         ShortedColors.textMuted,
       );
     }
+  }
+
+  void _paintRange(Canvas canvas, Size size) {
+    final range = rangeUs;
+    if (range == null) return;
+    final (start, end) = range;
+    canvas.drawRect(
+      Rect.fromLTRB(
+        layout.xForTime(start),
+        0,
+        layout.xForTime(end),
+        size.height,
+      ),
+      Paint()..color = ShortedColors.accent.withValues(alpha: _rangeTint),
+    );
   }
 
   void _paintWaveform(
@@ -251,7 +270,8 @@ class TimelinePainter extends CustomPainter {
       old.selectedId != selectedId ||
       old.dragPreview != dragPreview ||
       old.filmstrips != filmstrips ||
-      old.waveforms != waveforms;
+      old.waveforms != waveforms ||
+      old.rangeUs != rangeUs;
 }
 
 /// Driven by `playheadUs` directly, so no widget rebuilds during a scrub.

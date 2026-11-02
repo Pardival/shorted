@@ -34,6 +34,26 @@ void moveCrop({
 Future<ProjectView> commitCrop({required String id}) =>
     RustLib.instance.api.crateApiClipsCommitCrop(id: id);
 
+/// Removes a range from every unlocked track, closing the gap (FR-TL).
+Future<ProjectView> deleteRange({
+  required PlatformInt64 startUs,
+  required PlatformInt64 endUs,
+}) => RustLib.instance.api.crateApiClipsDeleteRange(
+  startUs: startUs,
+  endUs: endUs,
+);
+
+/// Silences a range on every unlocked track.
+Future<ProjectView> muteRange({
+  required PlatformInt64 startUs,
+  required PlatformInt64 endUs,
+}) =>
+    RustLib.instance.api.crateApiClipsMuteRange(startUs: startUs, endUs: endUs);
+
+/// Splits every unlocked track at one time.
+Future<ProjectView> splitAllAt({required PlatformInt64 timeUs}) =>
+    RustLib.instance.api.crateApiClipsSplitAllAt(timeUs: timeUs);
+
 /// Turns the slow zoom of an image clip on or off (FR-CLIP-03).
 Future<ProjectView> toggleSlowZoom({required String id}) =>
     RustLib.instance.api.crateApiClipsToggleSlowZoom(id: id);

@@ -159,6 +159,36 @@
   "transitionWhipPan": "Whip pan",
   "transitionZoomIn": "Zoom in",
   "transitionZoomOut": "Zoom out",
+  "splitAll": "Split all",
+  "deleteRange": "Delete range",
+  "muteRange": "Mute range",
+  "clearRange": "Clear selection",
+  "settingsLanguage": "Language",
+  "languageSystem": "System",
+  "settingsStorage": "Storage",
+  "cacheSize": "Caches use {size} MB",
+  "clearCaches": "Clear caches",
+  "cachesCleared": "Caches cleared.",
+  "settingsShortcuts": "Keyboard shortcuts",
+  "settingsAbout": "About",
+  "openSourceLicences": "Open-source licences",
+  "sourceCode": "Source code: github.com/Pardival/shorted",
+  "shortcutPlay": "Play or pause",
+  "shortcutBackForward": "One second back or forward",
+  "shortcutPause": "Pause",
+  "shortcutSplit": "Split",
+  "shortcutDelete": "Delete the selected clip",
+  "shortcutUndo": "Undo",
+  "shortcutRedo": "Redo",
+  "shortcutNudge": "One frame back or forward",
+  "shortcutZoom": "Zoom the timeline",
+  "@cacheSize": {
+    "placeholders": {
+      "size": {
+        "type": "int"
+      }
+    }
+  },
   "split": "Split",
   "exportTitle": "Export your short",
   "exportResolution": "Resolution",

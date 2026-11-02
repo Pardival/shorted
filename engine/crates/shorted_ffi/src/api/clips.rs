@@ -147,6 +147,38 @@ pub async fn commit_crop(id: String) -> Result<ProjectView, EngineFailure> {
     })
 }
 
+/// Removes a range from every unlocked track, closing the gap (FR-TL).
+pub async fn delete_range(start_us: i64, end_us: i64) -> Result<ProjectView, EngineFailure> {
+    edit(move |_| {
+        Ok(Command::DeleteRange {
+            start_us,
+            end_us,
+            id_seed: Uuid::now_v7(),
+        })
+    })
+}
+
+/// Silences a range on every unlocked track.
+pub async fn mute_range(start_us: i64, end_us: i64) -> Result<ProjectView, EngineFailure> {
+    edit(move |_| {
+        Ok(Command::MuteRange {
+            start_us,
+            end_us,
+            id_seed: Uuid::now_v7(),
+        })
+    })
+}
+
+/// Splits every unlocked track at one time.
+pub async fn split_all_at(time_us: i64) -> Result<ProjectView, EngineFailure> {
+    edit(move |_| {
+        Ok(Command::SplitAllAt {
+            t_us: time_us,
+            id_seed: Uuid::now_v7(),
+        })
+    })
+}
+
 /// A slow zoom on the picture as it is framed.
 fn slow_zoom(crop: &Crop) -> KenBurns {
     KenBurns {

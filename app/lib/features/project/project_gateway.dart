@@ -72,6 +72,11 @@ abstract interface class ProjectGateway {
   Future<ProjectView> renameAudioTrack(String id, String name);
   Future<ProjectView> setAudioTrackMuted(String? id, {required bool muted});
   Future<Uint8List> peaks(String mediaId);
+  Future<ProjectView> deleteRange(int startUs, int endUs);
+  Future<ProjectView> muteRange(int startUs, int endUs);
+  Future<ProjectView> splitAllAt(int timeUs);
+  Future<int> cacheBytes();
+  Future<void> clearCaches();
   Future<ProjectView> setClipSpeed(String id, double speed);
   Future<ProjectView> setClipColor(
     String id, {
@@ -276,6 +281,25 @@ class EngineGateway implements ProjectGateway {
   @override
   Future<ProjectView> setTransitionForAll(look.TransitionKindView kind) =>
       look.setTransitionForAll(kind: kind);
+
+  @override
+  Future<ProjectView> deleteRange(int startUs, int endUs) =>
+      clips.deleteRange(startUs: startUs, endUs: endUs);
+
+  @override
+  Future<ProjectView> muteRange(int startUs, int endUs) =>
+      clips.muteRange(startUs: startUs, endUs: endUs);
+
+  @override
+  Future<ProjectView> splitAllAt(int timeUs) =>
+      clips.splitAllAt(timeUs: timeUs);
+
+  @override
+  Future<int> cacheBytes() async =>
+      (await media.cacheBytes(root: root)).toInt();
+
+  @override
+  Future<void> clearCaches() => media.clearCaches(root: root);
 
   @override
   Future<Uint8List> peaks(String mediaId) => audio.mediaPeaks(mediaId: mediaId);

@@ -321,6 +321,45 @@ pub async fn relink_media(id: String, path: String) -> Result<ProjectView, Engin
     })
 }
 
+/// The cache folder of every project under `root`.
+fn cache_folders(root: &Path) -> Vec<PathBuf> {
+    let projects = std::fs::read_dir(root.join("projects"));
+    projects
+        .into_iter()
+        .flatten()
+        .flatten()
+        .map(|entry| entry.path().join("cache"))
+        .filter(|folder| folder.is_dir())
+        .collect()
+}
+
+fn folder_bytes(folder: &Path) -> u64 {
+    let entries = std::fs::read_dir(folder);
+    entries
+        .into_iter()
+        .flatten()
+        .flatten()
+        .filter_map(|entry| entry.metadata().ok())
+        .map(|metadata| metadata.len())
+        .sum()
+}
+
+/// Bytes used by thumbnails and waveforms, which can all be made again.
+pub async fn cache_bytes(root: String) -> u64 {
+    let folders = cache_folders(Path::new(&root));
+    folders.iter().map(|folder| folder_bytes(folder)).sum()
+}
+
+/// Removes every cache. Projects and media are left alone.
+pub async fn clear_caches(root: String) -> Result<(), EngineFailure> {
+    for folder in cache_folders(Path::new(&root)) {
+        std::fs::remove_dir_all(folder)
+            .map_err(shorted_store::session::StoreError::from)
+            .map_err(EngineError::from)?;
+    }
+    Ok(())
+}
+
 pub struct ThumbnailView {
     pub time_us: i64,
     pub width: u32,
@@ -543,6 +582,23 @@ mod filmstrip_tests {
         assert_eq!(file, Path::new("/p/cache/filmstrip-abc123.bin"));
         media.content_hash = "../../evil".into();
         assert!(strip_cache(&media, Path::new("/p")).is_none());
+    }
+
+    #[test]
+    fn clearing_caches_keeps_projects() {
+        let root = std::env::temp_dir().join(format!("shorted-cache-{}", Uuid::now_v7()));
+        let project = root.join("projects").join("one");
+        std::fs::create_dir_all(project.join("cache")).unwrap();
+        std::fs::write(project.join("cache").join("peaks.bin"), [0; 10]).unwrap();
+        std::fs::write(project.join("project.json"), "{}").unwrap();
+
+        let folders = cache_folders(&root);
+        assert_eq!(folders.len(), 1);
+        assert_eq!(folder_bytes(&folders[0]), 10);
+        std::fs::remove_dir_all(&folders[0]).unwrap();
+        assert!(cache_folders(&root).is_empty());
+        assert!(project.join("project.json").exists());
+        std::fs::remove_dir_all(root).unwrap();
     }
 
     #[test]

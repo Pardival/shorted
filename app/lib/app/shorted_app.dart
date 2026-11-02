@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../design_system/theme.dart';
+import '../features/settings/app_settings.dart';
 import '../l10n/generated/app_localizations.dart';
 import 'router.dart';
 
@@ -46,13 +48,16 @@ class _ShortedAppState extends State<ShortedApp> {
         home: measurement,
       );
     }
-    return MaterialApp.router(
-      onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      theme: shortedTheme(),
-      routerConfig: _router,
-      debugShowCheckedModeBanner: false,
+    return Consumer(
+      builder: (context, ref, child) => MaterialApp.router(
+        onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: ref.watch(localeProvider),
+        theme: shortedTheme(),
+        routerConfig: _router,
+        debugShowCheckedModeBanner: false,
+      ),
     );
   }
 }

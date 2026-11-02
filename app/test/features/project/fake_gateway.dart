@@ -234,6 +234,31 @@ class FakeGateway implements ProjectGateway {
   @override
   Future<Uint8List> peaks(String mediaId) async => Uint8List(0);
 
+  final rangeCalls = <String>[];
+  var cleared = 0;
+
+  Future<ProjectView> _range(String call) async {
+    rangeCalls.add(call);
+    return view();
+  }
+
+  @override
+  Future<ProjectView> deleteRange(int startUs, int endUs) =>
+      _range('delete $startUs $endUs');
+
+  @override
+  Future<ProjectView> muteRange(int startUs, int endUs) =>
+      _range('mute $startUs $endUs');
+
+  @override
+  Future<ProjectView> splitAllAt(int timeUs) => _range('split $timeUs');
+
+  @override
+  Future<int> cacheBytes() async => 3 * 1024 * 1024;
+
+  @override
+  Future<void> clearCaches() async => cleared++;
+
   final lookCalls = <String>[];
 
   Future<ProjectView> _look(String call) async {

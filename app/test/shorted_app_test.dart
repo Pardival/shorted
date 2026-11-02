@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shorted/app/shorted_app.dart';
@@ -250,6 +251,57 @@ void main() {
     await tester.tap(find.byTooltip('Slow zoom'));
     await tester.pumpAndSettle();
     expect(gateway.slowZooms, ['still']);
+  });
+
+  testWidgets('keyboard shortcuts reach the editor', (tester) async {
+    final project = FakeProject('p1', 'Mine')..clips.add('c1');
+    final gateway = FakeGateway()..projects.add(project);
+    await open(
+      tester,
+      '/editor/p1/clips',
+      size: const Size(1280, 800),
+      gateway: gateway,
+    );
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyL);
+    await tester.pump();
+    expect(find.textContaining('0:01'), findsWidgets);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyJ);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyS);
+    await tester.pumpAndSettle();
+    expect(gateway.clipCalls.single, startsWith('split c1'));
+
+    final timeline = tester.getTopLeft(find.byType(TimelineView));
+    await tester.tapAt(timeline + const Offset(100, 40));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.sendKeyEvent(LogicalKeyboardKey.delete);
+    await tester.pumpAndSettle();
+    expect(gateway.clipCalls.last, 'delete c1');
+  });
+
+  testWidgets('a long press on the ruler selects a range for every track', (
+    tester,
+  ) async {
+    final project = FakeProject('p1', 'Mine')..clips.add('c1');
+    final gateway = FakeGateway()..projects.add(project);
+    await open(
+      tester,
+      '/editor/p1/clips',
+      size: const Size(1280, 800),
+      gateway: gateway,
+    );
+    final timeline = tester.getTopLeft(find.byType(TimelineView));
+    final gesture = await tester.startGesture(timeline + const Offset(128, 6));
+    await tester.pump(const Duration(milliseconds: 700));
+    await gesture.moveBy(const Offset(40, 0));
+    await tester.pump();
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Delete range'));
+    await tester.pumpAndSettle();
+    expect(gateway.rangeCalls, ['delete 1000000 2000000']);
+    expect(find.byTooltip('Delete range'), findsNothing);
   });
 
   testWidgets('a project that cannot open shows a human message', (

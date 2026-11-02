@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -32,6 +34,9 @@ class TimelineView extends StatefulWidget {
     this.onMove,
     this.filmstrips,
     this.waveforms,
+    this.rangeUs,
+    this.onRange,
+    this.zoomRequests,
   });
 
   final List<TimelineTrack> tracks;
@@ -48,6 +53,13 @@ class TimelineView extends StatefulWidget {
   final void Function(TimelineItem item, int toIndex)? onMove;
   final Filmstrips? filmstrips;
   final Waveforms? waveforms;
+
+  /// The range selected on the ruler, owned by the parent.
+  final (int, int)? rangeUs;
+  final ValueChanged<(int, int)?>? onRange;
+
+  /// Each value multiplies the zoom, around the playhead.
+  final Stream<double>? zoomRequests;
 
   @override
   State<TimelineView> createState() => _TimelineViewState();
@@ -70,6 +82,41 @@ class _TimelineViewState extends State<TimelineView> {
   (int, int, int)? _dragPreview;
   int? _lastSnap;
   var _pointers = 0;
+  int? _rangeAnchor;
+  StreamSubscription<double>? _zoomRequests;
+
+  @override
+  void initState() {
+    super.initState();
+    _zoomRequests = widget.zoomRequests?.listen(_zoomBy);
+  }
+
+  @override
+  void dispose() {
+    unawaited(_zoomRequests?.cancel());
+    super.dispose();
+  }
+
+  void _zoomBy(double factor) {
+    final focusX = _layout.xForTime(widget.playheadUs.value);
+    setState(() => _layout = _layout.zoomed(factor, focusX));
+  }
+
+  int _clampedTime(double x) =>
+      _layout.timeForX(x).clamp(0, widget.durationUs).toInt();
+
+  void _rangeStart(LongPressStartDetails details) {
+    if (details.localPosition.dy >= _rulerHeight) return;
+    _rangeAnchor = _clampedTime(details.localPosition.dx);
+  }
+
+  void _rangeMove(LongPressMoveUpdateDetails details) {
+    final anchor = _rangeAnchor;
+    if (anchor == null) return;
+    final time = _clampedTime(details.localPosition.dx);
+    if (time == anchor) return;
+    widget.onRange?.call(time < anchor ? (time, anchor) : (anchor, time));
+  }
 
   void _pointerDown(PointerDownEvent event) {
     _pointers++;
@@ -184,6 +231,7 @@ class _TimelineViewState extends State<TimelineView> {
 
   void _tap(TapUpDetails details) {
     final position = details.localPosition;
+    if (widget.rangeUs != null) widget.onRange?.call(null);
     final index = _layout.trackAt(position.dy, widget.tracks.length);
     if (index == null) {
       _scrub(position.dx);
@@ -217,6 +265,9 @@ class _TimelineViewState extends State<TimelineView> {
       onPointerSignal: _onPointerSignal,
       child: GestureDetector(
         onTapUp: _tap,
+        onLongPressStart: _rangeStart,
+        onLongPressMoveUpdate: _rangeMove,
+        onLongPressEnd: (_) => _rangeAnchor = null,
         onScaleStart: (_) => _pinchStart = _layout,
         onScaleUpdate: (details) {
           final start = _pinchStart;
@@ -244,6 +295,7 @@ class _TimelineViewState extends State<TimelineView> {
                   dragPreview: _dragPreview,
                   filmstrips: widget.filmstrips,
                   waveforms: widget.waveforms,
+                  rangeUs: widget.rangeUs,
                 ),
               ),
             ),

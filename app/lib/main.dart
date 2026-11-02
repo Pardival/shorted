@@ -11,6 +11,7 @@ import 'bridge/frb_generated.dart';
 import 'features/preview/preview_controller.dart';
 import 'features/project/project_gateway.dart';
 import 'features/project/project_providers.dart';
+import 'features/settings/app_settings.dart';
 import 'features/spike/spike_screen.dart';
 
 const _runSpike = bool.fromEnvironment('SHORTED_SPIKE');
@@ -20,9 +21,13 @@ Future<void> main() async {
   await RustLib.init();
   await _startLogging();
   final support = await getApplicationSupportDirectory();
+  final settings = File('${support.path}/settings.json');
+  final locale = await loadLocale(settings);
   runApp(
     ProviderScope(
       overrides: [
+        settingsFileProvider.overrideWithValue(settings),
+        savedLocaleProvider.overrideWithValue(locale),
         projectGatewayProvider.overrideWithValue(EngineGateway(support.path)),
         previewTransportProvider.overrideWithValue(EngineTransport()),
       ],

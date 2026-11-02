@@ -14,6 +14,7 @@ import '../enhance/enhance_panel.dart';
 import '../export/export_panel.dart';
 import '../project/project_dialogs.dart';
 import '../preview/preview_controller.dart';
+import '../project/project_gateway.dart';
 import '../project/project_providers.dart';
 import '../timeline/filmstrips.dart';
 import '../timeline/timeline_layout.dart';
@@ -219,10 +220,10 @@ class TransportBar extends ConsumerStatefulWidget {
   final VoidCallback? onRedo;
 
   @override
-  ConsumerState<TransportBar> createState() => _TransportBarState();
+  ConsumerState<TransportBar> createState() => TransportBarState();
 }
 
-class _TransportBarState extends ConsumerState<TransportBar>
+class TransportBarState extends ConsumerState<TransportBar>
     with SingleTickerProviderStateMixin {
   late final Ticker _ticker = createTicker(_follow);
   late final PreviewTransport _transport = ref.read(previewTransportProvider);
@@ -256,7 +257,11 @@ class _TransportBarState extends ConsumerState<TransportBar>
     }
   }
 
-  void _toggle() {
+  void pause() {
+    if (_transport.isPlaying) toggle();
+  }
+
+  void toggle() {
     if (_transport.isPlaying) {
       _transport.pause();
       _ticker.stop();
@@ -277,7 +282,7 @@ class _TransportBarState extends ConsumerState<TransportBar>
           ShortedIconButton(
             icon: _transport.isPlaying ? Icons.pause : Icons.play_arrow,
             tooltip: l10n.playPause,
-            onPressed: widget.durationUs > 0 ? _toggle : null,
+            onPressed: widget.durationUs > 0 ? toggle : null,
           ),
           const SizedBox(width: ShortedSpace.s),
           Expanded(
@@ -308,12 +313,14 @@ class _TransportBarState extends ConsumerState<TransportBar>
 class TimelineArea extends ConsumerStatefulWidget {
   const TimelineArea({
     super.key,
+    this.zoomRequests,
     required this.height,
     required this.view,
     required this.playheadUs,
   });
 
   final double height;
+  final Stream<double>? zoomRequests;
   final ProjectView view;
   final ValueNotifier<int> playheadUs;
 
@@ -322,6 +329,8 @@ class TimelineArea extends ConsumerStatefulWidget {
 }
 
 class _TimelineAreaState extends ConsumerState<TimelineArea> {
+  (int, int)? _range;
+
   /// The selected clip, for the tools. Other tracks get their tools with their tickets.
   TimelineItem? _clip;
 
@@ -348,6 +357,13 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
     } on Object catch (error) {
       if (mounted) showToast(context, errorMessage(l10n, error));
     }
+  }
+
+  Future<void> _onRange(
+    Future<ProjectView> Function(ProjectGateway gateway) action,
+  ) async {
+    setState(() => _range = null);
+    await _guard(() => _editor.apply(action));
   }
 
   bool get _cropping => ref.read(cropTargetProvider) != null;
@@ -432,6 +448,7 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
       }
     }
     final clip = _clip;
+    final range = _range;
     final cropping = ref.watch(cropTargetProvider) != null;
     ref.watch(selectedClipProvider);
     final slowZoom = clip == null ? null : _slowZoom(clip);
@@ -439,7 +456,38 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
       height: widget.height,
       child: Column(
         children: [
-          if (clip != null)
+          if (range != null)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ShortedIconButton(
+                  icon: Icons.vertical_split_outlined,
+                  tooltip: l10n.splitAll,
+                  onPressed: () =>
+                      _onRange((gateway) => gateway.splitAllAt(range.$1)),
+                ),
+                ShortedIconButton(
+                  icon: Icons.delete_sweep_outlined,
+                  tooltip: l10n.deleteRange,
+                  onPressed: () => _onRange(
+                    (gateway) => gateway.deleteRange(range.$1, range.$2),
+                  ),
+                ),
+                ShortedIconButton(
+                  icon: Icons.volume_off_outlined,
+                  tooltip: l10n.muteRange,
+                  onPressed: () => _onRange(
+                    (gateway) => gateway.muteRange(range.$1, range.$2),
+                  ),
+                ),
+                ShortedIconButton(
+                  icon: Icons.close,
+                  tooltip: l10n.clearRange,
+                  onPressed: () => setState(() => _range = null),
+                ),
+              ],
+            )
+          else if (clip != null)
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -492,6 +540,9 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
               playheadUs: widget.playheadUs,
               filmstrips: _filmstrips,
               waveforms: _waveforms,
+              rangeUs: range,
+              onRange: (next) => setState(() => _range = next),
+              zoomRequests: widget.zoomRequests,
               onSelect: (item) {
                 _stopCropping();
                 setState(() {
