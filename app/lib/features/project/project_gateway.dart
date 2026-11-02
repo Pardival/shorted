@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../bridge/api.dart' as tasks;
+import '../../bridge/api/ai.dart' as ai;
 import '../../bridge/api/arrange.dart' as arrange;
 import '../../bridge/api/audio.dart' as audio;
 import '../../bridge/api/brand_kit.dart' as brand;
@@ -105,6 +106,17 @@ abstract interface class ProjectGateway {
   Future<ProjectView> splitAllAt(int timeUs);
   Future<ProjectView> collectMedia();
   speech.ModelView speechModel();
+
+  Future<ai.AiSettingsView> aiSettings();
+  Future<ai.AiSettingsView> saveAiSettings(
+    ai.AiProviderView provider, {
+    required String model,
+    required String baseUrl,
+    String? key,
+  });
+  Future<ai.AiSettingsView> forgetAiKey();
+  Future<void> testAiConnection();
+  String defaultAiModel(ai.AiProviderView provider);
   Stream<TaskEvent> downloadSpeechModel();
   Future<void> deleteSpeechModel();
   Stream<TaskEvent> transcribe();
@@ -687,6 +699,33 @@ class EngineGateway implements ProjectGateway {
 
   @override
   speech.ModelView speechModel() => speech.speechModel(root: root);
+
+  @override
+  Future<ai.AiSettingsView> aiSettings() => ai.aiSettings(root: root);
+
+  @override
+  Future<ai.AiSettingsView> saveAiSettings(
+    ai.AiProviderView provider, {
+    required String model,
+    required String baseUrl,
+    String? key,
+  }) => ai.saveAiSettings(
+    root: root,
+    provider: provider,
+    model: model,
+    baseUrl: baseUrl,
+    key: key,
+  );
+
+  @override
+  Future<ai.AiSettingsView> forgetAiKey() => ai.forgetAiKey(root: root);
+
+  @override
+  Future<void> testAiConnection() => ai.testAiConnection(root: root);
+
+  @override
+  String defaultAiModel(ai.AiProviderView provider) =>
+      ai.defaultAiModel(provider: provider);
 
   @override
   Stream<TaskEvent> downloadSpeechModel() =>

@@ -463,5 +463,23 @@
       }
     }
   },
-  "reasonDuplicate": "said again later"
+  "reasonDuplicate": "said again later",
+  "aiProviders": "AI providers",
+  "aiExplained": "Optional. With your own key, an AI can arrange your clips. Nothing is sent without asking you first.",
+  "aiModel": "Model",
+  "aiBaseUrl": "Server address",
+  "aiKey": "API key",
+  "aiKeyHelp": "Kept in the system keychain, never in a file.",
+  "aiKeyStored": "A key is stored. Type a new one to replace it.",
+  "save": "Save",
+  "aiTest": "Test connection",
+  "aiForgetKey": "Remove the stored key",
+  "aiSaved": "Saved.",
+  "aiConnected": "Connected: the key works.",
+  "aiKeyRejected": "The provider refused this key. Check that it is complete and still valid.",
+  "aiRateLimited": "Too many requests, or no credit left on this account. Try again later.",
+  "aiUnavailable": "The provider is having trouble. Try again later.",
+  "aiUnreachable": "No answer. Check your connection and the server address.",
+  "aiNotConfigured": "Choose a provider and add its key first.",
+  "aiKeyStorage": "This device has no safe place for the key yet, so it was not kept."
 }

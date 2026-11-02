@@ -1,6 +1,7 @@
 //! Engine errors. Dart only ever receives a stable [`ErrorCode`], never a message: messages may
 //! hold paths or user content.
 
+use shorted_ai::providers::AiError;
 use shorted_store::session::StoreError;
 use thiserror::Error;
 
@@ -22,6 +23,12 @@ pub enum EngineError {
     ExportFailed,
     #[error("the file is beyond the size limits")]
     TooLarge,
+    #[error("no AI provider is set up")]
+    AiNotConfigured,
+    #[error("the key could not be stored safely")]
+    KeyStorage,
+    #[error("the AI provider failed")]
+    Ai(shorted_ai::providers::AiError),
     #[error("project storage failed")]
     Store(#[from] shorted_store::session::StoreError),
 }
@@ -46,6 +53,20 @@ pub enum ErrorCode {
     ExportFailed,
     /// The file is larger than the app accepts (docs/08).
     TooLarge,
+    /// No AI provider, or no key for it.
+    AiNotConfigured,
+    /// The system has no safe place for the key here.
+    KeyStorage,
+    /// The provider refused the key (401, 403).
+    AiKeyRejected,
+    /// Too many requests, or no credit left (429).
+    AiRateLimited,
+    /// The provider is having trouble (5xx).
+    AiUnavailable,
+    /// No answer: offline, wrong address, or too slow.
+    AiUnreachable,
+    /// The provider answered something unusable.
+    AiBadResponse,
 }
 
 impl EngineError {
@@ -58,6 +79,15 @@ impl EngineError {
             Self::DifferentMedia => ErrorCode::DifferentMedia,
             Self::ExportFailed => ErrorCode::ExportFailed,
             Self::TooLarge => ErrorCode::TooLarge,
+            Self::AiNotConfigured => ErrorCode::AiNotConfigured,
+            Self::KeyStorage => ErrorCode::KeyStorage,
+            Self::Ai(error) => match error {
+                AiError::KeyRejected => ErrorCode::AiKeyRejected,
+                AiError::RateLimited => ErrorCode::AiRateLimited,
+                AiError::Unavailable => ErrorCode::AiUnavailable,
+                AiError::Network => ErrorCode::AiUnreachable,
+                AiError::BadResponse(_) => ErrorCode::AiBadResponse,
+            },
             Self::Store(error) => match error {
                 StoreError::Io(_) | StoreError::WriterStopped => ErrorCode::Storage,
                 StoreError::NewerVersion { .. } => ErrorCode::NewerProject,

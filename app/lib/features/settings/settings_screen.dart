@@ -7,6 +7,7 @@ import '../../design_system/tokens.g.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../project/project_dialogs.dart';
 import '../project/project_providers.dart';
+import 'ai_settings_section.dart';
 import 'app_settings.dart';
 
 const _bytesPerMegabyte = 1024 * 1024;
@@ -75,6 +76,8 @@ class SettingsScreen extends ConsumerWidget {
                 ),
             ],
           ),
+          _Heading(l10n.aiProviders),
+          const AiSettingsSection(),
           _Heading(l10n.speechModelTitle),
           if (model.ready) ...[
             ShortedListRow(title: l10n.speechModelReady),

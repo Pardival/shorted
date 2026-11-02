@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
+import 'package:shorted/bridge/api/ai.dart';
 import 'package:shorted/bridge/api/arrange.dart';
 import 'package:shorted/bridge/api/audio.dart';
 import 'package:shorted/bridge/api/brand_kit.dart';
@@ -248,6 +249,57 @@ class FakeGateway implements ProjectGateway {
     arrangeCalls.add('undo');
     return view();
   }
+
+  AiSettingsView ai = const AiSettingsView(
+    model: '',
+    baseUrl: '',
+    hasKey: false,
+  );
+  final aiCalls = <String>[];
+  ErrorCode? aiTestFails;
+
+  @override
+  Future<AiSettingsView> aiSettings() async => ai;
+
+  @override
+  Future<AiSettingsView> saveAiSettings(
+    AiProviderView provider, {
+    required String model,
+    required String baseUrl,
+    String? key,
+  }) async {
+    // Only whether a key came is recorded: a test must not keep it either.
+    aiCalls.add('save ${provider.name} $model $baseUrl ${key != null}');
+    ai = AiSettingsView(
+      provider: provider,
+      model: model,
+      baseUrl: baseUrl,
+      hasKey: ai.hasKey || key != null,
+    );
+    return ai;
+  }
+
+  @override
+  Future<AiSettingsView> forgetAiKey() async {
+    aiCalls.add('forget');
+    ai = AiSettingsView(
+      provider: ai.provider,
+      model: ai.model,
+      baseUrl: ai.baseUrl,
+      hasKey: false,
+    );
+    return ai;
+  }
+
+  @override
+  Future<void> testAiConnection() async {
+    aiCalls.add('test');
+    final code = aiTestFails;
+    if (code != null) throw EngineFailure(code: code);
+  }
+
+  @override
+  String defaultAiModel(AiProviderView provider) => '${provider.name}-default';
 
   final versions = <VersionView>[];
   final restored = <String>[];
