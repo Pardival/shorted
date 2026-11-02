@@ -400,6 +400,88 @@ pub async fn set_track_flags(
     })
 }
 
+/// Starts recording the microphone into the project (FR-AUD-03).
+#[cfg(target_vendor = "apple")]
+pub async fn start_voice_over() -> Result<(), EngineFailure> {
+    let folder = transport().folder.clone();
+    let media = folder.join("media");
+    std::fs::create_dir_all(&media)
+        .map_err(shorted_store::session::StoreError::from)
+        .map_err(EngineError::from)?;
+    crate::recorder::start(media.join(format!("voice-{}.wav", Uuid::now_v7())))?;
+    Ok(())
+}
+
+/// Stops recording and places the take on the Voice-over track at `start_us`.
+#[cfg(target_vendor = "apple")]
+pub async fn stop_voice_over(start_us: i64) -> Result<ProjectView, EngineFailure> {
+    let take = crate::recorder::stop();
+    on_command_thread(move || {
+        with_active(|session| {
+            let Some(path) = take else {
+                return Ok(view_of(session));
+            };
+            let folder = crate::api::projects::active_folder(session.project().id)
+                .ok_or_else(|| shorted_store::session::StoreError::from(no_folder()))?;
+            let media = crate::api::media::make_media(&path, &folder).map_err(|error| {
+                tracing::error!(%error, "voice-over not imported");
+                shorted_store::session::StoreError::from(no_folder())
+            })?;
+            let mut item = audio_item(&media, AudioRole::VoiceOver, start_us.max(0), Uuid::nil());
+            item.track = AudioTrackRef::VoiceOver;
+            session.execute(&Command::Group {
+                label: "voice_over".into(),
+                commands: vec![
+                    Command::ImportMedia { media: vec![media] },
+                    Command::AddAudio {
+                        item: Box::new(item),
+                    },
+                ],
+            })?;
+            Ok(view_of(session))
+        })
+    })
+}
+
+#[cfg(target_vendor = "apple")]
+fn no_folder() -> std::io::Error {
+    std::io::Error::other("voice-over not saved")
+}
+
+/// The microphone's level while recording, from 0 to 1.
+#[cfg(target_vendor = "apple")]
+#[flutter_rust_bridge::frb(sync)]
+pub fn voice_level() -> f32 {
+    crate::recorder::level()
+}
+
+#[cfg(target_vendor = "apple")]
+#[flutter_rust_bridge::frb(sync)]
+pub fn pause_voice_over(paused: bool) {
+    crate::recorder::set_paused(paused);
+}
+
+/// No microphone capture on this platform yet.
+#[cfg(not(target_vendor = "apple"))]
+pub async fn start_voice_over() -> Result<(), EngineFailure> {
+    Err(EngineError::Internal("no microphone capture here".into()).into())
+}
+
+#[cfg(not(target_vendor = "apple"))]
+pub async fn stop_voice_over(_start_us: i64) -> Result<ProjectView, EngineFailure> {
+    Err(EngineError::Internal("no microphone capture here".into()).into())
+}
+
+#[cfg(not(target_vendor = "apple"))]
+#[flutter_rust_bridge::frb(sync)]
+pub fn voice_level() -> f32 {
+    0.0
+}
+
+#[cfg(not(target_vendor = "apple"))]
+#[flutter_rust_bridge::frb(sync)]
+pub fn pause_voice_over(_paused: bool) {}
+
 /// Loudest absolute sample of each span, scaled to a byte.
 fn peaks(samples: &[f32]) -> Vec<u8> {
     let span = (SAMPLE_RATE as usize / PEAKS_PER_SECOND * CHANNELS).max(1);

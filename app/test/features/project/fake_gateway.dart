@@ -262,6 +262,17 @@ class FakeGateway implements ProjectGateway {
   Future<ProjectView> addAudioTrack() => _audio('add track');
 
   @override
+  Future<void> startVoiceOver() async {
+    audioCalls.add('record');
+  }
+
+  @override
+  Future<ProjectView> stopVoiceOver(int startUs) => _audio('stop $startUs');
+
+  @override
+  double get voiceLevel => 0.5;
+
+  @override
   Future<ProjectView> removeAudioTrack(String id) => _audio('remove $id');
 
   @override

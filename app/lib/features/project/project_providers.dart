@@ -26,6 +26,18 @@ final cropTargetProvider =
       ({String projectId, String clipId})?
     >(CropTarget.new);
 
+/// True while a voice-over records: the video plays for the whole take.
+class RecordingVoice extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void set(bool recording) => state = recording;
+}
+
+final recordingVoiceProvider = NotifierProvider<RecordingVoice, bool>(
+  RecordingVoice.new,
+);
+
 /// The clip selected on the timeline, for the panels that edit one clip.
 class SelectedClip extends Notifier<String?> {
   @override

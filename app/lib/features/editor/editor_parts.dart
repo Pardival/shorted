@@ -276,6 +276,9 @@ class TransportBarState extends ConsumerState<TransportBar>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    ref.listen(recordingVoiceProvider, (_, recording) {
+      if (recording != _transport.isPlaying) toggle();
+    });
     return SizedBox(
       height: ShortedSize.transport,
       child: Row(

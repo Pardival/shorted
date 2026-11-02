@@ -12,7 +12,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 import 'projects.dart';
 
-// These functions are ignored because they are not marked as `pub`: `audio_item`, `decode_peaks`, `item_views`, `new_track`, `peaks`, `sound_view`, `trim_commands`
+// These functions are ignored because they are not marked as `pub`: `audio_item`, `decode_peaks`, `item_views`, `new_track`, `no_folder`, `peaks`, `sound_view`, `trim_commands`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `eq`, `from`, `from`
 
 /// The original sound of a clip (FR-AUD-02).
@@ -115,6 +115,20 @@ Future<ProjectView> setTrackFlags({
   locked: locked,
   hidden: hidden,
 );
+
+/// Starts recording the microphone into the project (FR-AUD-03).
+Future<void> startVoiceOver() =>
+    RustLib.instance.api.crateApiAudioStartVoiceOver();
+
+/// Stops recording and places the take on the Voice-over track at `start_us`.
+Future<ProjectView> stopVoiceOver({required PlatformInt64 startUs}) =>
+    RustLib.instance.api.crateApiAudioStopVoiceOver(startUs: startUs);
+
+/// The microphone's level while recording, from 0 to 1.
+double voiceLevel() => RustLib.instance.api.crateApiAudioVoiceLevel();
+
+void pauseVoiceOver({required bool paused}) =>
+    RustLib.instance.api.crateApiAudioPauseVoiceOver(paused: paused);
 
 /// The waveform of a media, 100 values per second, from the cache when possible.
 Future<Uint8List> mediaPeaks({required String mediaId}) =>

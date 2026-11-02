@@ -13,6 +13,8 @@ mod frb_generated;
 pub mod logging;
 #[cfg(target_vendor = "apple")]
 pub mod preview_session;
+#[cfg(target_vendor = "apple")]
+mod recorder;
 pub mod runtime;
 pub mod spike;
 mod transport;

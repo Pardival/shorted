@@ -181,7 +181,7 @@ fn location_for(path: &Path, folder: &Path, id: Id) -> Result<MediaLocation, Eng
     })
 }
 
-fn make_media(path: &Path, folder: &Path) -> Result<MediaRef, EngineError> {
+pub(crate) fn make_media(path: &Path, folder: &Path) -> Result<MediaRef, EngineError> {
     let kind = classify(path).ok_or(EngineError::UnsupportedMedia)?;
     let probe = match kind {
         MediaKind::Video => video_probe(path)?,

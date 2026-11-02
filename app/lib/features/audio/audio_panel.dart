@@ -1,5 +1,6 @@
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../bridge/api/audio.dart';
@@ -59,6 +60,8 @@ class AudioPanel extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.all(ShortedSpace.m),
       children: [
+        _VoiceRecorder(run: run),
+        const SizedBox(height: ShortedSpace.s),
         SecondaryButton(label: l10n.addAudio, onPressed: addSound),
         const SizedBox(height: ShortedSpace.s),
         SecondaryButton(
@@ -108,6 +111,89 @@ class AudioPanel extends ConsumerWidget {
               ),
             ),
           ),
+      ],
+    );
+  }
+}
+
+const _countIn = 3;
+
+/// Count-in, then records while the video plays. The take lands where recording began.
+class _VoiceRecorder extends ConsumerStatefulWidget {
+  const _VoiceRecorder({required this.run});
+
+  final _Run run;
+
+  @override
+  ConsumerState<_VoiceRecorder> createState() => _VoiceRecorderState();
+}
+
+class _VoiceRecorderState extends ConsumerState<_VoiceRecorder>
+    with SingleTickerProviderStateMixin {
+  late final Ticker _meter = createTicker((_) {
+    setState(() => _level = ref.read(projectGatewayProvider).voiceLevel);
+  });
+  int? _count;
+  int? _startUs;
+  double _level = 0;
+
+  @override
+  void dispose() {
+    _meter.dispose();
+    super.dispose();
+  }
+
+  Future<void> _record() async {
+    final l10n = AppLocalizations.of(context);
+    for (var count = _countIn; count > 0; count--) {
+      setState(() => _count = count);
+      await Future<void>.delayed(const Duration(seconds: 1));
+      if (!mounted) return;
+    }
+    setState(() => _count = null);
+    final gateway = ref.read(projectGatewayProvider);
+    try {
+      await gateway.startVoiceOver();
+    } on Object {
+      if (mounted) showToast(context, l10n.micUnavailable);
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _startUs = ref.read(previewTransportProvider).positionUs);
+    ref.read(recordingVoiceProvider.notifier).set(true);
+    await _meter.start();
+  }
+
+  Future<void> _stop() async {
+    final startUs = _startUs;
+    if (startUs == null) return;
+    _meter.stop();
+    ref.read(recordingVoiceProvider.notifier).set(false);
+    setState(() => _startUs = null);
+    await widget.run((gateway) => gateway.stopVoiceOver(startUs));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final count = _count;
+    if (count != null) {
+      return Center(
+        child: Text('$count', style: Theme.of(context).textTheme.displaySmall),
+      );
+    }
+    if (_startUs == null) {
+      return PrimaryButton(label: l10n.recordVoiceOver, onPressed: _record);
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Semantics(
+          label: l10n.recordingLevel,
+          child: LinearProgressIndicator(value: _level),
+        ),
+        const SizedBox(height: ShortedSpace.s),
+        PrimaryButton(label: l10n.stopRecording, onPressed: _stop),
       ],
     );
   }

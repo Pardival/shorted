@@ -85,6 +85,31 @@ void main() {
     expect(gateway.audioCalls, ['add track', 'loop a1 true']);
   });
 
+  testWidgets('recording counts in, plays the video and saves the take', (
+    tester,
+  ) async {
+    final project = FakeProject('p1', 'Mine')..clips.add('c1');
+    final gateway = FakeGateway()..projects.add(project);
+    await open(
+      tester,
+      '/editor/p1/audio',
+      size: const Size(1280, 800),
+      gateway: gateway,
+    );
+    await tester.tap(find.text('Record voice-over'));
+    await tester.pump();
+    expect(find.text('3'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pump();
+    await tester.pump();
+    expect(gateway.audioCalls, ['record']);
+
+    await tester.tap(find.text('Stop recording'));
+    await tester.pump();
+    await tester.pump();
+    expect(gateway.audioCalls.last, startsWith('stop'));
+  });
+
   test('waveform levels keep the loudest value of a span', () async {
     final waves = Waveforms((_) async => Uint8List.fromList([0, 255, 51, 0]));
     addTearDown(waves.dispose);

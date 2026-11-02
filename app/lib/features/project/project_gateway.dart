@@ -75,6 +75,9 @@ abstract interface class ProjectGateway {
   });
   Future<ProjectView> reorderAudioTrack(String id, int to);
   Future<ProjectView> addAudioTrack();
+  Future<void> startVoiceOver();
+  Future<ProjectView> stopVoiceOver(int startUs);
+  double get voiceLevel;
   Future<ProjectView> removeAudioTrack(String id);
   Future<ProjectView> renameAudioTrack(String id, String name);
   Future<ProjectView> setTrackFlags(
@@ -278,6 +281,16 @@ class EngineGateway implements ProjectGateway {
 
   @override
   Future<ProjectView> addAudioTrack() => audio.addAudioTrack();
+
+  @override
+  Future<void> startVoiceOver() => audio.startVoiceOver();
+
+  @override
+  Future<ProjectView> stopVoiceOver(int startUs) =>
+      audio.stopVoiceOver(startUs: startUs);
+
+  @override
+  double get voiceLevel => audio.voiceLevel();
 
   @override
   Future<ProjectView> removeAudioTrack(String id) =>
