@@ -2,6 +2,7 @@
 
 #![deny(unsafe_op_in_unsafe_fn)]
 
+pub mod migrations;
 pub mod session;
 
 /// Name of this crate, used by the workspace smoke tests.
