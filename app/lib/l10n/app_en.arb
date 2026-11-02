@@ -294,5 +294,18 @@
   "shapeEllipse": "Circle",
   "shapeArrow": "Arrow",
   "opacity": "Opacity",
-  "flip": "Flip"
+  "flip": "Flip",
+  "library": "Library",
+  "searchLibrary": "Search stickers, arrows…",
+  "allCategories": "All",
+  "categoryBadges": "Badges",
+  "categoryArrows": "Arrows",
+  "categoryStickers": "Stickers",
+  "categoryDoodles": "Doodles",
+  "categoryBubbles": "Bubbles",
+  "categoryHighlights": "Highlights",
+  "categoryLabels": "Label chips",
+  "nothingFound": "Nothing found.",
+  "clipTab": "Clip",
+  "transitionsTab": "Transitions"
 }

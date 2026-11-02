@@ -189,5 +189,18 @@
   "shapeEllipse": "Círculo",
   "shapeArrow": "Seta",
   "opacity": "Opacidade",
-  "flip": "Espelhar"
+  "flip": "Espelhar",
+  "library": "Biblioteca",
+  "searchLibrary": "Procurar stickers, setas…",
+  "allCategories": "Tudo",
+  "categoryBadges": "Selos",
+  "categoryArrows": "Setas",
+  "categoryStickers": "Adesivos",
+  "categoryDoodles": "Rabiscos",
+  "categoryBubbles": "Balões",
+  "categoryHighlights": "Destaques",
+  "categoryLabels": "Etiquetas",
+  "nothingFound": "Nada encontrado.",
+  "clipTab": "Clipe",
+  "transitionsTab": "Transições"
 }

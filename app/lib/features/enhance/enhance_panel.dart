@@ -8,6 +8,7 @@ import '../../design_system/components.dart';
 import '../../design_system/tokens.g.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../project/project_dialogs.dart';
+import 'library_section.dart';
 import '../project/project_gateway.dart';
 import '../project/project_providers.dart';
 
@@ -68,58 +69,88 @@ class EnhancePanel extends ConsumerWidget {
       }
     }
 
-    return ListView(
+    Widget page(List<Widget> children) => ListView(
       padding: const EdgeInsets.all(ShortedSpace.m),
-      children: [
-        Text(l10n.shapes, style: const TextStyle(fontWeight: FontWeight.w600)),
-        const SizedBox(height: ShortedSpace.s),
-        Wrap(
-          spacing: ShortedSpace.s,
-          children: [
-            for (final (shape, label) in [
-              (ShapeKindView.rectangle, l10n.shapeRectangle),
-              (ShapeKindView.ellipse, l10n.shapeEllipse),
-              (ShapeKindView.arrow, l10n.shapeArrow),
-            ])
-              ShortedChip(label: label, onTap: () => addShape(shape)),
-          ],
-        ),
-        if (selectedOverlay != null) ...[
-          const SizedBox(height: ShortedSpace.m),
-          _OverlayLook(
-            key: ValueKey(selectedOverlay.id),
-            overlay: selectedOverlay,
-            run: run,
+      children: children,
+    );
+
+    final library = page([
+      LibrarySection(
+        onPlace: (name) => placeLibraryItem(ref, context, view.id, name),
+      ),
+      const SizedBox(height: ShortedSpace.m),
+      Text(l10n.shapes, style: const TextStyle(fontWeight: FontWeight.w600)),
+      const SizedBox(height: ShortedSpace.s),
+      Wrap(
+        spacing: ShortedSpace.s,
+        children: [
+          for (final (shape, label) in [
+            (ShapeKindView.rectangle, l10n.shapeRectangle),
+            (ShapeKindView.ellipse, l10n.shapeEllipse),
+            (ShapeKindView.arrow, l10n.shapeArrow),
+          ])
+            ShortedChip(label: label, onTap: () => addShape(shape)),
+        ],
+      ),
+    ]);
+    final clipPage = page([
+      if (clip == null)
+        Text(
+          l10n.selectClipForLook,
+          style: const TextStyle(color: ShortedColors.textMuted),
+        )
+      else
+        _ClipLook(key: ValueKey(clip.clipId), clip: clip, run: run),
+    ]);
+    final transitions = page([
+      Text(
+        l10n.transitions,
+        style: const TextStyle(color: ShortedColors.textMuted),
+      ),
+      const SizedBox(height: ShortedSpace.s),
+      Wrap(
+        spacing: ShortedSpace.s,
+        runSpacing: ShortedSpace.s,
+        children: [
+          for (final kind in TransitionKindView.values)
+            ShortedChip(
+              label: _transitionName(l10n, kind),
+              selected: view.look.transition == kind,
+              onTap: () => run((gateway) => gateway.setTransitionForAll(kind)),
+            ),
+        ],
+      ),
+    ]);
+
+    // S40: tabs, with the selected element's own settings above them.
+    return DefaultTabController(
+      length: 3,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (selectedOverlay != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: ShortedSpace.m),
+              child: _OverlayLook(
+                key: ValueKey(selectedOverlay.id),
+                overlay: selectedOverlay,
+                run: run,
+              ),
+            ),
+          TabBar(
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
+            tabs: [
+              Tab(text: l10n.library),
+              Tab(text: l10n.clipTab),
+              Tab(text: l10n.transitionsTab),
+            ],
+          ),
+          Expanded(
+            child: TabBarView(children: [library, clipPage, transitions]),
           ),
         ],
-        const SizedBox(height: ShortedSpace.m),
-        if (clip == null)
-          Text(
-            l10n.selectClipForLook,
-            style: const TextStyle(color: ShortedColors.textMuted),
-          )
-        else
-          _ClipLook(key: ValueKey(clip.clipId), clip: clip, run: run),
-        const SizedBox(height: ShortedSpace.m),
-        Text(
-          l10n.transitions,
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: ShortedSpace.s),
-        Wrap(
-          spacing: ShortedSpace.s,
-          runSpacing: ShortedSpace.s,
-          children: [
-            for (final kind in TransitionKindView.values)
-              ShortedChip(
-                label: _transitionName(l10n, kind),
-                selected: view.look.transition == kind,
-                onTap: () =>
-                    run((gateway) => gateway.setTransitionForAll(kind)),
-              ),
-          ],
-        ),
-      ],
+      ),
     );
   }
 }

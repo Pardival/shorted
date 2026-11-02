@@ -88,6 +88,7 @@ pub(crate) fn media_views(session: &ProjectSession) -> Vec<MediaItemView> {
     project
         .media
         .iter()
+        .filter(|media| !crate::api::library::is_library_item(media))
         .map(|media| MediaItemView {
             id: media.id.to_string(),
             name: display_name(&media.location),

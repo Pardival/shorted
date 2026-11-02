@@ -295,7 +295,7 @@ impl FrameComposer {
     }
 
     /// Draws each overlay's picture when its look changes; pictures of removed overlays go.
-    fn prepare_overlays(&mut self, project: &Project, frame: &FrameDescription) {
+    fn prepare_overlays(&mut self, project: &Project, folder: &Path, frame: &FrameDescription) {
         self.overlays
             .retain(|id, _| project.timeline.overlays.iter().any(|item| item.id == *id));
         for layer in &frame.overlays {
@@ -316,7 +316,13 @@ impl FrameComposer {
             }
             let pixels = match &item.kind {
                 OverlayKind::Shape { shape, fill } => Some(shape_pixels(*shape, parse_color(fill))),
-                // Pictures, text and video come with T-0703, T-0705 and T-0704.
+                OverlayKind::Image { asset } => project
+                    .media
+                    .iter()
+                    .find(|media| media.id == *asset)
+                    .and_then(|media| resolve(media, folder))
+                    .and_then(|path| load_image(&path)),
+                // Animations, text and video come with T-0704 and T-0705.
                 _ => None,
             };
             if let Some((width, height, rgba)) = pixels {
@@ -326,9 +332,13 @@ impl FrameComposer {
         }
     }
 
-    fn placed_overlay(&self, layer: &OverlayLayer) -> Option<(&wgpu::Texture, LayerPlacement)> {
+    fn placed_overlay(
+        &self,
+        project: &Project,
+        layer: &OverlayLayer,
+    ) -> Option<(&wgpu::Texture, LayerPlacement)> {
         let (kind, texture) = self.overlays.get(&layer.overlay_id)?;
-        let (width, height) = natural_size(kind);
+        let (width, height) = natural_size(kind, project);
         let sprite = Sprite {
             center: [
                 layer.position.x / CANVAS_WIDTH,
@@ -467,7 +477,7 @@ impl FrameComposer {
             for layer in &frame.clips {
                 self.prepare(project, folder, layer);
             }
-            self.prepare_overlays(project, frame);
+            self.prepare_overlays(project, folder, frame);
             self.prepare_caption(project, frame);
         }
         let mut layers = Vec::with_capacity(2);
@@ -478,7 +488,7 @@ impl FrameComposer {
                 layers.push(self.placed(media, layer, effect));
             }
             for layer in &frame.overlays {
-                layers.extend(self.placed_overlay(layer));
+                layers.extend(self.placed_overlay(project, layer));
             }
             if let Some((_, caption)) = self.caption.as_ref().filter(|_| !frame.captions.is_empty())
             {

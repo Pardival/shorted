@@ -6,6 +6,8 @@
 pub mod apple;
 pub mod captions;
 pub mod compositor;
+pub mod library;
+mod library_index;
 pub mod overlays;
 pub mod spike;
 

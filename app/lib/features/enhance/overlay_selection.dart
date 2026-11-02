@@ -10,6 +10,7 @@ import '../../design_system/tokens.g.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../project/project_dialogs.dart';
 import '../project/project_providers.dart';
+import 'library_section.dart';
 
 /// The canvas every overlay position is given in (docs/06).
 const canvasWidth = 1080.0;
@@ -282,32 +283,46 @@ class _OverlaySelectionState extends ConsumerState<OverlaySelection> {
     return LayoutBuilder(
       builder: (context, box) {
         _scale = box.maxWidth / canvasWidth;
-        return Listener(
-          onPointerDown: (event) => _down = event.localPosition,
-          child: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTapUp: _tap,
-            onScaleStart: _start,
-            onScaleUpdate: _update,
-            onScaleEnd: _end,
-            child: ValueListenableBuilder(
-              valueListenable: widget.playheadUs,
-              builder: (context, time, _) {
-                OverlayBoxView? shown;
-                if (selected != null) {
-                  for (final candidate in gateway.overlayBoxes(time)) {
-                    if (candidate.id == selected) shown = candidate;
+        return DragTarget<LibraryDrag>(
+          onAcceptWithDetails: (details) {
+            final area = context.findRenderObject()! as RenderBox;
+            final point = area.globalToLocal(details.offset) / _scale;
+            placeLibraryItem(
+              ref,
+              context,
+              widget.projectId,
+              details.data.name,
+              x: point.dx,
+              y: point.dy,
+            );
+          },
+          builder: (context, candidates, _) => Listener(
+            onPointerDown: (event) => _down = event.localPosition,
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTapUp: _tap,
+              onScaleStart: _start,
+              onScaleUpdate: _update,
+              onScaleEnd: _end,
+              child: ValueListenableBuilder(
+                valueListenable: widget.playheadUs,
+                builder: (context, time, _) {
+                  OverlayBoxView? shown;
+                  if (selected != null) {
+                    for (final candidate in gateway.overlayBoxes(time)) {
+                      if (candidate.id == selected) shown = candidate;
+                    }
                   }
-                }
-                return CustomPaint(
-                  size: Size.infinite,
-                  painter: SelectionPainter(
-                    box: shown,
-                    scale: _scale,
-                    guides: _guides,
-                  ),
-                );
-              },
+                  return CustomPaint(
+                    size: Size.infinite,
+                    painter: SelectionPainter(
+                      box: shown,
+                      scale: _scale,
+                      guides: _guides,
+                    ),
+                  );
+                },
+              ),
             ),
           ),
         );

@@ -20,6 +20,7 @@ const DUPLICATE_OFFSET: f32 = 40.0;
 const MIN_LENGTH_US: i64 = 100_000;
 const DEFAULT_FILL: &str = "#9A8CFFFF";
 const MIN_SCALE: f32 = 0.05;
+const PLACEHOLDER_SIZE: (f32, f32) = (400.0, 400.0);
 const MAX_SCALE: f32 = 20.0;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -110,12 +111,20 @@ pub struct OverlayBoxView {
     pub rotation: f32,
 }
 
-/// The size of an element at scale 1, in canvas units.
-pub(crate) fn natural_size(kind: &OverlayKind) -> (f32, f32) {
+/// The size of an element at scale 1, in canvas units: pictures show one pixel per unit.
+pub(crate) fn natural_size(kind: &OverlayKind, project: &Project) -> (f32, f32) {
+    let picture = |id: &Id| {
+        let media = project.media.iter().find(|media| media.id == *id)?;
+        Some((media.probe.width as f32, media.probe.height as f32))
+    };
     match kind {
         OverlayKind::Shape { shape, .. } => shape_size(*shape),
-        // Measured from their content by the tickets that draw them.
-        _ => (400.0, 400.0),
+        OverlayKind::Image { asset } | OverlayKind::AnimatedImage { asset } => {
+            picture(asset).unwrap_or(PLACEHOLDER_SIZE)
+        }
+        OverlayKind::Video { media, .. } => picture(media).unwrap_or(PLACEHOLDER_SIZE),
+        // Measured from its words by T-0705.
+        OverlayKind::Text { .. } => PLACEHOLDER_SIZE,
     }
 }
 
@@ -168,7 +177,7 @@ fn boxes(project: &Project, time_us: i64) -> Vec<OverlayBoxView> {
                 .overlays
                 .iter()
                 .find(|item| item.id == layer.overlay_id)?;
-            let (width, height) = natural_size(&item.kind);
+            let (width, height) = natural_size(&item.kind, project);
             Some(OverlayBoxView {
                 id: item.id.to_string(),
                 center_x: layer.position.x,

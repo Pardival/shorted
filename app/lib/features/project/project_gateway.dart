@@ -4,6 +4,7 @@ import '../../bridge/api.dart' as tasks;
 import '../../bridge/api/audio.dart' as audio;
 import '../../bridge/api/clips.dart' as clips;
 import '../../bridge/api/export.dart' as exporter;
+import '../../bridge/api/library.dart' as catalog;
 import '../../bridge/api/look.dart' as look;
 import '../../bridge/api/media.dart' as media;
 import '../../bridge/api/overlays.dart' as overlays;
@@ -155,6 +156,15 @@ abstract interface class ProjectGateway {
 
   /// Where the elements on screen are drawn at `timeUs`, top first.
   List<overlays.OverlayBoxView> overlayBoxes(int timeUs);
+
+  List<catalog.LibraryItemView> libraryItems(String query, String? category);
+  catalog.PictureView? libraryThumbnail(String name, int size);
+  Future<ProjectView> addLibraryItem(
+    String name,
+    int atUs, {
+    double? x,
+    double? y,
+  });
 
   /// Shown during a gesture, not recorded.
   void previewOverlayTransform(String id, overlays.TransformView transform);
@@ -427,6 +437,22 @@ class EngineGateway implements ProjectGateway {
   @override
   List<overlays.OverlayBoxView> overlayBoxes(int timeUs) =>
       overlays.overlayBoxes(timeUs: timeUs);
+
+  @override
+  List<catalog.LibraryItemView> libraryItems(String query, String? category) =>
+      catalog.libraryItems(query: query, category: category);
+
+  @override
+  catalog.PictureView? libraryThumbnail(String name, int size) =>
+      catalog.libraryThumbnail(name: name, size: size);
+
+  @override
+  Future<ProjectView> addLibraryItem(
+    String name,
+    int atUs, {
+    double? x,
+    double? y,
+  }) => catalog.addLibraryItem(name: name, atUs: atUs, x: x, y: y);
 
   @override
   void previewOverlayTransform(String id, overlays.TransformView transform) =>

@@ -430,8 +430,15 @@ impl Compositor {
     }
 }
 
-/// Decodes an image file to RGBA pixels.
+/// Decodes an image file to RGBA pixels. SVG is drawn at its declared size.
 pub fn load_image(path: &std::path::Path) -> Option<(u32, u32, Vec<u8>)> {
+    let is_svg = path
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("svg"));
+    if is_svg {
+        return crate::library::rasterize_svg_full(&std::fs::read(path).ok()?);
+    }
     let picture = image::open(path).ok()?.into_rgba8();
     let (width, height) = picture.dimensions();
     Some((width, height, picture.into_raw()))

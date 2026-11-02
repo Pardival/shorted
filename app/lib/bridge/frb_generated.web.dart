@@ -10,6 +10,7 @@ import 'api.dart';
 import 'api/audio.dart';
 import 'api/clips.dart';
 import 'api/export.dart';
+import 'api/library.dart';
 import 'api/look.dart';
 import 'api/media.dart';
 import 'api/overlays.dart';
@@ -82,6 +83,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   double dco_decode_box_autoadd_f_32(dynamic raw);
 
   @protected
+  PictureView dco_decode_box_autoadd_picture_view(dynamic raw);
+
+  @protected
   ThumbnailView dco_decode_box_autoadd_thumbnail_view(dynamic raw);
 
   @protected
@@ -133,6 +137,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ImportOutcome dco_decode_import_outcome(dynamic raw);
 
   @protected
+  LibraryItemView dco_decode_library_item_view(dynamic raw);
+
+  @protected
   List<String> dco_decode_list_String(dynamic raw);
 
   @protected
@@ -149,6 +156,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<ImportOutcome> dco_decode_list_import_outcome(dynamic raw);
+
+  @protected
+  List<LibraryItemView> dco_decode_list_library_item_view(dynamic raw);
 
   @protected
   List<MediaItemView> dco_decode_list_media_item_view(dynamic raw);
@@ -205,6 +215,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   double? dco_decode_opt_box_autoadd_f_32(dynamic raw);
 
   @protected
+  PictureView? dco_decode_opt_box_autoadd_picture_view(dynamic raw);
+
+  @protected
   ThumbnailView? dco_decode_opt_box_autoadd_thumbnail_view(dynamic raw);
 
   @protected
@@ -220,6 +233,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   OverlayView dco_decode_overlay_view(dynamic raw);
+
+  @protected
+  PictureView dco_decode_picture_view(dynamic raw);
 
   @protected
   ProjectSummary dco_decode_project_summary(dynamic raw);
@@ -331,6 +347,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   double sse_decode_box_autoadd_f_32(SseDeserializer deserializer);
 
   @protected
+  PictureView sse_decode_box_autoadd_picture_view(SseDeserializer deserializer);
+
+  @protected
   ThumbnailView sse_decode_box_autoadd_thumbnail_view(
     SseDeserializer deserializer,
   );
@@ -392,6 +411,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ImportOutcome sse_decode_import_outcome(SseDeserializer deserializer);
 
   @protected
+  LibraryItemView sse_decode_library_item_view(SseDeserializer deserializer);
+
+  @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer);
 
   @protected
@@ -416,6 +438,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<ImportOutcome> sse_decode_list_import_outcome(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<LibraryItemView> sse_decode_list_library_item_view(
     SseDeserializer deserializer,
   );
 
@@ -486,6 +513,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   double? sse_decode_opt_box_autoadd_f_32(SseDeserializer deserializer);
 
   @protected
+  PictureView? sse_decode_opt_box_autoadd_picture_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   ThumbnailView? sse_decode_opt_box_autoadd_thumbnail_view(
     SseDeserializer deserializer,
   );
@@ -503,6 +535,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   OverlayView sse_decode_overlay_view(SseDeserializer deserializer);
+
+  @protected
+  PictureView sse_decode_picture_view(SseDeserializer deserializer);
 
   @protected
   ProjectSummary sse_decode_project_summary(SseDeserializer deserializer);
@@ -630,6 +665,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_box_autoadd_f_32(double self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_picture_view(
+    PictureView self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_thumbnail_view(
     ThumbnailView self,
     SseSerializer serializer,
@@ -699,6 +740,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_import_outcome(ImportOutcome self, SseSerializer serializer);
 
   @protected
+  void sse_encode_library_item_view(
+    LibraryItemView self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
 
   @protected
@@ -728,6 +775,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_import_outcome(
     List<ImportOutcome> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_library_item_view(
+    List<LibraryItemView> self,
     SseSerializer serializer,
   );
 
@@ -816,6 +869,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_opt_box_autoadd_f_32(double? self, SseSerializer serializer);
 
   @protected
+  void sse_encode_opt_box_autoadd_picture_view(
+    PictureView? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_box_autoadd_thumbnail_view(
     ThumbnailView? self,
     SseSerializer serializer,
@@ -841,6 +900,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_overlay_view(OverlayView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_picture_view(PictureView self, SseSerializer serializer);
 
   @protected
   void sse_encode_project_summary(

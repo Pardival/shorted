@@ -20,6 +20,8 @@ void main() {
       size: const Size(1280, 800),
       gateway: gateway,
     );
+    await tester.tap(find.widgetWithText(Tab, 'Clip'));
+    await tester.pumpAndSettle();
     expect(
       find.text(
         'Select a clip on the timeline to change its speed and colour.',
@@ -27,6 +29,8 @@ void main() {
       findsOneWidget,
     );
 
+    await tester.tap(find.widgetWithText(Tab, 'Transitions'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Crossfade'));
     await tester.pumpAndSettle();
     expect(gateway.lookCalls, ['transition crossfade']);
@@ -34,6 +38,8 @@ void main() {
     final timeline = tester.getTopLeft(find.byType(TimelineView));
     await tester.tapAt(timeline + const Offset(100, 40));
     await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.widgetWithText(Tab, 'Clip'));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text('2.0×'));
     await tester.pumpAndSettle();

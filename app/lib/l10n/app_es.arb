@@ -189,5 +189,18 @@
   "shapeEllipse": "Círculo",
   "shapeArrow": "Flecha",
   "opacity": "Opacidad",
-  "flip": "Voltear"
+  "flip": "Voltear",
+  "library": "Biblioteca",
+  "searchLibrary": "Buscar stickers, flechas…",
+  "allCategories": "Todo",
+  "categoryBadges": "Insignias",
+  "categoryArrows": "Flechas",
+  "categoryStickers": "Stickers",
+  "categoryDoodles": "Garabatos",
+  "categoryBubbles": "Bocadillos",
+  "categoryHighlights": "Resaltados",
+  "categoryLabels": "Etiquetas",
+  "nothingFound": "No se encontró nada.",
+  "clipTab": "Clip",
+  "transitionsTab": "Transiciones"
 }

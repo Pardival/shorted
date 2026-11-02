@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:shorted/bridge/api/audio.dart';
+import 'package:shorted/bridge/api/library.dart';
 import 'package:shorted/bridge/api/look.dart';
 import 'package:shorted/bridge/api/media.dart';
 import 'package:shorted/bridge/api/overlays.dart';
@@ -299,6 +300,57 @@ class FakeGateway implements ProjectGateway {
 
   @override
   List<OverlayBoxView> overlayBoxes(int timeUs) => boxes;
+
+  static const library = [
+    LibraryItemView(name: 'arrows-right', category: 'arrows'),
+    LibraryItemView(name: 'arrows-left', category: 'arrows'),
+    LibraryItemView(name: 'badges-check', category: 'badges'),
+  ];
+
+  @override
+  List<LibraryItemView> libraryItems(String query, String? category) => [
+    for (final item in library)
+      if ((category == null || item.category == category) &&
+          item.name.contains(query))
+        item,
+  ];
+
+  @override
+  PictureView? libraryThumbnail(String name, int size) => PictureView(
+    width: 2,
+    height: 2,
+    rgba: Uint8List.fromList(List.filled(16, 255)),
+  );
+
+  @override
+  Future<ProjectView> addLibraryItem(
+    String name,
+    int atUs, {
+    double? x,
+    double? y,
+  }) {
+    opened!.overlays.add(
+      OverlayView(
+        id: 'o${_next++}',
+        kind: OverlayKindView.image,
+        startUs: big(atUs),
+        endUs: big(atUs + 3000000),
+        locked: false,
+        hidden: false,
+        hasAnimation: false,
+        transform: TransformView(
+          x: x ?? 540,
+          y: y ?? 960,
+          scale: 1,
+          rotation: 0,
+          opacity: 1,
+          flip: false,
+        ),
+      ),
+    );
+    final at = x == null || y == null ? 'centre' : '${x.round()} ${y.round()}';
+    return _overlay('library $name $atUs $at');
+  }
 
   final previewed = <TransformView>[];
 

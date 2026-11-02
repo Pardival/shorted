@@ -189,5 +189,18 @@
   "shapeEllipse": "Cercle",
   "shapeArrow": "Flèche",
   "opacity": "Opacité",
-  "flip": "Retourner"
+  "flip": "Retourner",
+  "library": "Bibliothèque",
+  "searchLibrary": "Chercher stickers, flèches…",
+  "allCategories": "Tout",
+  "categoryBadges": "Badges",
+  "categoryArrows": "Flèches",
+  "categoryStickers": "Stickers",
+  "categoryDoodles": "Gribouillis",
+  "categoryBubbles": "Bulles",
+  "categoryHighlights": "Surlignages",
+  "categoryLabels": "Étiquettes",
+  "nothingFound": "Rien trouvé.",
+  "clipTab": "Clip",
+  "transitionsTab": "Transitions"
 }
