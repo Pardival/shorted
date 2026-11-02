@@ -163,6 +163,17 @@ class FakeGateway implements ProjectGateway {
         tracks: project.audioTracks,
       ),
       transcripts: project.transcripts,
+      captions: const CaptionsView(
+        enabled: true,
+        preset: CaptionPresetView.wordByWord,
+        animation: CaptionAnimationView.pop,
+        font: 'Space Grotesk',
+        size: 96,
+        uppercase: true,
+        color: '#FFFFFFFF',
+        emphasisColor: '#C6F135FF',
+        anchor: 0.7,
+      ),
       look: LookView(
         clips: [
           for (final clip in project.clips)
@@ -354,6 +365,54 @@ class FakeGateway implements ProjectGateway {
     speechCalls.add('edit $segment $word $text');
     return view();
   }
+
+  @override
+  Future<ProjectView> toggleEmphasis(
+    TranscriptView transcript,
+    String segment,
+    int word,
+  ) async {
+    speechCalls.add('emphasis $segment $word');
+    return view();
+  }
+
+  @override
+  Future<ProjectView> setCaptionPreset(CaptionPresetView preset) async {
+    speechCalls.add('preset ${preset.name}');
+    return view();
+  }
+
+  @override
+  Future<ProjectView> setCaptionsEnabled({required bool enabled}) async {
+    speechCalls.add('enabled $enabled');
+    return view();
+  }
+
+  @override
+  Future<ProjectView> setCaptionAnimation(
+    CaptionAnimationView animation,
+  ) async {
+    speechCalls.add('animation ${animation.name}');
+    return view();
+  }
+
+  @override
+  Future<ProjectView> setCaptionStyle({
+    required String font,
+    required double size,
+    required bool uppercase,
+    required String color,
+    required String emphasisColor,
+    required double anchor,
+  }) async {
+    speechCalls.add('style $font $uppercase');
+    return view();
+  }
+
+  final srts = <String>[];
+
+  @override
+  Future<void> writeSrt(String path) async => srts.add(path);
 
   @override
   Future<ProjectView> hideSegment(

@@ -14,14 +14,48 @@ TranscriptView transcript() => TranscriptView(
       id: 's1',
       hidden: false,
       words: [
-        WordView(index: 0, text: 'Hello', startUs: big(0), deleted: false),
-        WordView(index: 1, text: 'gone', startUs: big(9), deleted: true),
+        WordView(
+          index: 0,
+          text: 'Hello',
+          startUs: big(0),
+          deleted: false,
+          emphasis: false,
+        ),
+        WordView(
+          index: 1,
+          text: 'gone',
+          startUs: big(9),
+          deleted: true,
+          emphasis: false,
+        ),
       ],
     ),
   ],
 );
 
 void main() {
+  testWidgets('presets and the entrance reach the engine', (tester) async {
+    final project = FakeProject('p1', 'Mine');
+    final gateway = FakeGateway()
+      ..projects.add(project)
+      ..modelReady = true;
+    await open(
+      tester,
+      '/editor/p1/captions',
+      size: const Size(1280, 1400),
+      gateway: gateway,
+    );
+    await tester.tap(find.text('Karaoke'));
+    await tester.pumpAndSettle();
+    expect(gateway.speechCalls.last, 'preset karaoke');
+    await tester.tap(find.text('Typewriter'));
+    await tester.pumpAndSettle();
+    expect(gateway.speechCalls.last, 'animation typewriter');
+    await tester.tap(find.byType(Switch).first);
+    await tester.pumpAndSettle();
+    expect(gateway.speechCalls.last, 'enabled false');
+  });
+
   testWidgets('without a model the panel offers it, and shows its size', (
     tester,
   ) async {
@@ -64,6 +98,10 @@ void main() {
     expect(gateway.speechCalls, ['hide s1 true']);
 
     await tester.tap(find.text('Hello'));
+    await tester.pumpAndSettle();
+    expect(gateway.speechCalls.last, 'emphasis s1 0');
+
+    await tester.longPress(find.text('Hello'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'Hi');
     await tester.testTextInput.receiveAction(TextInputAction.done);

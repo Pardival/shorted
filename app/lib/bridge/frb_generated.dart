@@ -80,7 +80,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 375634181;
+  int get rustContentHash => 50123463;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -293,6 +293,27 @@ abstract class RustLibApi extends BaseApi {
     required PlatformInt64 fadeOutUs,
   });
 
+  Future<ProjectView> crateApiTranscribeSetCaptionAnimation({
+    required CaptionAnimationView animation,
+  });
+
+  Future<ProjectView> crateApiTranscribeSetCaptionPreset({
+    required CaptionPresetView preset,
+  });
+
+  Future<ProjectView> crateApiTranscribeSetCaptionStyle({
+    required String font,
+    required double size,
+    required bool uppercase,
+    required String color,
+    required String emphasisColor,
+    required double anchor,
+  });
+
+  Future<ProjectView> crateApiTranscribeSetCaptionsEnabled({
+    required bool enabled,
+  });
+
   Future<ProjectView> crateApiLookSetClipColor({
     required String id,
     required double brightness,
@@ -347,6 +368,13 @@ abstract class RustLibApi extends BaseApi {
     required PlatformInt64 startUs,
   });
 
+  Future<ProjectView> crateApiTranscribeToggleEmphasis({
+    String? clipId,
+    String? audioId,
+    required String segment,
+    required int word,
+  });
+
   Future<ProjectView> crateApiClipsToggleSlowZoom({required String id});
 
   Stream<TaskEvent> crateApiTranscribeTranscribeProject({required String root});
@@ -371,6 +399,8 @@ abstract class RustLibApi extends BaseApi {
   Future<ProjectView> crateApiProjectsUndo();
 
   double crateApiAudioVoiceLevel();
+
+  Future<void> crateApiTranscribeWriteSrt({required String path});
 }
 
 class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
@@ -2107,6 +2137,155 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   );
 
   @override
+  Future<ProjectView> crateApiTranscribeSetCaptionAnimation({
+    required CaptionAnimationView animation,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_caption_animation_view(animation, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 58,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiTranscribeSetCaptionAnimationConstMeta,
+        argValues: [animation],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTranscribeSetCaptionAnimationConstMeta =>
+      const TaskConstMeta(
+        debugName: "set_caption_animation",
+        argNames: ["animation"],
+      );
+
+  @override
+  Future<ProjectView> crateApiTranscribeSetCaptionPreset({
+    required CaptionPresetView preset,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_caption_preset_view(preset, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 59,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiTranscribeSetCaptionPresetConstMeta,
+        argValues: [preset],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTranscribeSetCaptionPresetConstMeta =>
+      const TaskConstMeta(
+        debugName: "set_caption_preset",
+        argNames: ["preset"],
+      );
+
+  @override
+  Future<ProjectView> crateApiTranscribeSetCaptionStyle({
+    required String font,
+    required double size,
+    required bool uppercase,
+    required String color,
+    required String emphasisColor,
+    required double anchor,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(font, serializer);
+          sse_encode_f_32(size, serializer);
+          sse_encode_bool(uppercase, serializer);
+          sse_encode_String(color, serializer);
+          sse_encode_String(emphasisColor, serializer);
+          sse_encode_f_32(anchor, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 60,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiTranscribeSetCaptionStyleConstMeta,
+        argValues: [font, size, uppercase, color, emphasisColor, anchor],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTranscribeSetCaptionStyleConstMeta =>
+      const TaskConstMeta(
+        debugName: "set_caption_style",
+        argNames: [
+          "font",
+          "size",
+          "uppercase",
+          "color",
+          "emphasisColor",
+          "anchor",
+        ],
+      );
+
+  @override
+  Future<ProjectView> crateApiTranscribeSetCaptionsEnabled({
+    required bool enabled,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_bool(enabled, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 61,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiTranscribeSetCaptionsEnabledConstMeta,
+        argValues: [enabled],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTranscribeSetCaptionsEnabledConstMeta =>
+      const TaskConstMeta(
+        debugName: "set_captions_enabled",
+        argNames: ["enabled"],
+      );
+
+  @override
   Future<ProjectView> crateApiLookSetClipColor({
     required String id,
     required double brightness,
@@ -2124,7 +2303,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 58,
+            funcId: 62,
             port: port_,
           );
         },
@@ -2164,7 +2343,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 59,
+            funcId: 63,
             port: port_,
           );
         },
@@ -2198,7 +2377,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 60,
+            funcId: 64,
             port: port_,
           );
         },
@@ -2238,7 +2417,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 61,
+            funcId: 65,
             port: port_,
           );
         },
@@ -2270,7 +2449,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 62,
+            funcId: 66,
             port: port_,
           );
         },
@@ -2298,7 +2477,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(root, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 63)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 67)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_model_view,
@@ -2324,7 +2503,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 64,
+            funcId: 68,
             port: port_,
           );
         },
@@ -2356,7 +2535,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 65,
+            funcId: 69,
             port: port_,
           );
         },
@@ -2387,7 +2566,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 66,
+              funcId: 70,
               port: port_,
             );
           },
@@ -2426,7 +2605,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 67,
+              funcId: 71,
               port: port_,
             );
           },
@@ -2457,7 +2636,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 68,
+            funcId: 72,
             port: port_,
           );
         },
@@ -2487,7 +2666,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 69,
+            funcId: 73,
             port: port_,
           );
         },
@@ -2506,6 +2685,45 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "stop_voice_over", argNames: ["startUs"]);
 
   @override
+  Future<ProjectView> crateApiTranscribeToggleEmphasis({
+    String? clipId,
+    String? audioId,
+    required String segment,
+    required int word,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_opt_String(clipId, serializer);
+          sse_encode_opt_String(audioId, serializer);
+          sse_encode_String(segment, serializer);
+          sse_encode_u_32(word, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 74,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiTranscribeToggleEmphasisConstMeta,
+        argValues: [clipId, audioId, segment, word],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTranscribeToggleEmphasisConstMeta =>
+      const TaskConstMeta(
+        debugName: "toggle_emphasis",
+        argNames: ["clipId", "audioId", "segment", "word"],
+      );
+
+  @override
   Future<ProjectView> crateApiClipsToggleSlowZoom({required String id}) {
     return handler.executeNormal(
       NormalTask(
@@ -2515,7 +2733,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 70,
+            funcId: 75,
             port: port_,
           );
         },
@@ -2548,7 +2766,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 71,
+              funcId: 76,
               port: port_,
             );
           },
@@ -2585,7 +2803,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 72,
+            funcId: 77,
             port: port_,
           );
         },
@@ -2619,7 +2837,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 73,
+            funcId: 78,
             port: port_,
           );
         },
@@ -2655,7 +2873,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 74,
+            funcId: 79,
             port: port_,
           );
         },
@@ -2684,7 +2902,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 75,
+            funcId: 80,
             port: port_,
           );
         },
@@ -2708,7 +2926,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 76)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 81)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_f_32,
@@ -2723,6 +2941,34 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiAudioVoiceLevelConstMeta =>
       const TaskConstMeta(debugName: "voice_level", argNames: []);
+
+  @override
+  Future<void> crateApiTranscribeWriteSrt({required String path}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(path, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 82,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiTranscribeWriteSrtConstMeta,
+        argValues: [path],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTranscribeWriteSrtConstMeta =>
+      const TaskConstMeta(debugName: "write_srt", argNames: ["path"]);
 
   @protected
   AnyhowException dco_decode_AnyhowException(dynamic raw) {
@@ -2835,6 +3081,37 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TransitionKindView dco_decode_box_autoadd_transition_kind_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_transition_kind_view(raw);
+  }
+
+  @protected
+  CaptionAnimationView dco_decode_caption_animation_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return CaptionAnimationView.values[raw as int];
+  }
+
+  @protected
+  CaptionPresetView dco_decode_caption_preset_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return CaptionPresetView.values[raw as int];
+  }
+
+  @protected
+  CaptionsView dco_decode_captions_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
+    return CaptionsView(
+      enabled: dco_decode_bool(arr[0]),
+      preset: dco_decode_caption_preset_view(arr[1]),
+      animation: dco_decode_caption_animation_view(arr[2]),
+      font: dco_decode_String(arr[3]),
+      size: dco_decode_f_32(arr[4]),
+      uppercase: dco_decode_bool(arr[5]),
+      color: dco_decode_String(arr[6]),
+      emphasisColor: dco_decode_String(arr[7]),
+      anchor: dco_decode_f_32(arr[8]),
+    );
   }
 
   @protected
@@ -3117,8 +3394,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ProjectView dco_decode_project_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 10)
-      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
+    if (arr.length != 11)
+      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
     return ProjectView(
       id: dco_decode_String(arr[0]),
       title: dco_decode_String(arr[1]),
@@ -3130,6 +3407,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       sound: dco_decode_sound_view(arr[7]),
       look: dco_decode_look_view(arr[8]),
       transcripts: dco_decode_list_transcript_view(arr[9]),
+      captions: dco_decode_captions_view(arr[10]),
     );
   }
 
@@ -3285,13 +3563,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   WordView dco_decode_word_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 4)
-      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
     return WordView(
       index: dco_decode_u_32(arr[0]),
       text: dco_decode_String(arr[1]),
       startUs: dco_decode_i_64(arr[2]),
       deleted: dco_decode_bool(arr[3]),
+      emphasis: dco_decode_bool(arr[4]),
     );
   }
 
@@ -3424,6 +3703,49 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_transition_kind_view(deserializer));
+  }
+
+  @protected
+  CaptionAnimationView sse_decode_caption_animation_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return CaptionAnimationView.values[inner];
+  }
+
+  @protected
+  CaptionPresetView sse_decode_caption_preset_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return CaptionPresetView.values[inner];
+  }
+
+  @protected
+  CaptionsView sse_decode_captions_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_enabled = sse_decode_bool(deserializer);
+    var var_preset = sse_decode_caption_preset_view(deserializer);
+    var var_animation = sse_decode_caption_animation_view(deserializer);
+    var var_font = sse_decode_String(deserializer);
+    var var_size = sse_decode_f_32(deserializer);
+    var var_uppercase = sse_decode_bool(deserializer);
+    var var_color = sse_decode_String(deserializer);
+    var var_emphasisColor = sse_decode_String(deserializer);
+    var var_anchor = sse_decode_f_32(deserializer);
+    return CaptionsView(
+      enabled: var_enabled,
+      preset: var_preset,
+      animation: var_animation,
+      font: var_font,
+      size: var_size,
+      uppercase: var_uppercase,
+      color: var_color,
+      emphasisColor: var_emphasisColor,
+      anchor: var_anchor,
+    );
   }
 
   @protected
@@ -3833,6 +4155,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_sound = sse_decode_sound_view(deserializer);
     var var_look = sse_decode_look_view(deserializer);
     var var_transcripts = sse_decode_list_transcript_view(deserializer);
+    var var_captions = sse_decode_captions_view(deserializer);
     return ProjectView(
       id: var_id,
       title: var_title,
@@ -3844,6 +4167,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       sound: var_sound,
       look: var_look,
       transcripts: var_transcripts,
+      captions: var_captions,
     );
   }
 
@@ -4013,11 +4337,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_text = sse_decode_String(deserializer);
     var var_startUs = sse_decode_i_64(deserializer);
     var var_deleted = sse_decode_bool(deserializer);
+    var var_emphasis = sse_decode_bool(deserializer);
     return WordView(
       index: var_index,
       text: var_text,
       startUs: var_startUs,
       deleted: var_deleted,
+      emphasis: var_emphasis,
     );
   }
 
@@ -4186,6 +4512,38 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_transition_kind_view(self, serializer);
+  }
+
+  @protected
+  void sse_encode_caption_animation_view(
+    CaptionAnimationView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_caption_preset_view(
+    CaptionPresetView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_captions_view(CaptionsView self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_bool(self.enabled, serializer);
+    sse_encode_caption_preset_view(self.preset, serializer);
+    sse_encode_caption_animation_view(self.animation, serializer);
+    sse_encode_String(self.font, serializer);
+    sse_encode_f_32(self.size, serializer);
+    sse_encode_bool(self.uppercase, serializer);
+    sse_encode_String(self.color, serializer);
+    sse_encode_String(self.emphasisColor, serializer);
+    sse_encode_f_32(self.anchor, serializer);
   }
 
   @protected
@@ -4556,6 +4914,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_sound_view(self.sound, serializer);
     sse_encode_look_view(self.look, serializer);
     sse_encode_list_transcript_view(self.transcripts, serializer);
+    sse_encode_captions_view(self.captions, serializer);
   }
 
   @protected
@@ -4698,5 +5057,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.text, serializer);
     sse_encode_i_64(self.startUs, serializer);
     sse_encode_bool(self.deleted, serializer);
+    sse_encode_bool(self.emphasis, serializer);
   }
 }

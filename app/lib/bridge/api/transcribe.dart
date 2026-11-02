@@ -14,8 +14,9 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 import 'projects.dart';
 
-// These functions are ignored because they are not marked as `pub`: `download`, `jobs`, `model_path`, `owner`, `run_transcription`, `to_transcript`, `transcript_view`, `transcript_views`
+// These functions are ignored because they are not marked as `pub`: `captions_view`, `download`, `jobs`, `model_path`, `owner`, `run_transcription`, `settings_command`, `to_transcript`, `transcript_view`, `transcript_views`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Job`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `eq`, `eq`, `from`, `from`, `from`, `from`
 
 /// Whether the model is on disk, and its size whether it is or not.
 ModelView speechModel({required String root}) =>
@@ -60,9 +61,120 @@ Future<ProjectView> hideSegment({
   hidden: hidden,
 );
 
+/// Switches to a preset, which sets grouping, entrance and case (FR-CAP-02).
+Future<ProjectView> setCaptionPreset({required CaptionPresetView preset}) =>
+    RustLib.instance.api.crateApiTranscribeSetCaptionPreset(preset: preset);
+
+Future<ProjectView> setCaptionsEnabled({required bool enabled}) =>
+    RustLib.instance.api.crateApiTranscribeSetCaptionsEnabled(enabled: enabled);
+
+Future<ProjectView> setCaptionAnimation({
+  required CaptionAnimationView animation,
+}) => RustLib.instance.api.crateApiTranscribeSetCaptionAnimation(
+  animation: animation,
+);
+
+/// The look a user adjusts on top of a preset (FR-CAP-03).
+Future<ProjectView> setCaptionStyle({
+  required String font,
+  required double size,
+  required bool uppercase,
+  required String color,
+  required String emphasisColor,
+  required double anchor,
+}) => RustLib.instance.api.crateApiTranscribeSetCaptionStyle(
+  font: font,
+  size: size,
+  uppercase: uppercase,
+  color: color,
+  emphasisColor: emphasisColor,
+  anchor: anchor,
+);
+
+/// Turns the emphasis of one word on or off; the choice then stays the user's (FR-CAP-04).
+Future<ProjectView> toggleEmphasis({
+  String? clipId,
+  String? audioId,
+  required String segment,
+  required int word,
+}) => RustLib.instance.api.crateApiTranscribeToggleEmphasis(
+  clipId: clipId,
+  audioId: audioId,
+  segment: segment,
+  word: word,
+);
+
+/// Writes the project's captions next to an export (FR-CAP-07).
+Future<void> writeSrt({required String path}) =>
+    RustLib.instance.api.crateApiTranscribeWriteSrt(path: path);
+
 /// The view after a background task changed the project.
 Future<ProjectView> currentView() =>
     RustLib.instance.api.crateApiTranscribeCurrentView();
+
+enum CaptionAnimationView { none, pop, fade, typewriter }
+
+enum CaptionPresetView {
+  wordByWord,
+  wordGroups,
+  sentence,
+  karaoke,
+  outline,
+  box,
+  bold,
+  minimal,
+}
+
+class CaptionsView {
+  final bool enabled;
+  final CaptionPresetView preset;
+  final CaptionAnimationView animation;
+  final String font;
+  final double size;
+  final bool uppercase;
+  final String color;
+  final String emphasisColor;
+  final double anchor;
+
+  const CaptionsView({
+    required this.enabled,
+    required this.preset,
+    required this.animation,
+    required this.font,
+    required this.size,
+    required this.uppercase,
+    required this.color,
+    required this.emphasisColor,
+    required this.anchor,
+  });
+
+  @override
+  int get hashCode =>
+      enabled.hashCode ^
+      preset.hashCode ^
+      animation.hashCode ^
+      font.hashCode ^
+      size.hashCode ^
+      uppercase.hashCode ^
+      color.hashCode ^
+      emphasisColor.hashCode ^
+      anchor.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CaptionsView &&
+          runtimeType == other.runtimeType &&
+          enabled == other.enabled &&
+          preset == other.preset &&
+          animation == other.animation &&
+          font == other.font &&
+          size == other.size &&
+          uppercase == other.uppercase &&
+          color == other.color &&
+          emphasisColor == other.emphasisColor &&
+          anchor == other.anchor;
+}
 
 class ModelView {
   final bool ready;
@@ -142,17 +254,23 @@ class WordView {
   final String text;
   final PlatformInt64 startUs;
   final bool deleted;
+  final bool emphasis;
 
   const WordView({
     required this.index,
     required this.text,
     required this.startUs,
     required this.deleted,
+    required this.emphasis,
   });
 
   @override
   int get hashCode =>
-      index.hashCode ^ text.hashCode ^ startUs.hashCode ^ deleted.hashCode;
+      index.hashCode ^
+      text.hashCode ^
+      startUs.hashCode ^
+      deleted.hashCode ^
+      emphasis.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -162,5 +280,6 @@ class WordView {
           index == other.index &&
           text == other.text &&
           startUs == other.startUs &&
-          deleted == other.deleted;
+          deleted == other.deleted &&
+          emphasis == other.emphasis;
 }

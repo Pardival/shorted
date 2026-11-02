@@ -6,6 +6,8 @@ use std::path::Path;
 
 use objc2_core_foundation::CFRetained;
 use objc2_io_surface::IOSurfaceRef;
+#[cfg(test)]
+use shorted_core::evaluate::CaptionRun;
 use shorted_core::evaluate::{evaluate, ClipLayer, FrameDescription, TransitionState};
 use shorted_core::model::{
     CaptionAnimation, CaptionPreset, ColorAdjust, Id, MediaKind, MediaRef, Project, TransitionKind,
@@ -121,6 +123,7 @@ pub struct FrameComposer {
 const POP_US: i64 = 120_000;
 const FADE_US: i64 = 150_000;
 const POP_START: f32 = 0.85;
+const TYPEWRITER_US_PER_CHARACTER: i64 = 30_000;
 
 fn caption_look(project: &Project) -> CaptionLook {
     let settings = &project.captions;
@@ -139,15 +142,30 @@ fn caption_look(project: &Project) -> CaptionLook {
     }
 }
 
-fn caption_words(frame: &FrameDescription, karaoke: bool) -> Vec<CaptionWord> {
-    frame
-        .captions
-        .iter()
-        .map(|run| CaptionWord {
-            text: run.text.clone(),
+/// Words as they show at this instant. Typewriter reveals one character at a time.
+fn caption_words(
+    frame: &FrameDescription,
+    karaoke: bool,
+    animation: CaptionAnimation,
+) -> Vec<CaptionWord> {
+    let mut left = if animation == CaptionAnimation::Typewriter {
+        (frame.caption_age_us / TYPEWRITER_US_PER_CHARACTER) as usize + 1
+    } else {
+        usize::MAX
+    };
+    let mut words = Vec::new();
+    for run in &frame.captions {
+        if left == 0 {
+            break;
+        }
+        let text: String = run.text.chars().take(left).collect();
+        left = left.saturating_sub(run.text.chars().count());
+        words.push(CaptionWord {
+            text,
             highlighted: if karaoke { run.active } else { run.emphasis },
-        })
-        .collect()
+        });
+    }
+    words
 }
 
 /// The caption's entrance. Pop grows around the block, so the block stays where it is.
@@ -346,7 +364,7 @@ impl FrameComposer {
             return;
         }
         let karaoke = project.captions.preset == CaptionPreset::Karaoke;
-        let words = caption_words(frame, karaoke);
+        let words = caption_words(frame, karaoke, project.captions.animation);
         let look = caption_look(project);
         let key = format!("{words:?}{look:?}");
         if self
@@ -448,6 +466,37 @@ mod transition_tests {
         let end = caption_effect(CaptionAnimation::Pop, POP_US, 0.7);
         assert_eq!(end.frame_zoom, 1.0);
         assert!(end.keeps_alpha);
+    }
+
+    #[test]
+    fn a_typewriter_reveals_characters_in_order() {
+        let frame = FrameDescription {
+            time_us: 0,
+            clips: Vec::new(),
+            transition: None,
+            overlays: Vec::new(),
+            captions: vec![
+                CaptionRun {
+                    text: "ab".into(),
+                    emphasis: false,
+                    active: true,
+                },
+                CaptionRun {
+                    text: "cd".into(),
+                    emphasis: true,
+                    active: false,
+                },
+            ],
+            caption_age_us: TYPEWRITER_US_PER_CHARACTER * 2,
+        };
+        let shown = caption_words(&frame, false, CaptionAnimation::Typewriter);
+        assert_eq!(shown.len(), 2);
+        assert_eq!(
+            (shown[0].text.as_str(), shown[1].text.as_str()),
+            ("ab", "c")
+        );
+        let all = caption_words(&frame, false, CaptionAnimation::Pop);
+        assert_eq!(all[1].text, "cd");
     }
 
     #[test]

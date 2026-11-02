@@ -1,6 +1,8 @@
 //! `evaluate(project, t)`: what is on screen at time `t`. Pure and deterministic: preview and
 //! export both go through this function (ADR-0003).
 
+use std::ops::Range;
+
 use crate::model::*;
 
 /// One video layer. During a transition there are two: outgoing first.
@@ -348,9 +350,15 @@ fn word_block(
     transcript: &Transcript,
     source_time: i64,
     grouping: Grouping,
+    used: Range<i64>,
 ) -> Option<(Vec<CaptionRun>, i64)> {
     for segment in transcript.segments.iter().filter(|s| !s.hidden) {
-        let words: Vec<&Word> = segment.words.iter().filter(|w| !w.deleted).collect();
+        // Words trimmed out of the edit do not take a place in a group.
+        let words: Vec<&Word> = segment
+            .words
+            .iter()
+            .filter(|w| !w.deleted && used.contains(&w.start_us))
+            .collect();
         let size = match grouping {
             Grouping::OneWord => 1,
             Grouping::UpTo(count) => usize::from(count).max(1),
@@ -395,10 +403,12 @@ fn caption_block(project: &Project, layers: &[ClipLayer], t: i64) -> (Vec<Captio
                 let clip =
                     layer.and_then(|l| project.timeline.clips.iter().find(|c| c.id == l.clip_id));
                 match (layer, clip) {
-                    (Some(layer), Some(clip)) if clip.original_audio.transcribe => clip
-                        .transcript
-                        .as_ref()
-                        .and_then(|t| word_block(t, layer.source_time_us, settings.grouping)),
+                    (Some(layer), Some(clip)) if clip.original_audio.transcribe => {
+                        clip.transcript.as_ref().and_then(|t| {
+                            let used = clip.source_in_us..clip.source_out_us;
+                            word_block(t, layer.source_time_us, settings.grouping, used)
+                        })
+                    }
                     _ => None,
                 }
             }
@@ -408,7 +418,8 @@ fn caption_block(project: &Project, layers: &[ClipLayer], t: i64) -> (Vec<Captio
                     .and_then(|item| {
                         let source_time = item.source_in_us + t - item.start_us;
                         let transcript = item.transcript.as_ref()?;
-                        word_block(transcript, source_time, settings.grouping)
+                        let used = item.source_in_us..item.source_out_us;
+                        word_block(transcript, source_time, settings.grouping, used)
                     })
             }
         };

@@ -5,6 +5,7 @@
 
 use std::path::{Path, PathBuf};
 
+use shorted_core::captions::{apply_auto_emphasis, apply_preset, srt};
 use shorted_core::command::{Command, TranscriptOwner};
 use shorted_core::model::*;
 use shorted_transcribe::{group_words, SpokenWord, BASE_MODEL};
@@ -136,7 +137,9 @@ fn to_transcript(words: Vec<SpokenWord>, offset_us: i64, language: String) -> Tr
                 .collect(),
         })
         .collect();
-    Transcript { language, segments }
+    let mut transcript = Transcript { language, segments };
+    apply_auto_emphasis(&mut transcript);
+    transcript
 }
 
 /// A sound to transcribe: who owns the words, and the part of the file that is used.
@@ -253,6 +256,23 @@ pub fn transcribe_project(root: String, events: StreamSink<TaskEvent>) {
             if commands.is_empty() {
                 return Ok(());
             }
+            let mut settings = project.captions.clone();
+            for command in &commands {
+                if let Command::SetTranscript {
+                    owner: TranscriptOwner::Audio(id),
+                    ..
+                } = command
+                {
+                    let source = CaptionSource::AudioItem(*id);
+                    if !settings.sources.contains(&source) {
+                        settings.sources.push(source);
+                    }
+                }
+            }
+            let mut commands = commands;
+            commands.push(Command::SetCaptionSettings {
+                settings: Box::new(settings),
+            });
             on_command_thread(move || {
                 with_active(|session| {
                     session.execute(&Command::Group {
@@ -271,6 +291,7 @@ pub struct WordView {
     pub text: String,
     pub start_us: i64,
     pub deleted: bool,
+    pub emphasis: bool,
 }
 
 pub struct SegmentView {
@@ -310,6 +331,10 @@ fn transcript_view(
                         text: word.text.clone(),
                         start_us: word.start_us,
                         deleted: word.deleted,
+                        emphasis: matches!(
+                            word.emphasis,
+                            EmphasisState::Auto(true) | EmphasisState::User(true)
+                        ),
                     })
                     .collect(),
             })
@@ -373,6 +398,178 @@ pub async fn hide_segment(
             hidden,
         })
     })
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum CaptionPresetView {
+    WordByWord,
+    WordGroups,
+    Sentence,
+    Karaoke,
+    Outline,
+    Box,
+    Bold,
+    Minimal,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum CaptionAnimationView {
+    None,
+    Pop,
+    Fade,
+    Typewriter,
+}
+
+impl From<CaptionPresetView> for CaptionPreset {
+    fn from(preset: CaptionPresetView) -> Self {
+        match preset {
+            CaptionPresetView::WordByWord => Self::WordByWord,
+            CaptionPresetView::WordGroups => Self::WordGroups,
+            CaptionPresetView::Sentence => Self::Sentence,
+            CaptionPresetView::Karaoke => Self::Karaoke,
+            CaptionPresetView::Outline => Self::Outline,
+            CaptionPresetView::Box => Self::Box,
+            CaptionPresetView::Bold => Self::Bold,
+            CaptionPresetView::Minimal => Self::Minimal,
+        }
+    }
+}
+
+impl From<CaptionPreset> for CaptionPresetView {
+    fn from(preset: CaptionPreset) -> Self {
+        match preset {
+            CaptionPreset::WordByWord => Self::WordByWord,
+            CaptionPreset::WordGroups => Self::WordGroups,
+            CaptionPreset::Sentence => Self::Sentence,
+            CaptionPreset::Karaoke => Self::Karaoke,
+            CaptionPreset::Outline => Self::Outline,
+            CaptionPreset::Box => Self::Box,
+            CaptionPreset::Bold => Self::Bold,
+            CaptionPreset::Minimal => Self::Minimal,
+        }
+    }
+}
+
+impl From<CaptionAnimationView> for CaptionAnimation {
+    fn from(animation: CaptionAnimationView) -> Self {
+        match animation {
+            CaptionAnimationView::None => Self::None,
+            CaptionAnimationView::Pop => Self::Pop,
+            CaptionAnimationView::Fade => Self::Fade,
+            CaptionAnimationView::Typewriter => Self::Typewriter,
+        }
+    }
+}
+
+impl From<CaptionAnimation> for CaptionAnimationView {
+    fn from(animation: CaptionAnimation) -> Self {
+        match animation {
+            CaptionAnimation::None => Self::None,
+            CaptionAnimation::Pop => Self::Pop,
+            CaptionAnimation::Fade => Self::Fade,
+            CaptionAnimation::Typewriter => Self::Typewriter,
+        }
+    }
+}
+
+pub struct CaptionsView {
+    pub enabled: bool,
+    pub preset: CaptionPresetView,
+    pub animation: CaptionAnimationView,
+    pub font: String,
+    pub size: f32,
+    pub uppercase: bool,
+    pub color: String,
+    pub emphasis_color: String,
+    pub anchor: f32,
+}
+
+pub(crate) fn captions_view(project: &Project) -> CaptionsView {
+    let settings = &project.captions;
+    CaptionsView {
+        enabled: settings.enabled,
+        preset: settings.preset.into(),
+        animation: settings.animation.into(),
+        font: settings.style.font.clone(),
+        size: settings.style.size,
+        uppercase: settings.style.uppercase,
+        color: settings.style.color.clone(),
+        emphasis_color: settings.emphasis_color.clone(),
+        anchor: settings.vertical_anchor,
+    }
+}
+
+fn settings_command(
+    project: &Project,
+    change: impl FnOnce(&mut CaptionSettings),
+) -> Result<Command, EngineError> {
+    let mut settings = project.captions.clone();
+    change(&mut settings);
+    Ok(Command::SetCaptionSettings {
+        settings: Box::new(settings),
+    })
+}
+
+/// Switches to a preset, which sets grouping, entrance and case (FR-CAP-02).
+pub async fn set_caption_preset(preset: CaptionPresetView) -> Result<ProjectView, EngineFailure> {
+    edit(move |project| settings_command(project, |settings| apply_preset(settings, preset.into())))
+}
+
+pub async fn set_captions_enabled(enabled: bool) -> Result<ProjectView, EngineFailure> {
+    edit(move |project| settings_command(project, |settings| settings.enabled = enabled))
+}
+
+pub async fn set_caption_animation(
+    animation: CaptionAnimationView,
+) -> Result<ProjectView, EngineFailure> {
+    edit(move |project| settings_command(project, |settings| settings.animation = animation.into()))
+}
+
+/// The look a user adjusts on top of a preset (FR-CAP-03).
+pub async fn set_caption_style(
+    font: String,
+    size: f32,
+    uppercase: bool,
+    color: String,
+    emphasis_color: String,
+    anchor: f32,
+) -> Result<ProjectView, EngineFailure> {
+    edit(move |project| {
+        settings_command(project, |settings| {
+            settings.style.font = font;
+            settings.style.size = size;
+            settings.style.uppercase = uppercase;
+            settings.style.color = color;
+            settings.emphasis_color = emphasis_color;
+            settings.vertical_anchor = anchor;
+        })
+    })
+}
+
+/// Turns the emphasis of one word on or off; the choice then stays the user's (FR-CAP-04).
+pub async fn toggle_emphasis(
+    clip_id: Option<String>,
+    audio_id: Option<String>,
+    segment: String,
+    word: u32,
+) -> Result<ProjectView, EngineFailure> {
+    edit(move |_| {
+        Ok(Command::ToggleEmphasis {
+            owner: owner(clip_id, audio_id)?,
+            segment: parse(&segment)?,
+            word: word as usize,
+        })
+    })
+}
+
+/// Writes the project's captions next to an export (FR-CAP-07).
+pub async fn write_srt(path: String) -> Result<(), EngineFailure> {
+    let project = transport().project.clone();
+    let project = project.ok_or_else(|| EngineError::Internal("no project is open".into()))?;
+    std::fs::write(path, srt(&project))
+        .map_err(shorted_store::session::StoreError::from)
+        .map_err(EngineError::from)?;
+    Ok(())
 }
 
 /// The view after a background task changed the project.

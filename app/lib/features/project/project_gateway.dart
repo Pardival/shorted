@@ -107,6 +107,25 @@ abstract interface class ProjectGateway {
     String segment, {
     required bool hidden,
   });
+  Future<ProjectView> toggleEmphasis(
+    speech.TranscriptView transcript,
+    String segment,
+    int word,
+  );
+  Future<ProjectView> setCaptionPreset(speech.CaptionPresetView preset);
+  Future<ProjectView> setCaptionsEnabled({required bool enabled});
+  Future<ProjectView> setCaptionAnimation(
+    speech.CaptionAnimationView animation,
+  );
+  Future<ProjectView> setCaptionStyle({
+    required String font,
+    required double size,
+    required bool uppercase,
+    required String color,
+    required String emphasisColor,
+    required double anchor,
+  });
+  Future<void> writeSrt(String path);
   Future<media.ThumbnailView?> cover(String projectId);
   int exportSizeEstimate(int width, int fps, int durationUs);
   Future<int> cacheBytes();
@@ -392,6 +411,51 @@ class EngineGateway implements ProjectGateway {
     word: word,
     text: text,
   );
+
+  @override
+  Future<ProjectView> toggleEmphasis(
+    speech.TranscriptView transcript,
+    String segment,
+    int word,
+  ) => speech.toggleEmphasis(
+    clipId: transcript.clipId,
+    audioId: transcript.audioId,
+    segment: segment,
+    word: word,
+  );
+
+  @override
+  Future<ProjectView> setCaptionPreset(speech.CaptionPresetView preset) =>
+      speech.setCaptionPreset(preset: preset);
+
+  @override
+  Future<ProjectView> setCaptionsEnabled({required bool enabled}) =>
+      speech.setCaptionsEnabled(enabled: enabled);
+
+  @override
+  Future<ProjectView> setCaptionAnimation(
+    speech.CaptionAnimationView animation,
+  ) => speech.setCaptionAnimation(animation: animation);
+
+  @override
+  Future<ProjectView> setCaptionStyle({
+    required String font,
+    required double size,
+    required bool uppercase,
+    required String color,
+    required String emphasisColor,
+    required double anchor,
+  }) => speech.setCaptionStyle(
+    font: font,
+    size: size,
+    uppercase: uppercase,
+    color: color,
+    emphasisColor: emphasisColor,
+    anchor: anchor,
+  );
+
+  @override
+  Future<void> writeSrt(String path) => speech.writeSrt(path: path);
 
   @override
   Future<ProjectView> hideSegment(

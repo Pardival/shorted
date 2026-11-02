@@ -82,6 +82,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   TransitionKindView dco_decode_box_autoadd_transition_kind_view(dynamic raw);
 
   @protected
+  CaptionAnimationView dco_decode_caption_animation_view(dynamic raw);
+
+  @protected
+  CaptionPresetView dco_decode_caption_preset_view(dynamic raw);
+
+  @protected
+  CaptionsView dco_decode_captions_view(dynamic raw);
+
+  @protected
   ClipEdge dco_decode_clip_edge(dynamic raw);
 
   @protected
@@ -294,6 +303,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   TransitionKindView sse_decode_box_autoadd_transition_kind_view(
     SseDeserializer deserializer,
   );
+
+  @protected
+  CaptionAnimationView sse_decode_caption_animation_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CaptionPresetView sse_decode_caption_preset_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CaptionsView sse_decode_captions_view(SseDeserializer deserializer);
 
   @protected
   ClipEdge sse_decode_clip_edge(SseDeserializer deserializer);
@@ -548,6 +570,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     TransitionKindView self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_caption_animation_view(
+    CaptionAnimationView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_caption_preset_view(
+    CaptionPresetView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_captions_view(CaptionsView self, SseSerializer serializer);
 
   @protected
   void sse_encode_clip_edge(ClipEdge self, SseSerializer serializer);

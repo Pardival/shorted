@@ -112,6 +112,7 @@ class ProjectView {
   final SoundView sound;
   final LookView look;
   final List<TranscriptView> transcripts;
+  final CaptionsView captions;
 
   const ProjectView({
     required this.id,
@@ -124,6 +125,7 @@ class ProjectView {
     required this.sound,
     required this.look,
     required this.transcripts,
+    required this.captions,
   });
 
   @override
@@ -137,7 +139,8 @@ class ProjectView {
       media.hashCode ^
       sound.hashCode ^
       look.hashCode ^
-      transcripts.hashCode;
+      transcripts.hashCode ^
+      captions.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -153,7 +156,8 @@ class ProjectView {
           media == other.media &&
           sound == other.sound &&
           look == other.look &&
-          transcripts == other.transcripts;
+          transcripts == other.transcripts &&
+          captions == other.captions;
 }
 
 enum SaveStateView { saving, saved, failed }

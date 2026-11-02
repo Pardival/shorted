@@ -121,6 +121,7 @@ class _CaptionsPanelState extends ConsumerState<CaptionsPanel> {
                 _follow(_gateway.downloadSpeechModel(), downloading: true),
           ),
         const SizedBox(height: ShortedSpace.m),
+        const SizedBox(height: ShortedSpace.m),
         if (transcripts.isEmpty)
           Text(
             l10n.noTranscript,
@@ -129,6 +130,210 @@ class _CaptionsPanelState extends ConsumerState<CaptionsPanel> {
         for (final transcript in transcripts)
           for (final segment in transcript.segments)
             _Phrase(transcript: transcript, segment: segment, run: _run),
+        const SizedBox(height: ShortedSpace.m),
+        _CaptionStyle(
+          key: ValueKey(widget.view.captions.preset),
+          captions: widget.view.captions,
+          run: _run,
+        ),
+      ],
+    );
+  }
+}
+
+const _fonts = ['Space Grotesk', 'Inter'];
+const _colours = [
+  '#FFFFFFFF',
+  '#FFE14DFF',
+  '#C6F135FF',
+  '#FF5C7AFF',
+  '#4DD2FFFF',
+];
+
+Color _colour(String hex) =>
+    Color(int.parse('FF${hex.substring(1, 7)}', radix: 16));
+
+String _presetName(AppLocalizations l10n, CaptionPresetView preset) =>
+    switch (preset) {
+      CaptionPresetView.wordByWord => l10n.presetWordByWord,
+      CaptionPresetView.wordGroups => l10n.presetWordGroups,
+      CaptionPresetView.sentence => l10n.presetSentence,
+      CaptionPresetView.karaoke => l10n.presetKaraoke,
+      CaptionPresetView.outline => l10n.presetOutline,
+      CaptionPresetView.box => l10n.presetBox,
+      CaptionPresetView.bold => l10n.presetBold,
+      CaptionPresetView.minimal => l10n.presetMinimal,
+    };
+
+String _animationName(AppLocalizations l10n, CaptionAnimationView animation) =>
+    switch (animation) {
+      CaptionAnimationView.none => l10n.animationNone,
+      CaptionAnimationView.pop => l10n.animationPop,
+      CaptionAnimationView.fade => l10n.animationFade,
+      CaptionAnimationView.typewriter => l10n.animationTypewriter,
+    };
+
+/// Sliders follow the finger locally; the engine hears once, when the finger lifts.
+class _CaptionStyle extends StatefulWidget {
+  const _CaptionStyle({super.key, required this.captions, required this.run});
+
+  final CaptionsView captions;
+  final Future<void> Function(
+    Future<ProjectView> Function(ProjectGateway gateway) action,
+  )
+  run;
+
+  @override
+  State<_CaptionStyle> createState() => _CaptionStyleState();
+}
+
+class _CaptionStyleState extends State<_CaptionStyle> {
+  double? _size;
+  double? _anchor;
+
+  void _style({
+    String? font,
+    bool? uppercase,
+    String? color,
+    String? emphasisColor,
+  }) {
+    final captions = widget.captions;
+    widget.run(
+      (gateway) => gateway.setCaptionStyle(
+        font: font ?? captions.font,
+        size: _size ?? captions.size,
+        uppercase: uppercase ?? captions.uppercase,
+        color: color ?? captions.color,
+        emphasisColor: emphasisColor ?? captions.emphasisColor,
+        anchor: _anchor ?? captions.anchor,
+      ),
+    );
+  }
+
+  Widget _heading(String text) => Padding(
+    padding: const EdgeInsets.only(
+      top: ShortedSpace.m,
+      bottom: ShortedSpace.xs,
+    ),
+    child: Text(text, style: const TextStyle(fontWeight: FontWeight.w600)),
+  );
+
+  Widget _swatches(String selected, ValueChanged<String> onTap) => Wrap(
+    spacing: ShortedSpace.s,
+    children: [
+      for (final hex in _colours)
+        Semantics(
+          button: true,
+          selected: hex == selected,
+          label: hex,
+          child: InkWell(
+            onTap: () => onTap(hex),
+            child: Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: _colour(hex),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: hex == selected
+                      ? ShortedColors.text
+                      : ShortedColors.line,
+                  width: 2,
+                ),
+              ),
+            ),
+          ),
+        ),
+    ],
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final captions = widget.captions;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(l10n.captionsOn),
+          value: captions.enabled,
+          onChanged: (enabled) => widget.run(
+            (gateway) => gateway.setCaptionsEnabled(enabled: enabled),
+          ),
+        ),
+        _heading(l10n.captionStyle),
+        Wrap(
+          spacing: ShortedSpace.s,
+          runSpacing: ShortedSpace.s,
+          children: [
+            for (final preset in CaptionPresetView.values)
+              ShortedChip(
+                label: _presetName(l10n, preset),
+                selected: captions.preset == preset,
+                onTap: () =>
+                    widget.run((gateway) => gateway.setCaptionPreset(preset)),
+              ),
+          ],
+        ),
+        _heading(l10n.captionAnimation),
+        Wrap(
+          spacing: ShortedSpace.s,
+          runSpacing: ShortedSpace.s,
+          children: [
+            for (final animation in CaptionAnimationView.values)
+              ShortedChip(
+                label: _animationName(l10n, animation),
+                selected: captions.animation == animation,
+                onTap: () => widget.run(
+                  (gateway) => gateway.setCaptionAnimation(animation),
+                ),
+              ),
+          ],
+        ),
+        _heading(l10n.captionFont),
+        Wrap(
+          spacing: ShortedSpace.s,
+          children: [
+            for (final font in _fonts)
+              ShortedChip(
+                label: font,
+                selected: captions.font == font,
+                onTap: () => _style(font: font),
+              ),
+          ],
+        ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(l10n.captionUppercase),
+          value: captions.uppercase,
+          onChanged: (uppercase) => _style(uppercase: uppercase),
+        ),
+        _heading(l10n.captionSize),
+        Slider(
+          min: 40,
+          max: 160,
+          value: (_size ?? captions.size).clamp(40, 160),
+          label: l10n.captionSize,
+          onChanged: (value) => setState(() => _size = value),
+          onChangeEnd: (_) => _style(),
+        ),
+        _heading(l10n.captionPosition),
+        Slider(
+          min: 0.15,
+          max: 0.75,
+          value: (_anchor ?? captions.anchor).clamp(0.15, 0.75),
+          label: l10n.captionPosition,
+          onChanged: (value) => setState(() => _anchor = value),
+          onChangeEnd: (_) => _style(),
+        ),
+        _heading(l10n.textColour),
+        _swatches(captions.color, (color) => _style(color: color)),
+        _heading(l10n.emphasisColour),
+        _swatches(
+          captions.emphasisColor,
+          (color) => _style(emphasisColor: color),
+        ),
       ],
     );
   }
@@ -170,9 +375,16 @@ class _Phrase extends StatelessWidget {
               for (final word in segment.words)
                 if (!word.deleted)
                   Tooltip(
-                    message: l10n.editWord,
+                    message: l10n.toggleEmphasis,
                     child: InkWell(
-                      onTap: () => _edit(context, word),
+                      onTap: () => run(
+                        (gateway) => gateway.toggleEmphasis(
+                          transcript,
+                          segment.id,
+                          word.index,
+                        ),
+                      ),
+                      onLongPress: () => _edit(context, word),
                       child: Padding(
                         padding: const EdgeInsets.all(ShortedSpace.xs),
                         child: Text(
@@ -180,6 +392,8 @@ class _Phrase extends StatelessWidget {
                           style: TextStyle(
                             color: hidden
                                 ? ShortedColors.textMuted
+                                : word.emphasis
+                                ? ShortedColors.accent
                                 : ShortedColors.text,
                           ),
                         ),

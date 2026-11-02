@@ -34,7 +34,9 @@ class ExportPanel extends ConsumerStatefulWidget {
 class _ExportPanelState extends ConsumerState<ExportPanel> {
   var _width = 1080;
   var _fps = 30;
+  var _srt = false;
   double? _progress;
+  String? _savedPath;
   BigInt? _taskId;
   StreamSubscription<TaskEvent>? _events;
 
@@ -61,11 +63,25 @@ class _ExportPanelState extends ConsumerState<ExportPanel> {
       case TaskEvent_Finished():
         setState(() => _progress = null);
         showToast(context, l10n.exportDone);
+        unawaited(_saveCaptions(l10n));
       case TaskEvent_Cancelled():
         setState(() => _progress = null);
       case TaskEvent_Failed(:final code):
         setState(() => _progress = null);
         showToast(context, errorMessage(l10n, EngineFailure(code: code)));
+    }
+  }
+
+  /// The `.srt` sits next to the video, with the same name.
+  Future<void> _saveCaptions(AppLocalizations l10n) async {
+    final path = _savedPath;
+    if (!_srt || path == null) return;
+    final dot = path.lastIndexOf('.');
+    final base = dot < 0 ? path : path.substring(0, dot);
+    try {
+      await ref.read(projectGatewayProvider).writeSrt('$base.srt');
+    } on Object catch (error) {
+      if (mounted) showToast(context, errorMessage(l10n, error));
     }
   }
 
@@ -75,6 +91,7 @@ class _ExportPanelState extends ConsumerState<ExportPanel> {
     if (path == null || !mounted) return;
     setState(() => _progress = 0);
     final gateway = ref.read(projectGatewayProvider);
+    _savedPath = path;
     _events = gateway
         .export(path, width: _width, fps: _fps)
         .listen((event) => _onEvent(event, l10n));
@@ -149,6 +166,12 @@ class _ExportPanelState extends ConsumerState<ExportPanel> {
             options: {for (final fps in _frameRates) fps: '$fps'},
             selected: _fps,
             onSelected: (value) => setState(() => _fps = value),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.exportSrt),
+            value: _srt,
+            onChanged: (value) => setState(() => _srt = value),
           ),
           if (blocked == null)
             Text(
