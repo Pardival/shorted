@@ -225,7 +225,10 @@ class _EditorShellState extends ConsumerState<EditorShell> {
   Widget _phone(BuildContext context, EditorState state, Widget transport) {
     return Column(
       children: [
-        const Expanded(flex: 5, child: PreviewArea()),
+        Expanded(
+          flex: 5,
+          child: PreviewArea(projectId: projectId, playheadUs: _playheadUs),
+        ),
         transport,
         TimelineArea(
           height: _expanded
@@ -258,7 +261,12 @@ class _EditorShellState extends ConsumerState<EditorShell> {
               Expanded(
                 child: Row(
                   children: [
-                    const Expanded(child: PreviewArea()),
+                    Expanded(
+                      child: PreviewArea(
+                        projectId: projectId,
+                        playheadUs: _playheadUs,
+                      ),
+                    ),
                     SizedBox(width: 280, child: _panel(state)),
                     if (inspector) const Inspector(),
                   ],

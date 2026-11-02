@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../bridge/api/look.dart';
+import '../../bridge/api/overlays.dart';
 import '../../bridge/api/projects.dart';
 import '../../design_system/components.dart';
 import '../../design_system/tokens.g.dart';
@@ -51,9 +52,33 @@ class EnhancePanel extends ConsumerWidget {
     for (final look in view.look.clips) {
       if (look.clipId == selected) clip = look;
     }
+    Future<void> addShape(ShapeKindView shape) async {
+      final atUs = ref.read(previewTransportProvider).positionUs;
+      await run((gateway) => gateway.addShape(shape, atUs));
+      if (!context.mounted) return;
+      final added = ref.read(editorProvider(view.id)).value?.view.overlays;
+      if (added != null && added.isNotEmpty) {
+        ref.read(selectedOverlayProvider.notifier).set(added.last.id);
+      }
+    }
+
     return ListView(
       padding: const EdgeInsets.all(ShortedSpace.m),
       children: [
+        Text(l10n.shapes, style: const TextStyle(fontWeight: FontWeight.w600)),
+        const SizedBox(height: ShortedSpace.s),
+        Wrap(
+          spacing: ShortedSpace.s,
+          children: [
+            for (final (shape, label) in [
+              (ShapeKindView.rectangle, l10n.shapeRectangle),
+              (ShapeKindView.ellipse, l10n.shapeEllipse),
+              (ShapeKindView.arrow, l10n.shapeArrow),
+            ])
+              ShortedChip(label: label, onTap: () => addShape(shape)),
+          ],
+        ),
+        const SizedBox(height: ShortedSpace.m),
         if (clip == null)
           Text(
             l10n.selectClipForLook,

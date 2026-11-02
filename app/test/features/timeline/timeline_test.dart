@@ -56,6 +56,69 @@ void main() {
     expect(TimelineLayout.visible(const [], 0, 1), isEmpty);
   });
 
+  test('overlapping overlays are all found, the latest on top', () {
+    const long = TimelineItem(id: 'long', startUs: 0, endUs: 9000000);
+    const short = TimelineItem(id: 'short', startUs: 1000000, endUs: 2000000);
+    const late = TimelineItem(id: 'late', startUs: 5000000, endUs: 6000000);
+    const track = TimelineTrack(
+      kind: TrackKind.widgets,
+      label: 'W',
+      items: [long, short, late],
+    );
+    final found = TimelineLayout.visible(
+      track.items,
+      3000000,
+      4000000,
+      overlapping: true,
+    );
+    expect(found.map((item) => item.id), ['long']);
+    expect(layout.itemAt(track, 1500000)?.id, 'short');
+    expect(layout.itemAt(track, 7000000)?.id, 'long');
+  });
+
+  testWidgets('an overlay is moved in time, and a locked one stays', (
+    tester,
+  ) async {
+    final playhead = ValueNotifier<int>(0);
+    addTearDown(playhead.dispose);
+    final timings = <String>[];
+    Widget timeline({required bool locked}) => harness(
+      TimelineView(
+        tracks: [
+          TimelineTrack(
+            kind: TrackKind.widgets,
+            label: 'W',
+            items: [
+              TimelineItem(
+                id: 'o',
+                startUs: 1000000,
+                endUs: 2000000,
+                locked: locked,
+                animated: true,
+              ),
+            ],
+          ),
+        ],
+        durationUs: 4000000,
+        playheadUs: playhead,
+        selectedId: 'o',
+        onOverlayTiming: (item, start, end) =>
+            timings.add('${item.id} $start $end'),
+      ),
+    );
+    await tester.pumpWidget(timeline(locked: false));
+    final origin = tester.getTopLeft(find.byType(TimelineView));
+    // 1 s to 2 s spans x = 128 to 168 at the default 40 px/s.
+    await tester.dragFrom(origin + const Offset(148, 40), const Offset(40, 0));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(timings, ['o 2000000 3000000']);
+
+    await tester.pumpWidget(timeline(locked: true));
+    await tester.dragFrom(origin + const Offset(148, 40), const Offset(40, 0));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(timings, hasLength(1));
+  });
+
   test('tracks are found from y', () {
     expect(layout.trackAt(10, 2), isNull);
     expect(layout.trackAt(25, 2), 0);

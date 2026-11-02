@@ -208,7 +208,12 @@ class TimelinePainter extends CustomPainter {
     final fill = Paint()
       ..color = _trackColor(track.kind)
           .withValues(alpha: track.hidden ? _hiddenTrackAlpha : 1);
-    for (final item in TimelineLayout.visible(track.items, fromUs, toUs)) {
+    for (final item in TimelineLayout.visible(
+      track.items,
+      fromUs,
+      toUs,
+      overlapping: track.overlapping,
+    )) {
       final rect = Rect.fromLTRB(
         layout.xForTime(item.startUs),
         top + _itemGap,
@@ -219,6 +224,8 @@ class TimelinePainter extends CustomPainter {
       canvas.drawRRect(shape, fill);
       if (track.kind == TrackKind.video) {
         _paintFilmstrip(canvas, item, shape, size.width);
+      } else if (track.kind == TrackKind.widgets) {
+        if (item.animated) _paintDiamonds(canvas, rect);
       } else {
         _paintWaveform(canvas, item, rect, size.width);
       }
@@ -233,6 +240,24 @@ class TimelinePainter extends CustomPainter {
       }
     }
     canvas.restore();
+  }
+
+  /// Marks an animated overlay at its in and out (docs/04 S40).
+  void _paintDiamonds(Canvas canvas, Rect rect) {
+    final paint = Paint()..color = ShortedColors.text;
+    const reach = 4.0;
+    for (final x in [rect.left + reach * 2, rect.right - reach * 2]) {
+      final centre = Offset(x, rect.center.dy);
+      canvas.drawPath(
+        Path()
+          ..moveTo(centre.dx, centre.dy - reach)
+          ..lineTo(centre.dx + reach, centre.dy)
+          ..lineTo(centre.dx, centre.dy + reach)
+          ..lineTo(centre.dx - reach, centre.dy)
+          ..close(),
+        paint,
+      );
+    }
   }
 
   void _paintDrag(Canvas canvas) {

@@ -41,6 +41,8 @@ class TimelineView extends StatefulWidget {
     this.onTrackMenu,
     this.onAudioMove,
     this.onAudioTrim,
+    this.onOverlayTiming,
+    this.selectedId,
   });
 
   final List<TimelineTrack> tracks;
@@ -78,6 +80,13 @@ class TimelineView extends StatefulWidget {
   /// A dragged edge of the selected sound: true for its start, the change in time.
   final void Function(TimelineItem item, bool start, int deltaUs)? onAudioTrim;
 
+  /// An overlay moved or one of its edges dragged: its new range.
+  final void Function(TimelineItem item, int startUs, int endUs)?
+  onOverlayTiming;
+
+  /// Set when something else selects an item, such as a tap on the preview.
+  final String? selectedId;
+
   @override
   State<TimelineView> createState() => _TimelineViewState();
 }
@@ -105,7 +114,15 @@ class _TimelineViewState extends State<TimelineView> {
   @override
   void initState() {
     super.initState();
+    _selectedId = widget.selectedId;
     _zoomRequests = widget.zoomRequests?.listen(_zoomBy);
+  }
+
+  @override
+  void didUpdateWidget(TimelineView old) {
+    super.didUpdateWidget(old);
+    final selected = widget.selectedId;
+    if (selected != null && selected != old.selectedId) _selectedId = selected;
   }
 
   @override
@@ -193,7 +210,7 @@ class _TimelineViewState extends State<TimelineView> {
     final time = _layout.timeForX(position.dx);
     final slop = (_handleWidth / _layout.pixelsPerSecond * 1e6).round();
     for (final item in widget.tracks[index].items) {
-      if (item.id != _selectedId) continue;
+      if (item.id != _selectedId || item.locked) continue;
       _dragItem = item;
       _dragTrack = index;
       _dragStartX = position.dx;
@@ -264,6 +281,12 @@ class _TimelineViewState extends State<TimelineView> {
     _dragItem = null;
     if (item == null || preview == null) return;
     final (_, start, end) = preview;
+    if (widget.tracks[_dragTrack].kind == TrackKind.widgets) {
+      if (_drag == _DragKind.scrub) return;
+      final shift = start < 0 ? -start : 0;
+      widget.onOverlayTiming?.call(item, start + shift, end + shift);
+      return;
+    }
     if (_isSound(_dragTrack)) {
       switch (_drag) {
         case _DragKind.trimStart:

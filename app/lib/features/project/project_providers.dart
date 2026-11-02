@@ -49,6 +49,17 @@ class SelectedClip extends Notifier<String?> {
 final selectedClipProvider =
     NotifierProvider.autoDispose<SelectedClip, String?>(SelectedClip.new);
 
+/// The overlay selected on the preview or the Widgets track.
+class SelectedOverlay extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void set(String? id) => state = id;
+}
+
+final selectedOverlayProvider =
+    NotifierProvider.autoDispose<SelectedOverlay, String?>(SelectedOverlay.new);
+
 final previewTransportProvider = Provider<PreviewTransport>(
   (ref) => throw UnimplementedError('previewTransportProvider is not set'),
 );

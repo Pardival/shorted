@@ -122,7 +122,6 @@
   "collectMedia": "Reunir los medios en el proyecto",
   "mediaCollected": "Medios copiados en el proyecto.",
   "taskProcessing": "Procesando…",
-  "allTracks": "Todas las pistas",
   "collapseTimeline": "Contraer la línea de tiempo",
   "lockTrack": "Bloquear",
   "unlockTrack": "Desbloquear",
@@ -182,5 +181,11 @@
   "exportProgress": "Exportando {percent} %",
   "exportEmpty": "Primero añade clips a la línea de tiempo.",
   "exportTooLong": "Este short supera el límite de 2:00.",
-  "errorExportFailed": "No se pudo escribir el vídeo. Comprueba el espacio libre y la carpeta elegida."
+  "errorExportFailed": "No se pudo escribir el vídeo. Comprueba el espacio libre y la carpeta elegida.",
+  "bringForward": "Traer adelante",
+  "sendBackward": "Enviar atrás",
+  "shapes": "Formas",
+  "shapeRectangle": "Rectángulo",
+  "shapeEllipse": "Círculo",
+  "shapeArrow": "Flecha"
 }

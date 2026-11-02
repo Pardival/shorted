@@ -6,6 +6,7 @@
 pub mod apple;
 pub mod captions;
 pub mod compositor;
+pub mod overlays;
 pub mod spike;
 
 /// Name of this crate, used by the workspace smoke tests.

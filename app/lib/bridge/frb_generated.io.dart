@@ -9,6 +9,7 @@ import 'api/clips.dart';
 import 'api/export.dart';
 import 'api/look.dart';
 import 'api/media.dart';
+import 'api/overlays.dart';
 import 'api/preview.dart';
 import 'api/projects.dart';
 import 'api/transcribe.dart';
@@ -148,6 +149,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<MediaItemView> dco_decode_list_media_item_view(dynamic raw);
 
   @protected
+  List<OverlayBoxView> dco_decode_list_overlay_box_view(dynamic raw);
+
+  @protected
+  List<OverlayView> dco_decode_list_overlay_view(dynamic raw);
+
+  @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
   @protected
@@ -201,6 +208,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  OverlayBoxView dco_decode_overlay_box_view(dynamic raw);
+
+  @protected
+  OverlayKindView dco_decode_overlay_kind_view(dynamic raw);
+
+  @protected
+  OverlayView dco_decode_overlay_view(dynamic raw);
+
+  @protected
   ProjectSummary dco_decode_project_summary(dynamic raw);
 
   @protected
@@ -211,6 +227,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SegmentView dco_decode_segment_view(dynamic raw);
+
+  @protected
+  ShapeKindView dco_decode_shape_kind_view(dynamic raw);
 
   @protected
   SoundView dco_decode_sound_view(dynamic raw);
@@ -393,6 +412,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<OverlayBoxView> sse_decode_list_overlay_box_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<OverlayView> sse_decode_list_overlay_view(SseDeserializer deserializer);
+
+  @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
 
   @protected
@@ -456,6 +483,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  OverlayBoxView sse_decode_overlay_box_view(SseDeserializer deserializer);
+
+  @protected
+  OverlayKindView sse_decode_overlay_kind_view(SseDeserializer deserializer);
+
+  @protected
+  OverlayView sse_decode_overlay_view(SseDeserializer deserializer);
+
+  @protected
   ProjectSummary sse_decode_project_summary(SseDeserializer deserializer);
 
   @protected
@@ -466,6 +502,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SegmentView sse_decode_segment_view(SseDeserializer deserializer);
+
+  @protected
+  ShapeKindView sse_decode_shape_kind_view(SseDeserializer deserializer);
 
   @protected
   SoundView sse_decode_sound_view(SseDeserializer deserializer);
@@ -677,6 +716,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_overlay_box_view(
+    List<OverlayBoxView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_overlay_view(
+    List<OverlayView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_prim_u_8_strict(
     Uint8List self,
     SseSerializer serializer,
@@ -755,6 +806,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_overlay_box_view(
+    OverlayBoxView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_overlay_kind_view(
+    OverlayKindView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_overlay_view(OverlayView self, SseSerializer serializer);
+
+  @protected
   void sse_encode_project_summary(
     ProjectSummary self,
     SseSerializer serializer,
@@ -768,6 +834,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_segment_view(SegmentView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_shape_kind_view(ShapeKindView self, SseSerializer serializer);
 
   @protected
   void sse_encode_sound_view(SoundView self, SseSerializer serializer);

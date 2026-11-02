@@ -122,7 +122,6 @@
   "collectMedia": "Reunir os ficheiros no projeto",
   "mediaCollected": "Ficheiros copiados para o projeto.",
   "taskProcessing": "A processar…",
-  "allTracks": "Todas as faixas",
   "collapseTimeline": "Recolher a linha do tempo",
   "lockTrack": "Bloquear",
   "unlockTrack": "Desbloquear",
@@ -182,5 +181,11 @@
   "exportProgress": "Exportando {percent} %",
   "exportEmpty": "Primeiro adicione clipes à linha do tempo.",
   "exportTooLong": "Este short passa do limite de 2:00.",
-  "errorExportFailed": "Não foi possível gravar o vídeo. Verifique o espaço livre e a pasta escolhida."
+  "errorExportFailed": "Não foi possível gravar o vídeo. Verifique o espaço livre e a pasta escolhida.",
+  "bringForward": "Trazer para a frente",
+  "sendBackward": "Enviar para trás",
+  "shapes": "Formas",
+  "shapeRectangle": "Retângulo",
+  "shapeEllipse": "Círculo",
+  "shapeArrow": "Seta"
 }

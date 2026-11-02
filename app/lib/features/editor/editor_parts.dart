@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../bridge/api/overlays.dart';
 import '../../bridge/api/projects.dart';
 import '../../design_system/components.dart';
 import '../../design_system/motion.dart';
@@ -13,6 +14,7 @@ import '../audio/audio_panel.dart';
 import '../captions/captions_panel.dart';
 import '../clips/clips_panel.dart';
 import '../enhance/enhance_panel.dart';
+import '../enhance/overlay_selection.dart';
 import '../export/export_panel.dart';
 import '../project/project_dialogs.dart';
 import '../preview/preview_controller.dart';
@@ -113,7 +115,11 @@ class _SavedDot extends StatelessWidget {
 
 /// The engine's frames, in a texture. Nothing here may draw video content (ADR-0003).
 class PreviewArea extends ConsumerStatefulWidget {
-  const PreviewArea({super.key});
+  const PreviewArea({super.key, this.projectId, this.playheadUs});
+
+  /// With both, the selected overlay is outlined and a tap selects one.
+  final String? projectId;
+  final ValueNotifier<int>? playheadUs;
 
   @visibleForTesting
   static const cropKey = ValueKey('preview-crop');
@@ -160,7 +166,7 @@ class _PreviewAreaState extends ConsumerState<PreviewArea> {
         child: AspectRatio(
           aspectRatio: 9 / 16,
           child: crop == null
-              ? picture
+              ? _withSelection(picture)
               : LayoutBuilder(
                   builder: (context, box) => GestureDetector(
                     key: PreviewArea.cropKey,
@@ -192,6 +198,19 @@ class _PreviewAreaState extends ConsumerState<PreviewArea> {
                 ),
         ),
       ),
+    );
+  }
+
+  Widget _withSelection(Widget picture) {
+    final projectId = widget.projectId;
+    final playheadUs = widget.playheadUs;
+    if (projectId == null || playheadUs == null) return picture;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        picture,
+        OverlaySelection(projectId: projectId, playheadUs: playheadUs),
+      ],
     );
   }
 
@@ -524,6 +543,73 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
         track.items.any((other) => other.id == item.id),
   );
 
+  OverlayView? _overlay(String? id) {
+    for (final overlay in widget.view.overlays) {
+      if (overlay.id == id) return overlay;
+    }
+    return null;
+  }
+
+  Widget _overlayTools(AppLocalizations l10n, OverlayView overlay) {
+    Future<void> run(
+      Future<ProjectView> Function(ProjectGateway gateway) action,
+    ) => _guard(() => _editor.apply(action));
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        ShortedIconButton(
+          icon: Icons.flip_to_front,
+          tooltip: l10n.bringForward,
+          onPressed: () =>
+              run((g) => g.shiftOverlayLayer(overlay.id, forward: true)),
+        ),
+        ShortedIconButton(
+          icon: Icons.flip_to_back,
+          tooltip: l10n.sendBackward,
+          onPressed: () =>
+              run((g) => g.shiftOverlayLayer(overlay.id, forward: false)),
+        ),
+        ShortedIconButton(
+          icon: overlay.locked ? Icons.lock : Icons.lock_open,
+          tooltip: overlay.locked ? l10n.unlockTrack : l10n.lockTrack,
+          onPressed: () => run(
+            (g) => g.setOverlayFlags(
+              overlay.id,
+              locked: !overlay.locked,
+              hidden: overlay.hidden,
+            ),
+          ),
+        ),
+        ShortedIconButton(
+          icon: overlay.hidden ? Icons.visibility_off : Icons.visibility,
+          tooltip: overlay.hidden ? l10n.showTrack : l10n.hideTrack,
+          onPressed: () => run(
+            (g) => g.setOverlayFlags(
+              overlay.id,
+              locked: overlay.locked,
+              hidden: !overlay.hidden,
+            ),
+          ),
+        ),
+        ShortedIconButton(
+          icon: Icons.copy_outlined,
+          tooltip: l10n.duplicate,
+          onPressed: () => run((g) => g.duplicateOverlay(overlay.id)),
+        ),
+        ShortedIconButton(
+          icon: Icons.delete_outline,
+          tooltip: l10n.delete,
+          onPressed: overlay.locked
+              ? null
+              : () {
+                  ref.read(selectedOverlayProvider.notifier).set(null);
+                  run((g) => g.deleteOverlay(overlay.id));
+                },
+        ),
+      ],
+    );
+  }
+
   bool _isClip(TimelineItem item) => widget.view.tracks.any(
     (track) =>
         track.kind == TrackKindView.video &&
@@ -564,6 +650,8 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
                 mediaId: item.mediaId,
                 sourceInUs: item.sourceInUs.toInt(),
                 speed: item.speed,
+                locked: _overlay(item.id)?.locked ?? false,
+                animated: _overlay(item.id)?.hasAnimation ?? false,
               ),
           ],
         ),
@@ -581,6 +669,8 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
     }
     final clip = _clip;
     final range = _range;
+    final selectedOverlay = ref.watch(selectedOverlayProvider);
+    final overlay = _overlay(selectedOverlay);
     final cropping = ref.watch(cropTargetProvider) != null;
     ref.watch(selectedClipProvider);
     final slowZoom = clip == null ? null : _slowZoom(clip);
@@ -631,6 +721,8 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
                 ),
               ],
             )
+          else if (overlay != null)
+            _overlayTools(l10n, overlay)
           else if (_audioItem case final sound?)
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -714,6 +806,13 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
                   ),
                 ),
               ),
+              selectedId: selectedOverlay,
+              onOverlayTiming: (item, startUs, endUs) => _guard(
+                () => _editor.apply(
+                  (gateway) =>
+                      gateway.setOverlayTiming(item.id, startUs, endUs),
+                ),
+              ),
               rangeUs: range,
               onRange: (next) => setState(() => _range = next),
               zoomRequests: widget.zoomRequests,
@@ -724,6 +823,13 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
                   _audioItem = item != null && _isSound(item) ? item.id : null;
                 });
                 ref.read(selectedClipProvider.notifier).set(_clip?.id);
+                ref
+                    .read(selectedOverlayProvider.notifier)
+                    .set(
+                      item != null && _overlay(item.id) != null
+                          ? item.id
+                          : null,
+                    );
               },
               onTrim: (item, start, deltaUs) => _guard(
                 () => _editor.trimClip(item.id, start: start, deltaUs: deltaUs),

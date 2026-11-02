@@ -8,6 +8,7 @@ import '../frb_generated.dart';
 import 'audio.dart';
 import 'look.dart';
 import 'media.dart';
+import 'overlays.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
@@ -114,6 +115,9 @@ class ProjectView {
   final List<TranscriptView> transcripts;
   final CaptionsView captions;
 
+  /// Bottom first.
+  final List<OverlayView> overlays;
+
   const ProjectView({
     required this.id,
     required this.title,
@@ -126,6 +130,7 @@ class ProjectView {
     required this.look,
     required this.transcripts,
     required this.captions,
+    required this.overlays,
   });
 
   @override
@@ -140,7 +145,8 @@ class ProjectView {
       sound.hashCode ^
       look.hashCode ^
       transcripts.hashCode ^
-      captions.hashCode;
+      captions.hashCode ^
+      overlays.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -157,7 +163,8 @@ class ProjectView {
           sound == other.sound &&
           look == other.look &&
           transcripts == other.transcripts &&
-          captions == other.captions;
+          captions == other.captions &&
+          overlays == other.overlays;
 }
 
 enum SaveStateView { saving, saved, failed }

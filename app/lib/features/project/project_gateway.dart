@@ -6,6 +6,7 @@ import '../../bridge/api/clips.dart' as clips;
 import '../../bridge/api/export.dart' as exporter;
 import '../../bridge/api/look.dart' as look;
 import '../../bridge/api/media.dart' as media;
+import '../../bridge/api/overlays.dart' as overlays;
 import '../../bridge/api/projects.dart' as engine;
 import '../../bridge/api/transcribe.dart' as speech;
 import '../../bridge/api/projects.dart';
@@ -140,6 +141,20 @@ abstract interface class ProjectGateway {
   });
   Future<ProjectView> setTransitionForAll(look.TransitionKindView kind);
   void cancelTask(BigInt id);
+
+  Future<ProjectView> addShape(overlays.ShapeKindView shape, int atUs);
+  Future<ProjectView> setOverlayTiming(String id, int startUs, int endUs);
+  Future<ProjectView> shiftOverlayLayer(String id, {required bool forward});
+  Future<ProjectView> setOverlayFlags(
+    String id, {
+    required bool locked,
+    required bool hidden,
+  });
+  Future<ProjectView> duplicateOverlay(String id);
+  Future<ProjectView> deleteOverlay(String id);
+
+  /// Where the elements on screen are drawn at `timeUs`, top first.
+  List<overlays.OverlayBoxView> overlayBoxes(int timeUs);
 }
 
 class EngineGateway implements ProjectGateway {
@@ -374,6 +389,37 @@ class EngineGateway implements ProjectGateway {
   @override
   Future<ProjectView> setTransitionForAll(look.TransitionKindView kind) =>
       look.setTransitionForAll(kind: kind);
+
+  @override
+  Future<ProjectView> addShape(overlays.ShapeKindView shape, int atUs) =>
+      overlays.addShape(shape: shape, atUs: atUs);
+
+  @override
+  Future<ProjectView> setOverlayTiming(String id, int startUs, int endUs) =>
+      overlays.setOverlayTiming(id: id, startUs: startUs, endUs: endUs);
+
+  @override
+  Future<ProjectView> shiftOverlayLayer(String id, {required bool forward}) =>
+      overlays.shiftOverlayLayer(id: id, forward: forward);
+
+  @override
+  Future<ProjectView> setOverlayFlags(
+    String id, {
+    required bool locked,
+    required bool hidden,
+  }) => overlays.setOverlayFlags(id: id, locked: locked, hidden: hidden);
+
+  @override
+  Future<ProjectView> duplicateOverlay(String id) =>
+      overlays.duplicateOverlay(id: id);
+
+  @override
+  Future<ProjectView> deleteOverlay(String id) =>
+      overlays.deleteOverlay(id: id);
+
+  @override
+  List<overlays.OverlayBoxView> overlayBoxes(int timeUs) =>
+      overlays.overlayBoxes(timeUs: timeUs);
 
   @override
   Future<ProjectView> deleteRange(int startUs, int endUs) =>

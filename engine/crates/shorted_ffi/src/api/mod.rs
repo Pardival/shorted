@@ -5,6 +5,7 @@ pub mod clips;
 pub mod export;
 pub mod look;
 pub mod media;
+pub mod overlays;
 pub mod preview;
 pub mod projects;
 pub mod transcribe;

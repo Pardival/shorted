@@ -15,9 +15,12 @@ struct Layer {
     frame_zoom: f32,
     // 1 uses the picture's own transparency: captions and overlays.
     picture_alpha: f32,
+    // 1 for overlays: the rows below map the frame onto the sprite.
+    sprite: f32,
     padding_a: f32,
     padding_b: f32,
-    padding_c: f32,
+    sprite_u: vec4<f32>,
+    sprite_v: vec4<f32>,
 };
 @group(0) @binding(0) var<uniform> layer: Layer;
 @group(0) @binding(1) var source: texture_2d<f32>;
@@ -36,6 +39,15 @@ fn vs(@builtin(vertex_index) index: u32) -> Out {
 
 @fragment
 fn fs(in: Out) -> @location(0) vec4<f32> {
+    if layer.sprite > 0.5 {
+        let point = vec3<f32>(in.uv, 1.0);
+        let at = vec2<f32>(dot(layer.sprite_u.xyz, point), dot(layer.sprite_v.xyz, point));
+        if any(at < vec2<f32>(0.0)) || any(at > vec2<f32>(1.0)) {
+            discard;
+        }
+        let picture = textureSample(source, source_sampler, at);
+        return vec4<f32>(picture.rgb, picture.a * layer.opacity);
+    }
     let moved = (in.uv - 0.5) / layer.frame_zoom + 0.5 - layer.shift;
     if any(moved < vec2<f32>(0.0)) || any(moved > vec2<f32>(1.0)) {
         discard;

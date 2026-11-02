@@ -192,7 +192,6 @@
   "collectMedia": "Collect media into project",
   "mediaCollected": "Media copied into the project.",
   "taskProcessing": "Working…",
-  "allTracks": "All tracks",
   "collapseTimeline": "Collapse timeline",
   "lockTrack": "Lock",
   "unlockTrack": "Unlock",
@@ -287,5 +286,11 @@
         "type": "int"
       }
     }
-  }
+  },
+  "bringForward": "Bring forward",
+  "sendBackward": "Send backward",
+  "shapes": "Shapes",
+  "shapeRectangle": "Rectangle",
+  "shapeEllipse": "Circle",
+  "shapeArrow": "Arrow"
 }

@@ -1,11 +1,12 @@
 //! Composes frames from `core::evaluate` (ADR-0003): the one renderer for preview and export.
-//! Clips, crop, rotation and crossfade for now; overlays and text come with T-0402.
+//! Clips with crop, colour and transitions, captions, and overlays placed as sprites.
 
 use bytemuck::{Pod, Zeroable};
 
 use crate::spike::{RenderError, TARGET_FORMAT, target_descriptor};
 
-const MAX_LAYERS: u64 = 3;
+/// Two clips during a transition, the overlays, and the caption on top.
+const MAX_LAYERS: u64 = 64;
 const LAYER_STRIDE: u64 = 256;
 const BYTES_PER_PIXEL: u32 = 4;
 
@@ -23,7 +24,10 @@ struct LayerUniform {
     saturation: f32,
     frame_zoom: f32,
     picture_alpha: f32,
-    padding: [f32; 3],
+    sprite: f32,
+    padding: [f32; 2],
+    sprite_u: [f32; 4],
+    sprite_v: [f32; 4],
 }
 
 /// What a clip's colour and a transition do to a layer. The default changes nothing.
@@ -38,6 +42,38 @@ pub struct LayerEffect {
     pub frame_zoom: f32,
     /// True for pictures with transparency.
     pub keeps_alpha: bool,
+    /// Set for overlays: drawn at a place in the frame instead of filling it.
+    pub sprite: Option<Sprite>,
+}
+
+/// Where an overlay sits, in fractions of the frame.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Sprite {
+    pub center: [f32; 2],
+    pub size: [f32; 2],
+    /// Degrees, clockwise.
+    pub rotation: f32,
+    pub flip: bool,
+}
+
+impl Sprite {
+    /// The affine map from frame 0..1 to the sprite's own 0..1, as two rows: undoes the move, the
+    /// turn and the size, in pixels so a turn keeps its shape on a tall frame.
+    fn rows(&self, frame_width: u32, frame_height: u32) -> ([f32; 4], [f32; 4]) {
+        let (width, height) = (frame_width as f32, frame_height.max(1) as f32);
+        let (sin, cos) = self.rotation.to_radians().sin_cos();
+        let (size_x, size_y) = (self.size[0].max(1e-6), self.size[1].max(1e-6));
+        let mut u = [cos / size_x, sin * height / (size_x * width)];
+        let v = [-sin * width / (size_y * height), cos / size_y];
+        let [x, y] = self.center;
+        let mut u_offset = 0.5 - (u[0] * x + u[1] * y);
+        let v_offset = 0.5 - (v[0] * x + v[1] * y);
+        if self.flip {
+            u = [-u[0], -u[1]];
+            u_offset = 1.0 - u_offset;
+        }
+        ([u[0], u[1], u_offset, 0.0], [v[0], v[1], v_offset, 0.0])
+    }
 }
 
 impl Default for LayerEffect {
@@ -51,6 +87,7 @@ impl Default for LayerEffect {
             saturation: 1.0,
             frame_zoom: 1.0,
             keeps_alpha: false,
+            sprite: None,
         }
     }
 }
@@ -91,6 +128,9 @@ impl LayerPlacement {
             self.center[0].clamp(scale[0] / 2.0, 1.0 - scale[0] / 2.0),
             self.center[1].clamp(scale[1] / 2.0, 1.0 - scale[1] / 2.0),
         ];
+        let (sprite_u, sprite_v) = self.effect.sprite.map_or(([0.0; 4], [0.0; 4]), |sprite| {
+            sprite.rows(frame_width, frame_height)
+        });
         LayerUniform {
             scale,
             offset,
@@ -103,7 +143,14 @@ impl LayerPlacement {
             saturation: self.effect.saturation,
             frame_zoom: self.effect.frame_zoom.max(0.01),
             picture_alpha: if self.effect.keeps_alpha { 1.0 } else { 0.0 },
-            padding: [0.0; 3],
+            sprite: if self.effect.sprite.is_some() {
+                1.0
+            } else {
+                0.0
+            },
+            padding: [0.0; 2],
+            sprite_u,
+            sprite_v,
         }
     }
 }
@@ -625,5 +672,77 @@ mod tests {
             (&texture, placement()),
         ];
         assert!(compositor.render_to_pixels(&layers).is_ok());
+    }
+
+    fn sprite(center: [f32; 2], size: [f32; 2], rotation: f32, flip: bool) -> LayerPlacement {
+        LayerPlacement {
+            effect: LayerEffect {
+                keeps_alpha: true,
+                sprite: Some(Sprite {
+                    center,
+                    size,
+                    rotation,
+                    flip,
+                }),
+                ..LayerEffect::default()
+            },
+            ..placement()
+        }
+    }
+
+    #[test]
+    fn a_sprite_covers_only_its_place() {
+        let Some(compositor) = compositor() else {
+            return;
+        };
+        let texture = solid(&compositor, [0, 200, 0]);
+        let layer = sprite([0.25, 0.25], [0.3, 0.2], 0.0, false);
+        let pixels = compositor.render_to_pixels(&[(&texture, layer)]).unwrap();
+        assert!(close(rgb_at(&pixels, 0.25, 0.25), [0, 200, 0]));
+        assert!(close(rgb_at(&pixels, 0.75, 0.75), [0, 0, 0]));
+        assert!(close(rgb_at(&pixels, 0.45, 0.25), [0, 0, 0]));
+    }
+
+    #[test]
+    fn a_turned_sprite_keeps_its_shape() {
+        let Some(compositor) = compositor() else {
+            return;
+        };
+        let texture = solid(&compositor, [0, 200, 0]);
+        // 60 x 16 pixels on a 90 x 160 frame, turned upright: 16 wide and 60 tall.
+        let layer = sprite([0.5, 0.5], [60.0 / 90.0, 0.1], 90.0, false);
+        let pixels = compositor.render_to_pixels(&[(&texture, layer)]).unwrap();
+        assert!(close(rgb_at(&pixels, 0.5, 0.5 + 25.0 / 160.0), [0, 200, 0]));
+        assert!(close(rgb_at(&pixels, 0.5 + 20.0 / 90.0, 0.5), [0, 0, 0]));
+    }
+
+    #[test]
+    fn a_flipped_sprite_is_mirrored() {
+        let Some(compositor) = compositor() else {
+            return;
+        };
+        let texture = quadrants(&compositor);
+        let layer = sprite([0.5, 0.5], [1.0, 1.0], 0.0, true);
+        let pixels = compositor.render_to_pixels(&[(&texture, layer)]).unwrap();
+        // Red was top left.
+        assert!(close(rgb_at(&pixels, 0.75, 0.25), [255, 0, 0]));
+    }
+
+    #[test]
+    fn a_sprite_turns_clockwise() {
+        let Some(compositor) = compositor() else {
+            return;
+        };
+        let texture = quadrants(&compositor);
+        let layer = sprite([0.5, 0.5], [0.5, 50.0 / 160.0 * 0.9], 90.0, false);
+        let size = 45.0;
+        let pixels = compositor.render_to_pixels(&[(&texture, layer)]).unwrap();
+        // The top-left red goes to the top right once turned a quarter clockwise.
+        let (x, y) = (0.5 + size / 4.0 / 90.0, 0.5 - size / 4.0 / 160.0);
+        assert!(
+            close(rgb_at(&pixels, x, y), [255, 0, 0]),
+            "{:?}",
+            rgb_at(&pixels, x, y)
+        );
     }
 }

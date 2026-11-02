@@ -10,6 +10,8 @@ class TimelineItem {
     this.mediaId,
     this.sourceInUs = 0,
     this.speed = 1,
+    this.locked = false,
+    this.animated = false,
   });
 
   final String id;
@@ -20,6 +22,10 @@ class TimelineItem {
   final String? mediaId;
   final int sourceInUs;
   final double speed;
+
+  /// Overlays: a locked one cannot be dragged, an animated one shows diamonds.
+  final bool locked;
+  final bool animated;
 }
 
 class TimelineTrack {
@@ -44,6 +50,9 @@ class TimelineTrack {
 
   /// Sorted by start, so visible items can be found by bisection.
   final List<TimelineItem> items;
+
+  /// Overlays may overlap in time, so their ends are not in order.
+  bool get overlapping => kind == TrackKind.widgets;
 }
 
 /// Time to pixels and back. Pure, so that gestures and painting share one definition.
@@ -161,12 +170,21 @@ class TimelineLayout {
     );
   }
 
-  /// Items of a sorted list crossing the time window: painting skips everything else.
+  /// Items of a sorted list crossing the time window: painting skips everything else. Items
+  /// that may overlap are scanned from the start, as their ends are not sorted.
   static Iterable<TimelineItem> visible(
     List<TimelineItem> items,
     int fromUs,
-    int toUs,
-  ) sync* {
+    int toUs, {
+    bool overlapping = false,
+  }) sync* {
+    if (overlapping) {
+      for (final item in items) {
+        if (item.startUs >= toUs) return;
+        if (item.endUs > fromUs) yield item;
+      }
+      return;
+    }
     var low = 0;
     var high = items.length;
     while (low < high) {
@@ -182,11 +200,19 @@ class TimelineLayout {
     }
   }
 
+  /// The item under `timeUs`; among overlapping overlays, the one that starts last.
   TimelineItem? itemAt(TimelineTrack track, int timeUs) {
-    for (final item in visible(track.items, timeUs, timeUs + 1)) {
-      return item;
+    TimelineItem? found;
+    for (final item in visible(
+      track.items,
+      timeUs,
+      timeUs + 1,
+      overlapping: track.overlapping,
+    )) {
+      found = item;
+      if (!track.overlapping) break;
     }
-    return null;
+    return found;
   }
 
   /// Seconds between ruler marks, so labels stay at least `minGap` pixels apart.

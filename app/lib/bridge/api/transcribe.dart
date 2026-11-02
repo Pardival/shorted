@@ -9,6 +9,7 @@ import '../runtime.dart';
 import 'audio.dart';
 import 'look.dart';
 import 'media.dart';
+import 'overlays.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 

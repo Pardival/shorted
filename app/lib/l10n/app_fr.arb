@@ -122,7 +122,6 @@
   "collectMedia": "Rassembler les médias dans le projet",
   "mediaCollected": "Médias copiés dans le projet.",
   "taskProcessing": "Traitement en cours…",
-  "allTracks": "Toutes les pistes",
   "collapseTimeline": "Replier la timeline",
   "lockTrack": "Verrouiller",
   "unlockTrack": "Déverrouiller",
@@ -182,5 +181,11 @@
   "exportProgress": "Export {percent} %",
   "exportEmpty": "Ajoutez d'abord des clips à la timeline.",
   "exportTooLong": "Ce short dépasse la limite de 2:00.",
-  "errorExportFailed": "La vidéo n'a pas pu être écrite. Vérifiez l'espace libre et le dossier choisi."
+  "errorExportFailed": "La vidéo n'a pas pu être écrite. Vérifiez l'espace libre et le dossier choisi.",
+  "bringForward": "Mettre devant",
+  "sendBackward": "Mettre derrière",
+  "shapes": "Formes",
+  "shapeRectangle": "Rectangle",
+  "shapeEllipse": "Cercle",
+  "shapeArrow": "Flèche"
 }

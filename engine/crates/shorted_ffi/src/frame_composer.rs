@@ -8,18 +8,23 @@ use objc2_core_foundation::CFRetained;
 use objc2_io_surface::IOSurfaceRef;
 #[cfg(test)]
 use shorted_core::evaluate::CaptionRun;
-use shorted_core::evaluate::{evaluate, ClipLayer, FrameDescription, TransitionState};
+use shorted_core::evaluate::{
+    evaluate, ClipLayer, FrameDescription, OverlayLayer, TransitionState,
+};
 use shorted_core::model::{
-    CaptionAnimation, CaptionPreset, ColorAdjust, Id, MediaKind, MediaRef, Project, TransitionKind,
+    CaptionAnimation, CaptionPreset, ColorAdjust, Id, MediaKind, MediaRef, OverlayKind, Project,
+    TransitionKind,
 };
 use shorted_media::apple::{AppleBackend, AppleDecoder, AppleFrame};
 use shorted_media::{DecodedFrame, MediaBackend, MediaInfo, VideoDecoder};
 use shorted_render::apple::texture_from_iosurface;
 use shorted_render::captions::{parse_color, CaptionLook, CaptionPainter, CaptionWord};
-use shorted_render::compositor::{load_image, Compositor, LayerEffect, LayerPlacement};
+use shorted_render::compositor::{load_image, Compositor, LayerEffect, LayerPlacement, Sprite};
+use shorted_render::overlays::{shape_pixels, CANVAS_HEIGHT, CANVAS_WIDTH};
 use shorted_render::spike::RenderError;
 
 use crate::api::media::resolve;
+use crate::api::overlays::natural_size;
 
 /// A seek further than this is cheaper than decoding the frames between.
 const MAX_DECODE_AHEAD_US: i64 = 500_000;
@@ -118,6 +123,8 @@ pub struct FrameComposer {
     painter: Option<CaptionPainter>,
     /// The last caption drawn, reused for as long as the words stay.
     caption: Option<(String, wgpu::Texture)>,
+    /// Each overlay's picture, with the look it was drawn from.
+    overlays: HashMap<Id, (OverlayKind, wgpu::Texture)>,
 }
 
 const POP_US: i64 = 120_000;
@@ -283,7 +290,73 @@ impl FrameComposer {
             offline,
             painter: None,
             caption: None,
+            overlays: HashMap::new(),
         }
+    }
+
+    /// Draws each overlay's picture when its look changes; pictures of removed overlays go.
+    fn prepare_overlays(&mut self, project: &Project, frame: &FrameDescription) {
+        self.overlays
+            .retain(|id, _| project.timeline.overlays.iter().any(|item| item.id == *id));
+        for layer in &frame.overlays {
+            let Some(item) = project
+                .timeline
+                .overlays
+                .iter()
+                .find(|item| item.id == layer.overlay_id)
+            else {
+                continue;
+            };
+            if self
+                .overlays
+                .get(&item.id)
+                .is_some_and(|(kind, _)| *kind == item.kind)
+            {
+                continue;
+            }
+            let pixels = match &item.kind {
+                OverlayKind::Shape { shape, fill } => Some(shape_pixels(*shape, parse_color(fill))),
+                // Pictures, text and video come with T-0703, T-0705 and T-0704.
+                _ => None,
+            };
+            if let Some((width, height, rgba)) = pixels {
+                let texture = self.compositor.texture_from_rgba(width, height, &rgba);
+                self.overlays.insert(item.id, (item.kind.clone(), texture));
+            }
+        }
+    }
+
+    fn placed_overlay(&self, layer: &OverlayLayer) -> Option<(&wgpu::Texture, LayerPlacement)> {
+        let (kind, texture) = self.overlays.get(&layer.overlay_id)?;
+        let (width, height) = natural_size(kind);
+        let sprite = Sprite {
+            center: [
+                layer.position.x / CANVAS_WIDTH,
+                layer.position.y / CANVAS_HEIGHT,
+            ],
+            size: [
+                width * layer.scale / CANVAS_WIDTH,
+                height * layer.scale / CANVAS_HEIGHT,
+            ],
+            rotation: layer.rotation,
+            flip: layer.flip,
+        };
+        Some((
+            texture,
+            LayerPlacement {
+                width: self.compositor.width,
+                height: self.compositor.height,
+                quarter_turns: 0,
+                center: [0.5, 0.5],
+                zoom: 1.0,
+                effect: LayerEffect {
+                    opacity: layer.opacity,
+                    keeps_alpha: true,
+                    sprite: Some(sprite),
+                    ..LayerEffect::default()
+                },
+            },
+        ))
     }
 
     fn prepare(&mut self, project: &Project, folder: &Path, layer: &ClipLayer) {
@@ -394,6 +467,7 @@ impl FrameComposer {
             for layer in &frame.clips {
                 self.prepare(project, folder, layer);
             }
+            self.prepare_overlays(project, frame);
             self.prepare_caption(project, frame);
         }
         let mut layers = Vec::with_capacity(2);
@@ -402,6 +476,9 @@ impl FrameComposer {
                 let media = project.media.iter().find(|m| m.id == layer.media_id);
                 let effect = layer_effect(index, frame.transition, layer.color);
                 layers.push(self.placed(media, layer, effect));
+            }
+            for layer in &frame.overlays {
+                layers.extend(self.placed_overlay(layer));
             }
             if let Some((_, caption)) = self.caption.as_ref().filter(|_| !frame.captions.is_empty())
             {

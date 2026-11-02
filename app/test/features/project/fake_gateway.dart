@@ -4,6 +4,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:shorted/bridge/api/audio.dart';
 import 'package:shorted/bridge/api/look.dart';
 import 'package:shorted/bridge/api/media.dart';
+import 'package:shorted/bridge/api/overlays.dart';
 import 'package:shorted/bridge/api/projects.dart';
 import 'package:shorted/bridge/api/transcribe.dart';
 import 'package:shorted/bridge/error.dart';
@@ -22,6 +23,9 @@ class FakeProject {
   final stills = <String>{};
   final audioTracks = <AudioTrackView>[];
   final transcripts = <TranscriptView>[];
+
+  /// Bottom first.
+  final overlays = <OverlayView>[];
 
   /// Items per user audio track, as timeline items.
   final sounds = <String, List<String>>{};
@@ -110,6 +114,24 @@ class FakeGateway implements ProjectGateway {
       canUndo: project.titles.isNotEmpty,
       canRedo: project.redone.isNotEmpty,
       tracks: [
+        // The engine always has it; here only when used, so other tests keep their layout.
+        if (project.overlays.isNotEmpty)
+          TrackView(
+            kind: TrackKindView.widgets,
+            muted: false,
+            locked: false,
+            hidden: false,
+            items: [
+              for (final overlay in project.overlays)
+                TrackItemView(
+                  sourceInUs: big(0),
+                  speed: 1,
+                  id: overlay.id,
+                  startUs: overlay.startUs,
+                  endUs: overlay.endUs,
+                ),
+            ],
+          ),
         TrackView(
           kind: TrackKindView.video,
           muted: false,
@@ -149,6 +171,7 @@ class FakeGateway implements ProjectGateway {
           ),
       ],
       media: project.media,
+      overlays: List.of(project.overlays),
       sound: SoundView(
         clips: [
           for (final clip in project.clips)
@@ -217,6 +240,57 @@ class FakeGateway implements ProjectGateway {
   final cropResets = <String>[];
   final slowZooms = <String>[];
   final audioCalls = <String>[];
+
+  final overlayCalls = <String>[];
+  List<OverlayBoxView> boxes = [];
+
+  Future<ProjectView> _overlay(String call) async {
+    overlayCalls.add(call);
+    return view();
+  }
+
+  @override
+  Future<ProjectView> addShape(ShapeKindView shape, int atUs) {
+    opened!.overlays.add(
+      OverlayView(
+        id: 'o${_next++}',
+        kind: OverlayKindView.shape,
+        startUs: big(atUs),
+        endUs: big(atUs + 3000000),
+        locked: false,
+        hidden: false,
+        hasAnimation: false,
+      ),
+    );
+    return _overlay('shape ${shape.name} $atUs');
+  }
+
+  @override
+  Future<ProjectView> setOverlayTiming(String id, int startUs, int endUs) =>
+      _overlay('timing $id $startUs $endUs');
+
+  @override
+  Future<ProjectView> shiftOverlayLayer(String id, {required bool forward}) =>
+      _overlay('layer $id $forward');
+
+  @override
+  Future<ProjectView> setOverlayFlags(
+    String id, {
+    required bool locked,
+    required bool hidden,
+  }) => _overlay('flags $id $locked $hidden');
+
+  @override
+  Future<ProjectView> duplicateOverlay(String id) => _overlay('duplicate $id');
+
+  @override
+  Future<ProjectView> deleteOverlay(String id) {
+    opened!.overlays.removeWhere((overlay) => overlay.id == id);
+    return _overlay('delete $id');
+  }
+
+  @override
+  List<OverlayBoxView> overlayBoxes(int timeUs) => boxes;
 
   Future<ProjectView> _audio(String call) async {
     audioCalls.add(call);
