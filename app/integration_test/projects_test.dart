@@ -175,6 +175,34 @@ void main() {
       expect(view.media, hasLength(2));
     });
 
+    test('clip edits work and undo one step each', () async {
+      await gateway.create('Edits');
+      final path = await write('a.png', png);
+      await gateway.importFiles([path]);
+      var view = await gateway.view();
+      view = await gateway.placeClips([view.media.single.id]);
+      final clip = view.tracks[1].items.single.id;
+
+      view = await gateway.splitClip(clip, 1000000);
+      expect(view.tracks[1].items, hasLength(2));
+      expect(view.tracks[1].items[1].startUs.toInt(), 1000000);
+
+      view = await gateway.trimClip(clip, start: false, deltaUs: -500000);
+      expect(view.tracks[1].items[0].endUs.toInt(), 500000);
+
+      view = await gateway.duplicateClip(clip);
+      expect(view.tracks[1].items, hasLength(3));
+      view = await gateway.moveClip(clip, 2);
+      expect(view.tracks[1].items[2].id, clip);
+      view = await gateway.deleteClip(clip);
+      expect(view.tracks[1].items, hasLength(2));
+
+      for (final length in [3, 3, 2, 2, 1]) {
+        view = await gateway.undo();
+        expect(view.tracks[1].items, hasLength(length));
+      }
+    });
+
     test('a deleted file goes offline, relink brings it back', () async {
       final id = await gateway.create('Offline');
       final path = await write('clip.png', png);

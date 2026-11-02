@@ -96,6 +96,46 @@ void main() {
     expect(tracks.debugNeedsPaint, isFalse);
   });
 
+  test('snapping takes the nearest target within the threshold', () {
+    expect(snapTime(1000, const [900, 1200], 150), 900);
+    expect(snapTime(1000, const [1500], 150), 1000);
+    expect(snapTime(1000, const [], 150), 1000);
+  });
+
+  testWidgets('dragging the selected item trims or moves it', (tester) async {
+    final playhead = ValueNotifier<int>(0);
+    addTearDown(playhead.dispose);
+    final trims = <String>[];
+    final moves = <String>[];
+    await tester.pumpWidget(
+      harness(
+        TimelineView(
+          tracks: [
+            TimelineTrack(kind: TrackKind.video, label: 'V', items: items(4)),
+          ],
+          durationUs: 4000000,
+          playheadUs: playhead,
+          onTrim: (item, start, delta) => trims.add('${item.id} $start $delta'),
+          onMove: (item, to) => moves.add('${item.id} $to'),
+        ),
+      ),
+    );
+    final origin = tester.getTopLeft(find.byType(TimelineView));
+    // Item 1 spans x = 128 to 168 at the default 40 px/s.
+    await tester.tapAt(origin + const Offset(148, 40));
+    await tester.pump(const Duration(milliseconds: 400));
+
+    await tester.dragFrom(origin + const Offset(168, 40), const Offset(20, 0));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(trims, hasLength(1));
+    expect(trims.single, startsWith('1 false'));
+
+    await tester.dragFrom(origin + const Offset(148, 40), const Offset(100, 0));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(moves, ['1 3']);
+    expect(playhead.value, 0);
+  });
+
   test('timecodes', () {
     expect(formatTimecode(0), '0:00');
     expect(formatTimecode(65000000), '1:05');

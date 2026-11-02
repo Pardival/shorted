@@ -21,6 +21,7 @@ class TimelinePainter extends CustomPainter {
     required this.durationUs,
     required this.selectedId,
     required this.textDirection,
+    this.dragPreview,
   });
 
   final TimelineLayout layout;
@@ -28,6 +29,9 @@ class TimelinePainter extends CustomPainter {
   final int durationUs;
   final String? selectedId;
   final TextDirection textDirection;
+
+  /// A range being dragged, drawn over its track until the edit is committed.
+  final (int, int, int)? dragPreview;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -49,6 +53,7 @@ class TimelinePainter extends CustomPainter {
     for (var index = 0; index < tracks.length; index++) {
       _paintTrack(canvas, size, tracks[index], index, fromUs, toUs);
     }
+    _paintDrag(canvas);
     canvas.restore();
 
     _paintHeaders(canvas);
@@ -111,6 +116,28 @@ class TimelinePainter extends CustomPainter {
     }
   }
 
+  void _paintDrag(Canvas canvas) {
+    final drag = dragPreview;
+    if (drag == null) return;
+    final (index, startUs, endUs) = drag;
+    final top = layout.rulerHeight + index * layout.trackHeight;
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTRB(
+          layout.xForTime(startUs),
+          top + _itemGap,
+          layout.xForTime(endUs),
+          top + layout.trackHeight - _itemGap,
+        ),
+        _itemRadius,
+      ),
+      Paint()
+        ..color = ShortedColors.accent
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3,
+    );
+  }
+
   void _paintHeaders(Canvas canvas) {
     final height = layout.rulerHeight + tracks.length * layout.trackHeight;
     canvas.drawRect(
@@ -146,7 +173,8 @@ class TimelinePainter extends CustomPainter {
       old.layout != layout ||
       old.tracks != tracks ||
       old.durationUs != durationUs ||
-      old.selectedId != selectedId;
+      old.selectedId != selectedId ||
+      old.dragPreview != dragPreview;
 }
 
 /// Driven by `playheadUs` directly, so no widget rebuilds during a scrub.

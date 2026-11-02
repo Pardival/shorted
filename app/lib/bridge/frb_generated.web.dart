@@ -7,6 +7,7 @@
 // ignore_for_file: argument_type_not_assignable
 
 import 'api.dart';
+import 'api/clips.dart';
 import 'api/media.dart';
 import 'api/preview.dart';
 import 'api/projects.dart';
@@ -51,6 +52,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ErrorCode dco_decode_box_autoadd_error_code(dynamic raw);
+
+  @protected
+  ClipEdge dco_decode_clip_edge(dynamic raw);
 
   @protected
   EngineFailure dco_decode_engine_failure(dynamic raw);
@@ -162,6 +166,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ErrorCode sse_decode_box_autoadd_error_code(SseDeserializer deserializer);
+
+  @protected
+  ClipEdge sse_decode_clip_edge(SseDeserializer deserializer);
 
   @protected
   EngineFailure sse_decode_engine_failure(SseDeserializer deserializer);
@@ -292,6 +299,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     ErrorCode self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_clip_edge(ClipEdge self, SseSerializer serializer);
 
   @protected
   void sse_encode_engine_failure(EngineFailure self, SseSerializer serializer);

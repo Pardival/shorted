@@ -1,3 +1,4 @@
+import '../../bridge/api/clips.dart' as clips;
 import '../../bridge/api/media.dart' as media;
 import '../../bridge/api/projects.dart' as engine;
 import '../../bridge/api/projects.dart';
@@ -23,6 +24,15 @@ abstract interface class ProjectGateway {
   Future<int> importFiles(List<String> paths);
   Future<ProjectView> placeClips(List<String> mediaIds);
   Future<ProjectView> relink(String mediaId, String path);
+  Future<ProjectView> splitClip(String id, int timeUs);
+  Future<ProjectView> deleteClip(String id);
+  Future<ProjectView> duplicateClip(String id);
+  Future<ProjectView> moveClip(String id, int to);
+  Future<ProjectView> trimClip(
+    String id, {
+    required bool start,
+    required int deltaUs,
+  });
 }
 
 class EngineGateway implements ProjectGateway {
@@ -86,4 +96,29 @@ class EngineGateway implements ProjectGateway {
   @override
   Future<ProjectView> relink(String mediaId, String path) =>
       media.relinkMedia(id: mediaId, path: path);
+
+  @override
+  Future<ProjectView> splitClip(String id, int timeUs) =>
+      clips.splitClip(id: id, timeUs: timeUs);
+
+  @override
+  Future<ProjectView> deleteClip(String id) => clips.deleteClip(id: id);
+
+  @override
+  Future<ProjectView> duplicateClip(String id) => clips.duplicateClip(id: id);
+
+  @override
+  Future<ProjectView> moveClip(String id, int to) =>
+      clips.moveClip(id: id, to: to);
+
+  @override
+  Future<ProjectView> trimClip(
+    String id, {
+    required bool start,
+    required int deltaUs,
+  }) => clips.trimClip(
+    id: id,
+    edge: start ? clips.ClipEdge.start : clips.ClipEdge.end,
+    deltaUs: deltaUs,
+  );
 }

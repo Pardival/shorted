@@ -166,6 +166,31 @@ void main() {
     expect(transport.seeks.single, closeTo(1000000, 50000));
   });
 
+  testWidgets('selecting a clip offers tools that reach the engine', (
+    tester,
+  ) async {
+    final project = FakeProject('p1', 'Mine')..clips.add('c1');
+    final gateway = FakeGateway()..projects.add(project);
+    await open(
+      tester,
+      '/editor/p1/audio',
+      size: const Size(1280, 800),
+      gateway: gateway,
+    );
+    expect(find.byTooltip('Split'), findsNothing);
+    final timeline = tester.getTopLeft(find.byType(TimelineView));
+    await tester.tapAt(timeline + const Offset(100, 40));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(gateway.opened!.clips, ['c1']);
+    await tester.tap(find.byTooltip('Split'));
+    await tester.pumpAndSettle();
+    expect(gateway.clipCalls.single, startsWith('split c1'));
+    await tester.tap(find.byTooltip('Delete'));
+    await tester.pumpAndSettle();
+    expect(gateway.clipCalls.last, 'delete c1');
+    expect(find.byTooltip('Split'), findsNothing);
+  });
+
   testWidgets('a project that cannot open shows a human message', (
     tester,
   ) async {

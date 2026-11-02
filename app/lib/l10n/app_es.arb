@@ -59,5 +59,6 @@
   "mediaOffline": "Medio sin conexión",
   "relink": "Volver a vincular",
   "importFailed": "{count, plural, =1{No se pudo importar 1 archivo.} other{No se pudieron importar {count} archivos.}}",
-  "errorDifferentMedia": "Este no es el archivo que falta."
+  "errorDifferentMedia": "Este no es el archivo que falta.",
+  "split": "Dividir"
 }

@@ -163,6 +163,43 @@ class FakeGateway implements ProjectGateway {
     return view();
   }
 
+  final clipCalls = <String>[];
+
+  @override
+  Future<ProjectView> splitClip(String id, int timeUs) async {
+    clipCalls.add('split $id $timeUs');
+    return view();
+  }
+
+  @override
+  Future<ProjectView> deleteClip(String id) async {
+    clipCalls.add('delete $id');
+    opened!.clips.remove(id);
+    return view();
+  }
+
+  @override
+  Future<ProjectView> duplicateClip(String id) async {
+    clipCalls.add('duplicate $id');
+    return view();
+  }
+
+  @override
+  Future<ProjectView> moveClip(String id, int to) async {
+    clipCalls.add('move $id $to');
+    return view();
+  }
+
+  @override
+  Future<ProjectView> trimClip(
+    String id, {
+    required bool start,
+    required int deltaUs,
+  }) async {
+    clipCalls.add('trim $id ${start ? 'start' : 'end'} $deltaUs');
+    return view();
+  }
+
   @override
   Future<ProjectView> relink(String mediaId, String path) async {
     final media = opened!.media;
