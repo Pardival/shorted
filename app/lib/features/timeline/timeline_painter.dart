@@ -30,6 +30,8 @@ class TimelinePainter extends CustomPainter {
     this.filmstrips,
     this.waveforms,
     this.rangeUs,
+    this.selectedKeyframe,
+    this.keyframeDrag,
   }) : super(repaint: Listenable.merge([filmstrips, waveforms]));
 
   final TimelineLayout layout;
@@ -43,6 +45,12 @@ class TimelinePainter extends CustomPainter {
   final Filmstrips? filmstrips;
   final Waveforms? waveforms;
   final (int, int)? rangeUs;
+
+  /// The keyframe picked on the selected element, outlined.
+  final int? selectedKeyframe;
+
+  /// A keyframe being dragged: from, to.
+  final (int, int)? keyframeDrag;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -226,6 +234,7 @@ class TimelinePainter extends CustomPainter {
         _paintFilmstrip(canvas, item, shape, size.width);
       } else if (track.kind == TrackKind.widgets) {
         if (item.animated) _paintDiamonds(canvas, rect);
+        _paintKeyframes(canvas, item, rect);
       } else {
         _paintWaveform(canvas, item, rect, size.width);
       }
@@ -257,6 +266,35 @@ class TimelinePainter extends CustomPainter {
           ..close(),
         paint,
       );
+    }
+  }
+
+  /// Lime diamonds along the bottom of an element, one per time holding keys.
+  void _paintKeyframes(Canvas canvas, TimelineItem item, Rect rect) {
+    if (item.keyframes.isEmpty) return;
+    final selected = item.id == selectedId;
+    final drag = selected ? keyframeDrag : null;
+    for (final time in item.keyframes) {
+      final shown = drag != null && drag.$1 == time ? drag.$2 : time;
+      final centre = Offset(layout.xForTime(shown), rect.bottom - 6);
+      final picked = selected && time == selectedKeyframe;
+      final reach = picked ? 6.0 : 4.5;
+      final diamond = Path()
+        ..moveTo(centre.dx, centre.dy - reach)
+        ..lineTo(centre.dx + reach, centre.dy)
+        ..lineTo(centre.dx, centre.dy + reach)
+        ..lineTo(centre.dx - reach, centre.dy)
+        ..close();
+      canvas.drawPath(diamond, Paint()..color = ShortedColors.accent);
+      if (picked) {
+        canvas.drawPath(
+          diamond,
+          Paint()
+            ..color = ShortedColors.text
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.5,
+        );
+      }
     }
   }
 
@@ -349,7 +387,9 @@ class TimelinePainter extends CustomPainter {
       old.dragPreview != dragPreview ||
       old.filmstrips != filmstrips ||
       old.waveforms != waveforms ||
-      old.rangeUs != rangeUs;
+      old.rangeUs != rangeUs ||
+      old.selectedKeyframe != selectedKeyframe ||
+      old.keyframeDrag != keyframeDrag;
 }
 
 /// Driven by `playheadUs` directly, so no widget rebuilds during a scrub.

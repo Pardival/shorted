@@ -2,7 +2,9 @@
 //! and where each one sits on screen so Flutter can draw the selection around it.
 
 use shorted_core::command::{AnimSlot, Command};
-use shorted_core::evaluate::{evaluate, preset_modifier};
+use shorted_core::evaluate::{
+    evaluate, keyframe_times, keys_for, path_position_at, preset_modifier, property_value,
+};
 use shorted_core::model::*;
 use shorted_render::captions::parse_color;
 use shorted_render::overlays::{shape_size, CANVAS_HEIGHT, CANVAS_WIDTH};
@@ -12,7 +14,7 @@ use uuid::Uuid;
 use crate::api::clips::{edit, parse};
 use crate::api::projects::{on_command_thread, view_of, with_active, ProjectView};
 use crate::error::{EngineError, EngineFailure};
-use crate::transport::{publish_overlay, transport};
+use crate::transport::{publish_overlay, publish_overlay_keys, transport};
 
 /// A new element lasts this long from the playhead.
 const DEFAULT_LENGTH_US: i64 = 3_000_000;
@@ -207,6 +209,46 @@ pub struct PresetSampleView {
     pub reveal: f32,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum EasingView {
+    Linear,
+    EaseIn,
+    EaseOut,
+    EaseInOut,
+    Spring,
+}
+
+impl From<EasingView> for Easing {
+    fn from(easing: EasingView) -> Self {
+        match easing {
+            EasingView::Linear => Self::Linear,
+            EasingView::EaseIn => Self::EaseIn,
+            EasingView::EaseOut => Self::EaseOut,
+            EasingView::EaseInOut => Self::EaseInOut,
+            EasingView::Spring => Self::Spring,
+        }
+    }
+}
+
+impl From<Easing> for EasingView {
+    fn from(easing: Easing) -> Self {
+        match easing {
+            Easing::Linear => Self::Linear,
+            Easing::EaseIn => Self::EaseIn,
+            Easing::EaseOut => Self::EaseOut,
+            Easing::EaseInOut => Self::EaseInOut,
+            Easing::Spring => Self::Spring,
+        }
+    }
+}
+
+/// A time holding keys, on the timeline: absolute microseconds.
+#[derive(Clone, Copy)]
+pub struct KeyframeView {
+    pub time_us: i64,
+    pub easing: EasingView,
+}
+
 /// One element, bottom first in `ProjectView::overlays`.
 pub struct OverlayView {
     pub id: String,
@@ -222,6 +264,7 @@ pub struct OverlayView {
     pub anim_in: Option<PresetView>,
     pub anim_loop: Option<PresetView>,
     pub anim_out: Option<PresetView>,
+    pub keyframes: Vec<KeyframeView>,
 }
 
 /// An element's own placement, before animation: centre in canvas units, degrees clockwise.
@@ -324,6 +367,13 @@ pub(crate) fn overlay_views(project: &Project) -> Vec<OverlayView> {
             anim_in: preset_view(item.anim_in),
             anim_loop: preset_view(item.anim_loop),
             anim_out: preset_view(item.anim_out),
+            keyframes: keyframe_times(item)
+                .into_iter()
+                .map(|(local, easing)| KeyframeView {
+                    time_us: item.start_us + local,
+                    easing: easing.into(),
+                })
+                .collect(),
         })
         .collect()
 }
@@ -579,6 +629,173 @@ pub async fn set_overlay_transform(
     })
 }
 
+/// The element's own placement at `time_us`: its keyframes and path, without presets. Where a
+/// gesture in keyframe mode starts from.
+#[flutter_rust_bridge::frb(sync)]
+pub fn overlay_transform_at(id: String, time_us: i64) -> Option<TransformView> {
+    let id = parse(&id).ok()?;
+    let project = transport().project.clone()?;
+    let item = project
+        .timeline
+        .overlays
+        .iter()
+        .find(|item| item.id == id)?;
+    Some(own_transform(item, time_us - item.start_us).into())
+}
+
+/// Base, then the path, then keyframes on their own axis: the order evaluation uses.
+fn own_transform(item: &OverlayItem, local: i64) -> Transform {
+    let keyed = |property| {
+        item.keyframes
+            .iter()
+            .any(|track| track.property == property && !track.keys.is_empty())
+    };
+    let path = item.path.as_ref().and_then(|p| path_position_at(p, local));
+    let mut position = path.unwrap_or(item.base.position);
+    if keyed(Prop::X) {
+        position.x = property_value(item, Prop::X, local);
+    }
+    if keyed(Prop::Y) {
+        position.y = property_value(item, Prop::Y, local);
+    }
+    Transform {
+        position,
+        scale: property_value(item, Prop::Scale, local),
+        rotation: property_value(item, Prop::Rotation, local),
+        opacity: property_value(item, Prop::Opacity, local),
+        flip: item.base.flip,
+    }
+}
+
+/// Shows keys for `transform` at `time_us` while a finger moves the element; nothing recorded.
+#[flutter_rust_bridge::frb(sync)]
+pub fn preview_overlay_key(id: String, time_us: i64, transform: TransformView) {
+    let Ok(id) = parse(&id) else {
+        return;
+    };
+    let target: Transform = transform.into();
+    publish_overlay_keys(id, |item| {
+        let local = time_us - item.start_us;
+        keys_for(item, local, &target)
+    });
+}
+
+/// Keys every property that differs from `transform` at `time_us`, as one undo step.
+pub async fn key_overlay_transform(
+    id: String,
+    time_us: i64,
+    transform: TransformView,
+) -> Result<ProjectView, EngineFailure> {
+    edit(move |project| {
+        let item = find(project, parse(&id)?)?;
+        let target: Transform = transform.into();
+        let local = (time_us - item.start_us).clamp(0, item.end_us - item.start_us);
+        let commands = keys_for(item, local, &target)
+            .into_iter()
+            .map(|(property, key)| Command::SetKeyframe {
+                id: item.id,
+                property,
+                key,
+            })
+            .collect();
+        Ok(Command::Group {
+            label: "keyframe".into(),
+            commands,
+        })
+    })
+}
+
+/// The keys of every property at `time_us`, by timeline time.
+fn keys_at(item: &OverlayItem, time_us: i64) -> Vec<(Prop, Key)> {
+    let local = time_us - item.start_us;
+    item.keyframes
+        .iter()
+        .flat_map(|track| {
+            track
+                .keys
+                .iter()
+                .filter(|key| key.t_us == local)
+                .map(|key| (track.property, *key))
+        })
+        .collect()
+}
+
+pub async fn remove_keyframes_at(id: String, time_us: i64) -> Result<ProjectView, EngineFailure> {
+    edit(move |project| {
+        let item = find(project, parse(&id)?)?;
+        let commands = keys_at(item, time_us)
+            .into_iter()
+            .map(|(property, key)| Command::RemoveKeyframe {
+                id: item.id,
+                property,
+                t_us: key.t_us,
+            })
+            .collect();
+        Ok(Command::Group {
+            label: "remove keyframe".into(),
+            commands,
+        })
+    })
+}
+
+/// Moves every key at `from_us` to `to_us`, kept inside the element.
+pub async fn move_keyframes(
+    id: String,
+    from_us: i64,
+    to_us: i64,
+) -> Result<ProjectView, EngineFailure> {
+    edit(move |project| {
+        let item = find(project, parse(&id)?)?;
+        let to_local = (to_us - item.start_us).clamp(0, item.end_us - item.start_us);
+        let mut commands = Vec::new();
+        for (property, key) in keys_at(item, from_us) {
+            commands.push(Command::RemoveKeyframe {
+                id: item.id,
+                property,
+                t_us: key.t_us,
+            });
+            commands.push(Command::SetKeyframe {
+                id: item.id,
+                property,
+                key: Key {
+                    t_us: to_local,
+                    ..key
+                },
+            });
+        }
+        Ok(Command::Group {
+            label: "move keyframe".into(),
+            commands,
+        })
+    })
+}
+
+/// The easing from the keys at `time_us` to the next ones.
+pub async fn set_keyframe_easing(
+    id: String,
+    time_us: i64,
+    easing: EasingView,
+) -> Result<ProjectView, EngineFailure> {
+    edit(move |project| {
+        let item = find(project, parse(&id)?)?;
+        let commands = keys_at(item, time_us)
+            .into_iter()
+            .map(|(property, key)| Command::SetKeyframe {
+                id: item.id,
+                property,
+                key: Key {
+                    easing: easing.into(),
+                    ..key
+                },
+            })
+            .collect();
+        Ok(Command::Group {
+            label: "keyframe easing".into(),
+            commands,
+        })
+    })
+}
+
 /// A copy just above the original, a little down and to the right.
 pub async fn duplicate_overlay(id: String) -> Result<ProjectView, EngineFailure> {
     edit(move |project| {
@@ -704,5 +921,44 @@ mod tests {
         assert_eq!(base.rotation, 270.0);
         assert_eq!(base.opacity, 1.0);
         assert_eq!(TransformView::from(base).x, 10.0);
+    }
+
+    #[test]
+    fn keyframes_win_over_a_path_on_their_axis_when_editing() {
+        let (mut project, _) = project_with(OverlayKind::Shape {
+            shape: ShapeKind::Rectangle,
+            fill: DEFAULT_FILL.into(),
+        });
+        let item = &mut project.timeline.overlays[0];
+        item.path = Some(MotionPath {
+            samples: vec![
+                PathSample {
+                    t_us: 0,
+                    x: 10.0,
+                    y: 20.0,
+                },
+                PathSample {
+                    t_us: 1_000_000,
+                    x: 110.0,
+                    y: 220.0,
+                },
+            ],
+            smoothing: 0.0,
+            orient_to_path: false,
+        });
+        item.keyframes = vec![AnimatedProperty {
+            property: Prop::Y,
+            keys: vec![Key {
+                t_us: 0,
+                value: 7.0,
+                easing: Easing::Linear,
+            }],
+        }];
+        let own = own_transform(item, 500_000);
+        assert_eq!((own.position.x, own.position.y), (60.0, 7.0));
+        // Without clips the project lasts no time, so evaluation only shows its start.
+        let start = own_transform(&project.timeline.overlays[0], 0).position;
+        let shown = evaluate(&project, 0).overlays[0].position;
+        assert_eq!((shown.x, shown.y), (start.x, start.y));
     }
 }

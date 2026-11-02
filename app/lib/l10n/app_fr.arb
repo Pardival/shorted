@@ -240,5 +240,13 @@
   "presetWiggle": "Tortiller",
   "presetRotate": "Tourner",
   "presetBounce": "Rebond",
-  "seconds": "{value} s"
+  "seconds": "{value} s",
+  "keyframes": "Images clés",
+  "keyframesHelp": "Déplacer, agrandir, tourner ou estomper un élément pose une clé à la tête de lecture.",
+  "easingLinear": "Linéaire",
+  "easingIn": "Accélérer",
+  "easingOut": "Ralentir",
+  "easingInOut": "Doux",
+  "easingSpring": "Ressort",
+  "deleteKeyframe": "Supprimer l'image clé"
 }

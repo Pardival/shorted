@@ -12,6 +12,7 @@ class TimelineItem {
     this.speed = 1,
     this.locked = false,
     this.animated = false,
+    this.keyframes = const [],
   });
 
   final String id;
@@ -26,6 +27,9 @@ class TimelineItem {
   /// Overlays: a locked one cannot be dragged, an animated one shows diamonds.
   final bool locked;
   final bool animated;
+
+  /// Times holding keyframes, on the timeline.
+  final List<int> keyframes;
 }
 
 class TimelineTrack {

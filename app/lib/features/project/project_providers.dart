@@ -49,6 +49,32 @@ class SelectedClip extends Notifier<String?> {
 final selectedClipProvider =
     NotifierProvider.autoDispose<SelectedClip, String?>(SelectedClip.new);
 
+/// Expert mode of the Animate sheet: a change at the playhead becomes a keyframe (T-0707).
+class KeyframeMode extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void set(bool on) => state = on;
+}
+
+final keyframeModeProvider = NotifierProvider<KeyframeMode, bool>(
+  KeyframeMode.new,
+);
+
+/// A keyframe picked on the Widgets track: the element and the time of its keys.
+class SelectedKeyframe extends Notifier<({String overlayId, int timeUs})?> {
+  @override
+  ({String overlayId, int timeUs})? build() => null;
+
+  void set(({String overlayId, int timeUs})? keyframe) => state = keyframe;
+}
+
+final selectedKeyframeProvider =
+    NotifierProvider.autoDispose<
+      SelectedKeyframe,
+      ({String overlayId, int timeUs})?
+    >(SelectedKeyframe.new);
+
 /// The overlay selected on the preview or the Widgets track.
 class SelectedOverlay extends Notifier<String?> {
   @override

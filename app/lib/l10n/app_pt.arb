@@ -240,5 +240,13 @@
   "presetWiggle": "Balançar",
   "presetRotate": "Girar",
   "presetBounce": "Quicar",
-  "seconds": "{value} s"
+  "seconds": "{value} s",
+  "keyframes": "Quadros-chave",
+  "keyframesHelp": "Mover, escalar, girar ou esmaecer um elemento cria uma chave no cursor.",
+  "easingLinear": "Linear",
+  "easingIn": "Acelerar",
+  "easingOut": "Desacelerar",
+  "easingInOut": "Suave",
+  "easingSpring": "Mola",
+  "deleteKeyframe": "Excluir quadro-chave"
 }

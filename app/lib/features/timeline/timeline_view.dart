@@ -17,7 +17,7 @@ const _wheelZoomSpeed = 0.002;
 const _handleWidth = 14.0;
 const _snapPixels = 8.0;
 
-enum _DragKind { scrub, trimStart, trimEnd, move }
+enum _DragKind { scrub, trimStart, trimEnd, move, keyframe }
 
 /// Multi-track timeline. Collapsed and expanded modes come with T-0207.
 class TimelineView extends StatefulWidget {
@@ -43,6 +43,9 @@ class TimelineView extends StatefulWidget {
     this.onAudioTrim,
     this.onOverlayTiming,
     this.selectedId,
+    this.selectedKeyframe,
+    this.onKeyframeTap,
+    this.onKeyframeMove,
   });
 
   final List<TimelineTrack> tracks;
@@ -87,6 +90,13 @@ class TimelineView extends StatefulWidget {
   /// Set when something else selects an item, such as a tap on the preview.
   final String? selectedId;
 
+  /// The keyframe picked on the selected element.
+  final int? selectedKeyframe;
+
+  /// A keyframe diamond tapped, or dragged from one time to another.
+  final void Function(TimelineItem item, int timeUs)? onKeyframeTap;
+  final void Function(TimelineItem item, int fromUs, int toUs)? onKeyframeMove;
+
   @override
   State<TimelineView> createState() => _TimelineViewState();
 }
@@ -109,6 +119,8 @@ class _TimelineViewState extends State<TimelineView> {
   int? _lastSnap;
   var _pointers = 0;
   int? _rangeAnchor;
+  int? _keyframeFrom;
+  (int, int)? _keyframeDrag;
   StreamSubscription<double>? _zoomRequests;
 
   @override
@@ -214,7 +226,11 @@ class _TimelineViewState extends State<TimelineView> {
       _dragItem = item;
       _dragTrack = index;
       _dragStartX = position.dx;
-      if ((time - item.startUs).abs() <= slop) {
+      final key = _keyframeNear(item, time);
+      if (key != null) {
+        _drag = _DragKind.keyframe;
+        _keyframeFrom = key;
+      } else if ((time - item.startUs).abs() <= slop) {
         _drag = _DragKind.trimStart;
       } else if ((time - item.endUs).abs() <= slop) {
         _drag = _DragKind.trimEnd;
@@ -222,6 +238,20 @@ class _TimelineViewState extends State<TimelineView> {
         _drag = _DragKind.move;
       }
     }
+  }
+
+  /// A keyframe of `item` within half a handle of `timeUs`.
+  int? _keyframeNear(TimelineItem item, int timeUs) {
+    final slop = (_handleWidth / 2 / _layout.pixelsPerSecond * 1e6).round();
+    int? nearest;
+    for (final key in item.keyframes) {
+      final distance = (key - timeUs).abs();
+      if (distance <= slop &&
+          (nearest == null || distance < (nearest - timeUs).abs())) {
+        nearest = key;
+      }
+    }
+    return nearest;
   }
 
   int _snapped(int timeUs, TimelineItem item) {
@@ -247,6 +277,14 @@ class _TimelineViewState extends State<TimelineView> {
   void _updateDrag(double x, double y) {
     final item = _dragItem;
     if (item == null) return;
+    final from = _keyframeFrom;
+    if (_drag == _DragKind.keyframe && from != null) {
+      final deltaUs = ((x - _dragStartX) / _layout.pixelsPerSecond * 1e6)
+          .round();
+      final to = (from + deltaUs).clamp(item.startUs, item.endUs).toInt();
+      setState(() => _keyframeDrag = (from, to));
+      return;
+    }
     if (_drag == _DragKind.move && _isSound(_dragTrack)) {
       final over = _current.trackAt(y, widget.tracks.length);
       if (over != null && _isSound(over) && !widget.tracks[over].locked) {
@@ -275,6 +313,17 @@ class _TimelineViewState extends State<TimelineView> {
   }
 
   void _endDrag() {
+    final keyDrag = _keyframeDrag;
+    if (_drag == _DragKind.keyframe) {
+      final item = _dragItem;
+      setState(() => _keyframeDrag = null);
+      _keyframeFrom = null;
+      _dragItem = null;
+      if (item != null && keyDrag != null && keyDrag.$1 != keyDrag.$2) {
+        widget.onKeyframeMove?.call(item, keyDrag.$1, keyDrag.$2);
+      }
+      return;
+    }
     final item = _dragItem;
     final preview = _dragPreview;
     setState(() => _dragPreview = null);
@@ -296,7 +345,7 @@ class _TimelineViewState extends State<TimelineView> {
         case _DragKind.move:
           final track = widget.tracks[_dragTrack];
           widget.onAudioMove?.call(item, start < 0 ? 0 : start, track);
-        case _DragKind.scrub:
+        case _DragKind.scrub || _DragKind.keyframe:
           break;
       }
       return;
@@ -314,7 +363,7 @@ class _TimelineViewState extends State<TimelineView> {
               (other.startUs + other.endUs) ~/ 2 < centre;
         }).length;
         if (to != items.indexOf(item)) widget.onMove?.call(item, to);
-      case _DragKind.scrub:
+      case _DragKind.scrub || _DragKind.keyframe:
         break;
     }
   }
@@ -341,10 +390,17 @@ class _TimelineViewState extends State<TimelineView> {
       _scrub(position.dx);
       return;
     }
-    final item = _current.itemAt(
-      widget.tracks[index],
-      _layout.timeForX(position.dx),
-    );
+    final time = _layout.timeForX(position.dx);
+    final track = widget.tracks[index];
+    for (final selected in track.items) {
+      if (selected.id != _selectedId) continue;
+      final key = _keyframeNear(selected, time);
+      if (key != null) {
+        widget.onKeyframeTap?.call(selected, key);
+        return;
+      }
+    }
+    final item = _current.itemAt(track, time);
     setState(() => _selectedId = item?.id);
     widget.onSelect?.call(item);
   }
@@ -426,6 +482,8 @@ class _TimelineViewState extends State<TimelineView> {
                   filmstrips: widget.filmstrips,
                   waveforms: widget.waveforms,
                   rangeUs: widget.rangeUs,
+                  selectedKeyframe: widget.selectedKeyframe,
+                  keyframeDrag: _keyframeDrag,
                 ),
               ),
             ),

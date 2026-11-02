@@ -352,5 +352,13 @@
         "type": "String"
       }
     }
-  }
+  },
+  "keyframes": "Keyframes",
+  "keyframesHelp": "Moving, scaling, turning or fading an element sets a key at the playhead.",
+  "easingLinear": "Linear",
+  "easingIn": "Ease in",
+  "easingOut": "Ease out",
+  "easingInOut": "Ease in and out",
+  "easingSpring": "Spring",
+  "deleteKeyframe": "Delete keyframe"
 }

@@ -165,6 +165,73 @@ pub(crate) fn key_value(keys: &[Key], t: i64) -> Option<f32> {
     }
 }
 
+/// A property's own value at `local` microseconds into the element: its keyframes, else its base.
+/// Paths and presets are left out: they are not what a keyframe records.
+pub fn property_value(item: &OverlayItem, property: Prop, local: i64) -> f32 {
+    let keyed = item
+        .keyframes
+        .iter()
+        .find(|track| track.property == property)
+        .and_then(|track| key_value(&track.keys, local));
+    keyed.unwrap_or(match property {
+        Prop::X => item.base.position.x,
+        Prop::Y => item.base.position.y,
+        Prop::Scale => item.base.scale,
+        Prop::Rotation => item.base.rotation,
+        Prop::Opacity => item.base.opacity,
+    })
+}
+
+/// The keys that make the element look like `target` at `local`: one per property that differs.
+/// A key already there keeps its easing; a new one eases in and out.
+pub fn keys_for(item: &OverlayItem, local: i64, target: &Transform) -> Vec<(Prop, Key)> {
+    const SAME: f32 = 1e-4;
+    [
+        (Prop::X, target.position.x),
+        (Prop::Y, target.position.y),
+        (Prop::Scale, target.scale),
+        (Prop::Rotation, target.rotation),
+        (Prop::Opacity, target.opacity),
+    ]
+    .into_iter()
+    .filter(|(property, value)| (property_value(item, *property, local) - value).abs() > SAME)
+    .map(|(property, value)| {
+        let easing = item
+            .keyframes
+            .iter()
+            .find(|track| track.property == property)
+            .and_then(|track| track.keys.iter().find(|key| key.t_us == local))
+            .map_or(Easing::EaseInOut, |key| key.easing);
+        (
+            property,
+            Key {
+                t_us: local,
+                value,
+                easing,
+            },
+        )
+    })
+    .collect()
+}
+
+/// Every time that holds a key on any property, in order, with the easing of the first property
+/// keyed there.
+pub fn keyframe_times(item: &OverlayItem) -> Vec<(i64, Easing)> {
+    let mut times: Vec<(i64, Easing)> = item
+        .keyframes
+        .iter()
+        .flat_map(|track| track.keys.iter().map(|key| (key.t_us, key.easing)))
+        .collect();
+    times.sort_by_key(|(time, _)| *time);
+    times.dedup_by_key(|(time, _)| *time);
+    times
+}
+
+/// Where a recorded path puts the element at `t`, for edits that start from it.
+pub fn path_position_at(path: &MotionPath, t: i64) -> Option<Vec2> {
+    path_position(path, t).map(|(point, _)| point)
+}
+
 /// Position along a recorded path. Smoothing is applied by T-0708.
 pub(crate) fn path_position(path: &MotionPath, t: i64) -> Option<(Vec2, f32)> {
     let samples = &path.samples;

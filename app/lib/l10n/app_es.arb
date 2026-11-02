@@ -240,5 +240,13 @@
   "presetWiggle": "Menear",
   "presetRotate": "Girar",
   "presetBounce": "Rebote",
-  "seconds": "{value} s"
+  "seconds": "{value} s",
+  "keyframes": "Fotogramas clave",
+  "keyframesHelp": "Mover, escalar, girar o atenuar un elemento crea una clave en el cabezal.",
+  "easingLinear": "Lineal",
+  "easingIn": "Acelerar",
+  "easingOut": "Desacelerar",
+  "easingInOut": "Suave",
+  "easingSpring": "Resorte",
+  "deleteKeyframe": "Eliminar fotograma clave"
 }

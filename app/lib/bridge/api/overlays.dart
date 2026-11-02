@@ -14,8 +14,8 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'projects.dart';
 import 'transcribe.dart';
 
-// These functions are ignored because they are not marked as `pub`: `boxes`, `find`, `natural_size`, `new_overlay`, `overlay_views`, `preset_view`, `text_look`, `text_view`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `from`, `from`, `from`, `from`, `from`, `from`
+// These functions are ignored because they are not marked as `pub`: `boxes`, `find`, `keys_at`, `natural_size`, `new_overlay`, `overlay_views`, `own_transform`, `preset_view`, `text_look`, `text_view`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`
 
 /// The elements on screen at `time_us`, as the renderer places them, top first.
 List<OverlayBoxView> overlayBoxes({required PlatformInt64 timeUs}) =>
@@ -111,6 +111,68 @@ Future<ProjectView> setOverlayTransform({
   transform: transform,
 );
 
+/// The element's own placement at `time_us`: its keyframes and path, without presets. Where a
+/// gesture in keyframe mode starts from.
+TransformView? overlayTransformAt({
+  required String id,
+  required PlatformInt64 timeUs,
+}) => RustLib.instance.api.crateApiOverlaysOverlayTransformAt(
+  id: id,
+  timeUs: timeUs,
+);
+
+/// Shows keys for `transform` at `time_us` while a finger moves the element; nothing recorded.
+void previewOverlayKey({
+  required String id,
+  required PlatformInt64 timeUs,
+  required TransformView transform,
+}) => RustLib.instance.api.crateApiOverlaysPreviewOverlayKey(
+  id: id,
+  timeUs: timeUs,
+  transform: transform,
+);
+
+/// Keys every property that differs from `transform` at `time_us`, as one undo step.
+Future<ProjectView> keyOverlayTransform({
+  required String id,
+  required PlatformInt64 timeUs,
+  required TransformView transform,
+}) => RustLib.instance.api.crateApiOverlaysKeyOverlayTransform(
+  id: id,
+  timeUs: timeUs,
+  transform: transform,
+);
+
+Future<ProjectView> removeKeyframesAt({
+  required String id,
+  required PlatformInt64 timeUs,
+}) => RustLib.instance.api.crateApiOverlaysRemoveKeyframesAt(
+  id: id,
+  timeUs: timeUs,
+);
+
+/// Moves every key at `from_us` to `to_us`, kept inside the element.
+Future<ProjectView> moveKeyframes({
+  required String id,
+  required PlatformInt64 fromUs,
+  required PlatformInt64 toUs,
+}) => RustLib.instance.api.crateApiOverlaysMoveKeyframes(
+  id: id,
+  fromUs: fromUs,
+  toUs: toUs,
+);
+
+/// The easing from the keys at `time_us` to the next ones.
+Future<ProjectView> setKeyframeEasing({
+  required String id,
+  required PlatformInt64 timeUs,
+  required EasingView easing,
+}) => RustLib.instance.api.crateApiOverlaysSetKeyframeEasing(
+  id: id,
+  timeUs: timeUs,
+  easing: easing,
+);
+
 /// A copy just above the original, a little down and to the right.
 Future<ProjectView> duplicateOverlay({required String id}) =>
     RustLib.instance.api.crateApiOverlaysDuplicateOverlay(id: id);
@@ -119,6 +181,27 @@ Future<ProjectView> deleteOverlay({required String id}) =>
     RustLib.instance.api.crateApiOverlaysDeleteOverlay(id: id);
 
 enum AnimSlotView { in_, loop, out }
+
+enum EasingView { linear, easeIn, easeOut, easeInOut, spring }
+
+/// A time holding keys, on the timeline: absolute microseconds.
+class KeyframeView {
+  final PlatformInt64 timeUs;
+  final EasingView easing;
+
+  const KeyframeView({required this.timeUs, required this.easing});
+
+  @override
+  int get hashCode => timeUs.hashCode ^ easing.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is KeyframeView &&
+          runtimeType == other.runtimeType &&
+          timeUs == other.timeUs &&
+          easing == other.easing;
+}
 
 /// Where an element is drawn at one instant, in canvas units (1080 × 1920, origin top left).
 class OverlayBoxView {
@@ -180,6 +263,7 @@ class OverlayView {
   final PresetView? animIn;
   final PresetView? animLoop;
   final PresetView? animOut;
+  final List<KeyframeView> keyframes;
 
   const OverlayView({
     required this.id,
@@ -194,6 +278,7 @@ class OverlayView {
     this.animIn,
     this.animLoop,
     this.animOut,
+    required this.keyframes,
   });
 
   @override
@@ -209,7 +294,8 @@ class OverlayView {
       text.hashCode ^
       animIn.hashCode ^
       animLoop.hashCode ^
-      animOut.hashCode;
+      animOut.hashCode ^
+      keyframes.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -227,7 +313,8 @@ class OverlayView {
           text == other.text &&
           animIn == other.animIn &&
           animLoop == other.animLoop &&
-          animOut == other.animOut;
+          animOut == other.animOut &&
+          keyframes == other.keyframes;
 }
 
 /// The presets of FR-ENH-20.

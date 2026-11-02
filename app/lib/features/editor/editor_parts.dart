@@ -551,6 +551,58 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
     return null;
   }
 
+  /// The easing to the next keys, and delete (T-0707).
+  Widget _keyframeTools(
+    AppLocalizations l10n,
+    OverlayView overlay,
+    KeyframeView keyframe,
+  ) {
+    final time = keyframe.timeUs.toInt();
+    void clear() => ref.read(selectedKeyframeProvider.notifier).set(null);
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final (easing, label) in [
+            (EasingView.linear, l10n.easingLinear),
+            (EasingView.easeIn, l10n.easingIn),
+            (EasingView.easeOut, l10n.easingOut),
+            (EasingView.easeInOut, l10n.easingInOut),
+            (EasingView.spring, l10n.easingSpring),
+          ])
+            Padding(
+              padding: const EdgeInsets.only(right: ShortedSpace.xs),
+              child: ShortedChip(
+                label: label,
+                selected: keyframe.easing == easing,
+                onTap: () => _guard(
+                  () => _editor.apply(
+                    (g) => g.setKeyframeEasing(overlay.id, time, easing),
+                  ),
+                ),
+              ),
+            ),
+          ShortedIconButton(
+            icon: Icons.delete_outline,
+            tooltip: l10n.deleteKeyframe,
+            onPressed: () {
+              clear();
+              _guard(
+                () =>
+                    _editor.apply((g) => g.removeKeyframesAt(overlay.id, time)),
+              );
+            },
+          ),
+          ShortedIconButton(
+            icon: Icons.close,
+            tooltip: l10n.cancel,
+            onPressed: clear,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _overlayTools(AppLocalizations l10n, OverlayView overlay) {
     Future<void> run(
       Future<ProjectView> Function(ProjectGateway gateway) action,
@@ -664,6 +716,10 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
                 speed: item.speed,
                 locked: _overlay(item.id)?.locked ?? false,
                 animated: _overlay(item.id)?.hasAnimation ?? false,
+                keyframes: [
+                  for (final key in _overlay(item.id)?.keyframes ?? const [])
+                    key.timeUs.toInt(),
+                ],
               ),
           ],
         ),
@@ -683,6 +739,13 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
     final range = _range;
     final selectedOverlay = ref.watch(selectedOverlayProvider);
     final overlay = _overlay(selectedOverlay);
+    final picked = ref.watch(selectedKeyframeProvider);
+    KeyframeView? keyframe;
+    if (overlay != null && picked?.overlayId == overlay.id) {
+      for (final key in overlay.keyframes) {
+        if (key.timeUs.toInt() == picked?.timeUs) keyframe = key;
+      }
+    }
     final cropping = ref.watch(cropTargetProvider) != null;
     ref.watch(selectedClipProvider);
     final slowZoom = clip == null ? null : _slowZoom(clip);
@@ -733,6 +796,8 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
                 ),
               ],
             )
+          else if (overlay != null && keyframe != null)
+            _keyframeTools(l10n, overlay, keyframe)
           else if (overlay != null)
             _overlayTools(l10n, overlay)
           else if (_audioItem case final sound?)
@@ -819,6 +884,25 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
                 ),
               ),
               selectedId: selectedOverlay,
+              selectedKeyframe: keyframe?.timeUs.toInt(),
+              onKeyframeTap: (item, timeUs) {
+                ref.read(selectedOverlayProvider.notifier).set(item.id);
+                ref.read(selectedKeyframeProvider.notifier).set((
+                  overlayId: item.id,
+                  timeUs: timeUs,
+                ));
+              },
+              onKeyframeMove: (item, fromUs, toUs) {
+                ref.read(selectedKeyframeProvider.notifier).set((
+                  overlayId: item.id,
+                  timeUs: toUs,
+                ));
+                _guard(
+                  () => _editor.apply(
+                    (g) => g.moveKeyframes(item.id, fromUs, toUs),
+                  ),
+                );
+              },
               onOverlayTiming: (item, startUs, endUs) => _guard(
                 () => _editor.apply(
                   (gateway) =>

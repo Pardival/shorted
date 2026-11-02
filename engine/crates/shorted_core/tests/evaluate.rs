@@ -4,7 +4,9 @@
 
 use proptest::prelude::*;
 use shorted_core::command::AnimSlot;
-use shorted_core::evaluate::{Modifier, ease, evaluate, preset_modifier};
+use shorted_core::evaluate::{
+    Modifier, ease, evaluate, keyframe_times, keys_for, preset_modifier, property_value,
+};
 use shorted_core::model::*;
 use uuid::Uuid;
 
@@ -567,5 +569,74 @@ fn a_loop_adds_to_a_path_and_its_heading() {
         (layer.rotation - (90.0 + wiggle)).abs() < 1e-3,
         "{}",
         layer.rotation
+    );
+}
+
+fn two_keys(easing: Easing) -> Project {
+    overlay_only(|item| {
+        item.keyframes = vec![AnimatedProperty {
+            property: Prop::Opacity,
+            keys: vec![
+                Key {
+                    t_us: 0,
+                    value: 0.0,
+                    easing,
+                },
+                Key {
+                    t_us: 1_000_000,
+                    value: 1.0,
+                    easing: Easing::Linear,
+                },
+            ],
+        }];
+    })
+}
+
+#[test]
+fn each_easing_shapes_the_way_between_two_keys() {
+    let at = |easing, t| evaluate(&two_keys(easing), t).overlays[0].opacity;
+    assert!((at(Easing::Linear, 250_000) - 0.25).abs() < 1e-4);
+    assert!((at(Easing::EaseIn, 250_000) - 0.0625).abs() < 1e-4);
+    assert!((at(Easing::EaseOut, 250_000) - 0.4375).abs() < 1e-4);
+    assert!((at(Easing::EaseInOut, 250_000) - 0.15625).abs() < 1e-4);
+    assert!((at(Easing::EaseInOut, 500_000) - 0.5).abs() < 1e-4);
+    // A spring overshoots, so opacity is clamped at 1 on its way.
+    assert!(at(Easing::Spring, 250_000) > at(Easing::EaseOut, 250_000));
+    assert_eq!(ease(Easing::Spring, 1.0), 1.0);
+    let overshoot = (1..100).any(|i| ease(Easing::Spring, i as f32 / 100.0) > 1.0);
+    assert!(overshoot, "a spring overshoots before settling");
+    for easing in [
+        Easing::Linear,
+        Easing::EaseIn,
+        Easing::EaseOut,
+        Easing::Spring,
+    ] {
+        assert!((at(easing, 1_000_000) - 1.0).abs() < 1e-4, "{easing:?}");
+    }
+}
+
+#[test]
+fn a_change_at_the_playhead_keys_only_what_changed() {
+    let project = two_keys(Easing::Spring);
+    let item = &project.timeline.overlays[0];
+    let mut target = item.base;
+    target.opacity = property_value(item, Prop::Opacity, 0);
+    target.position.x += 50.0;
+    let keys = keys_for(item, 0, &target);
+    assert_eq!(keys.len(), 1);
+    assert_eq!(keys[0].0, Prop::X);
+    assert_eq!(keys[0].1.easing, Easing::EaseInOut);
+
+    target.opacity = 0.3;
+    let keys = keys_for(item, 0, &target);
+    let opacity = keys.iter().find(|(p, _)| *p == Prop::Opacity).unwrap();
+    assert_eq!(
+        opacity.1.easing,
+        Easing::Spring,
+        "an existing key keeps its easing"
+    );
+    assert_eq!(
+        keyframe_times(item),
+        vec![(0, Easing::Spring), (1_000_000, Easing::Linear)]
     );
 }

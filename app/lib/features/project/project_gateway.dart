@@ -153,6 +153,24 @@ abstract interface class ProjectGateway {
     overlays.PresetKindView? kind,
     int durationUs,
   );
+  overlays.TransformView? overlayTransformAt(String id, int timeUs);
+  void previewOverlayKey(
+    String id,
+    int timeUs,
+    overlays.TransformView transform,
+  );
+  Future<ProjectView> keyOverlayTransform(
+    String id,
+    int timeUs,
+    overlays.TransformView transform,
+  );
+  Future<ProjectView> removeKeyframesAt(String id, int timeUs);
+  Future<ProjectView> moveKeyframes(String id, int fromUs, int toUs);
+  Future<ProjectView> setKeyframeEasing(
+    String id,
+    int timeUs,
+    overlays.EasingView easing,
+  );
   overlays.PresetSampleView presetSample(
     overlays.PresetKindView kind,
     overlays.AnimSlotView slot,
@@ -456,6 +474,43 @@ class EngineGateway implements ProjectGateway {
     kind: kind,
     durationUs: durationUs,
   );
+
+  @override
+  overlays.TransformView? overlayTransformAt(String id, int timeUs) =>
+      overlays.overlayTransformAt(id: id, timeUs: timeUs);
+
+  @override
+  void previewOverlayKey(
+    String id,
+    int timeUs,
+    overlays.TransformView transform,
+  ) => overlays.previewOverlayKey(id: id, timeUs: timeUs, transform: transform);
+
+  @override
+  Future<ProjectView> keyOverlayTransform(
+    String id,
+    int timeUs,
+    overlays.TransformView transform,
+  ) => overlays.keyOverlayTransform(
+    id: id,
+    timeUs: timeUs,
+    transform: transform,
+  );
+
+  @override
+  Future<ProjectView> removeKeyframesAt(String id, int timeUs) =>
+      overlays.removeKeyframesAt(id: id, timeUs: timeUs);
+
+  @override
+  Future<ProjectView> moveKeyframes(String id, int fromUs, int toUs) =>
+      overlays.moveKeyframes(id: id, fromUs: fromUs, toUs: toUs);
+
+  @override
+  Future<ProjectView> setKeyframeEasing(
+    String id,
+    int timeUs,
+    overlays.EasingView easing,
+  ) => overlays.setKeyframeEasing(id: id, timeUs: timeUs, easing: easing);
 
   @override
   overlays.PresetSampleView presetSample(

@@ -174,7 +174,7 @@ class EnhancePanel extends ConsumerWidget {
 }
 
 /// Opacity and flip of the selected element. The slider is recorded once, when it is let go.
-class _OverlayLook extends StatefulWidget {
+class _OverlayLook extends ConsumerStatefulWidget {
   const _OverlayLook({super.key, required this.overlay, required this.run});
 
   final OverlayView overlay;
@@ -184,10 +184,10 @@ class _OverlayLook extends StatefulWidget {
   run;
 
   @override
-  State<_OverlayLook> createState() => _OverlayLookState();
+  ConsumerState<_OverlayLook> createState() => _OverlayLookState();
 }
 
-class _OverlayLookState extends State<_OverlayLook> {
+class _OverlayLookState extends ConsumerState<_OverlayLook> {
   double? _opacity;
 
   void _set({double? opacity, bool? flip}) {
@@ -200,9 +200,25 @@ class _OverlayLookState extends State<_OverlayLook> {
       opacity: opacity ?? base.opacity,
       flip: flip ?? base.flip,
     );
-    widget.run(
-      (gateway) => gateway.setOverlayTransform(widget.overlay.id, next),
-    );
+    final id = widget.overlay.id;
+    // Opacity is keyable; a flip is not, so it always changes the element itself.
+    if (ref.read(keyframeModeProvider) && opacity != null) {
+      final atUs = ref.read(previewTransportProvider).positionUs;
+      final here = ref
+          .read(projectGatewayProvider)
+          .overlayTransformAt(id, atUs);
+      final keyed = TransformView(
+        x: (here ?? base).x,
+        y: (here ?? base).y,
+        scale: (here ?? base).scale,
+        rotation: (here ?? base).rotation,
+        opacity: opacity,
+        flip: base.flip,
+      );
+      widget.run((gateway) => gateway.keyOverlayTransform(id, atUs, keyed));
+      return;
+    }
+    widget.run((gateway) => gateway.setOverlayTransform(id, next));
   }
 
   @override

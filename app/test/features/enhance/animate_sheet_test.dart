@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shorted/bridge/api/overlays.dart';
 import 'package:shorted/features/enhance/animate_sheet.dart';
 import 'package:shorted/features/enhance/overlay_selection.dart';
+import 'package:shorted/features/timeline/timeline_view.dart';
 
 import '../../shorted_app_test.dart' show open;
 import '../project/fake_gateway.dart';
@@ -55,5 +56,61 @@ void main() {
     ]);
     expect(presetsFor[AnimSlotView.out], contains(PresetKindView.shrink));
     expect(find.byType(OverlaySelection), findsOneWidget);
+  });
+
+  testWidgets('a picked keyframe gets its easing and can be deleted', (
+    tester,
+  ) async {
+    final project = FakeProject('p1', 'Mine')..clips.add('c1');
+    project.overlays.add(
+      OverlayView(
+        id: 'o5',
+        kind: OverlayKindView.shape,
+        startUs: big(0),
+        endUs: big(3000000),
+        locked: false,
+        hidden: false,
+        hasAnimation: true,
+        transform: const TransformView(
+          x: 540,
+          y: 960,
+          scale: 1,
+          rotation: 0,
+          opacity: 1,
+          flip: false,
+        ),
+        text: null,
+        animIn: null,
+        animLoop: null,
+        animOut: null,
+        keyframes: [
+          KeyframeView(timeUs: big(1000000), easing: EasingView.easeInOut),
+        ],
+      ),
+    );
+    final gateway = FakeGateway()..projects.add(project);
+    await open(
+      tester,
+      '/editor/p1/enhance',
+      size: const Size(1280, 900),
+      gateway: gateway,
+    );
+    // Select the element on the Widgets track, then its diamond at 1 s. The tools that
+    // appear push the timeline down, so it is measured again.
+    await tester.tapAt(
+      tester.getTopLeft(find.byType(TimelineView)) + const Offset(200, 40),
+    );
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tapAt(
+      tester.getTopLeft(find.byType(TimelineView)) + const Offset(128, 40),
+    );
+    await tester.pump(const Duration(milliseconds: 400));
+
+    await tester.tap(find.text('Spring'));
+    await tester.pumpAndSettle();
+    expect(gateway.overlayCalls, ['ease o5 1000000 spring']);
+    await tester.tap(find.byTooltip('Delete keyframe'));
+    await tester.pumpAndSettle();
+    expect(gateway.overlayCalls.last, 'unkey o5 1000000');
   });
 }

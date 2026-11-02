@@ -309,7 +309,14 @@ class _OverlaySelectionState extends ConsumerState<OverlaySelection> {
     if (target.id != selected) {
       ref.read(selectedOverlayProvider.notifier).set(target.id);
     }
-    _gesture = _Gesture(target.id, mode, overlay.transform, target, point);
+    // In keyframe mode the gesture starts from what is keyed at the playhead.
+    final start = ref.read(keyframeModeProvider)
+        ? ref
+                  .read(projectGatewayProvider)
+                  .overlayTransformAt(target.id, widget.playheadUs.value) ??
+              overlay.transform
+        : overlay.transform;
+    _gesture = _Gesture(target.id, mode, start, target, point);
   }
 
   void _update(ScaleUpdateDetails details) {
@@ -352,7 +359,12 @@ class _OverlaySelectionState extends ConsumerState<OverlaySelection> {
     if (guides.difference(_guides).isNotEmpty) {
       HapticFeedback.selectionClick();
     }
-    ref.read(projectGatewayProvider).previewOverlayTransform(gesture.id, next);
+    final gateway = ref.read(projectGatewayProvider);
+    if (ref.read(keyframeModeProvider)) {
+      gateway.previewOverlayKey(gesture.id, widget.playheadUs.value, next);
+    } else {
+      gateway.previewOverlayTransform(gesture.id, next);
+    }
     setState(() {
       _shown = next;
       _guides = guides;
@@ -370,9 +382,15 @@ class _OverlaySelectionState extends ConsumerState<OverlaySelection> {
     if (gesture == null || shown == null) return;
     final l10n = AppLocalizations.of(context);
     try {
+      final keyed = ref.read(keyframeModeProvider);
+      final atUs = widget.playheadUs.value;
       await ref
           .read(editorProvider(widget.projectId).notifier)
-          .apply((gateway) => gateway.setOverlayTransform(gesture.id, shown));
+          .apply(
+            (gateway) => keyed
+                ? gateway.keyOverlayTransform(gesture.id, atUs, shown)
+                : gateway.setOverlayTransform(gesture.id, shown),
+          );
     } on Object catch (error) {
       if (mounted) showToast(context, errorMessage(l10n, error));
     }

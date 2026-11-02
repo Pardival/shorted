@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shorted/bridge/api/overlays.dart';
+import 'package:shorted/features/enhance/animate_sheet.dart';
 import 'package:shorted/features/enhance/overlay_selection.dart';
 
 import '../../shorted_app_test.dart' show open;
@@ -19,6 +20,7 @@ Future<FakeGateway> _editor(WidgetTester tester, {bool locked = false}) async {
   final project = FakeProject('p1', 'Mine')..clips.add('c1');
   project.overlays.add(
     OverlayView(
+      keyframes: const [],
       animIn: null,
       animLoop: null,
       animOut: null,
@@ -120,6 +122,28 @@ void main() {
     await tester.pumpAndSettle();
     expect(gateway.previewed.last.rotation, greaterThan(30));
     expect(gateway.overlayCalls, hasLength(2));
+  });
+
+  testWidgets('in keyframe mode a drag keys the element at the playhead', (
+    tester,
+  ) async {
+    final gateway = await _editor(tester);
+    await tester.tapAt(_at(tester, 540, 960));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Animate'));
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.ensureVisible(find.byKey(const ValueKey('keyframe-mode')));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.byKey(const ValueKey('keyframe-mode')));
+    await tester.pump(const Duration(milliseconds: 300));
+    Navigator.of(tester.element(find.byType(AnimateSheet))).pop();
+    await tester.pumpAndSettle();
+
+    await tester.dragFrom(_at(tester, 540, 960), const Offset(0, 60));
+    await tester.pumpAndSettle();
+    expect(gateway.previewed, isEmpty);
+    expect(gateway.previewedKeys, isNotEmpty);
+    expect(gateway.overlayCalls.single, startsWith('key o9 0 540 '));
   });
 
   testWidgets('a locked element does not move', (tester) async {

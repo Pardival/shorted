@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::Instant;
 
 use shorted_audio::mixer::SAMPLE_RATE;
-use shorted_core::model::{Crop, Id, Project, Transform};
+use shorted_core::model::{AnimatedProperty, Crop, Id, Key, Project, Prop, Transform};
 
 pub(crate) struct Transport {
     pub project: Option<Arc<Project>>,
@@ -127,6 +127,39 @@ pub(crate) fn publish_overlay(id: Id, base: Transform) {
         item.base = base;
         state.revision += 1;
     }
+}
+
+/// Shows keys on an overlay during a gesture in keyframe mode, without an edit.
+pub(crate) fn publish_overlay_keys(
+    id: Id,
+    keys: impl FnOnce(&shorted_core::model::OverlayItem) -> Vec<(Prop, Key)>,
+) {
+    let mut state = transport();
+    let Some(project) = state.project.as_mut() else {
+        return;
+    };
+    let project = Arc::make_mut(project);
+    let Some(item) = project.timeline.overlays.iter_mut().find(|o| o.id == id) else {
+        return;
+    };
+    for (property, key) in keys(item) {
+        let track = match item.keyframes.iter().position(|t| t.property == property) {
+            Some(index) => &mut item.keyframes[index],
+            None => {
+                item.keyframes.push(AnimatedProperty {
+                    property,
+                    keys: Vec::new(),
+                });
+                let last = item.keyframes.len() - 1;
+                &mut item.keyframes[last]
+            }
+        };
+        match track.keys.binary_search_by_key(&key.t_us, |k| k.t_us) {
+            Ok(found) => track.keys[found] = key,
+            Err(slot) => track.keys.insert(slot, key),
+        }
+    }
+    state.revision += 1;
 }
 
 /// Hands the latest project to the preview. A shared copy: rendering never touches the editor's.

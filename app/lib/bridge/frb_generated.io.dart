@@ -130,6 +130,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ClipSoundView dco_decode_clip_sound_view(dynamic raw);
 
   @protected
+  EasingView dco_decode_easing_view(dynamic raw);
+
+  @protected
   EngineFailure dco_decode_engine_failure(dynamic raw);
 
   @protected
@@ -154,6 +157,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ImportOutcome dco_decode_import_outcome(dynamic raw);
 
   @protected
+  KeyframeView dco_decode_keyframe_view(dynamic raw);
+
+  @protected
   LibraryItemView dco_decode_library_item_view(dynamic raw);
 
   @protected
@@ -176,6 +182,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<ImportOutcome> dco_decode_list_import_outcome(dynamic raw);
+
+  @protected
+  List<KeyframeView> dco_decode_list_keyframe_view(dynamic raw);
 
   @protected
   List<LibraryItemView> dco_decode_list_library_item_view(dynamic raw);
@@ -248,6 +257,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ThumbnailView? dco_decode_opt_box_autoadd_thumbnail_view(dynamic raw);
+
+  @protected
+  TransformView? dco_decode_opt_box_autoadd_transform_view(dynamic raw);
 
   @protected
   TransitionKindView? dco_decode_opt_box_autoadd_transition_kind_view(
@@ -453,6 +465,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ClipSoundView sse_decode_clip_sound_view(SseDeserializer deserializer);
 
   @protected
+  EasingView sse_decode_easing_view(SseDeserializer deserializer);
+
+  @protected
   EngineFailure sse_decode_engine_failure(SseDeserializer deserializer);
 
   @protected
@@ -475,6 +490,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ImportOutcome sse_decode_import_outcome(SseDeserializer deserializer);
+
+  @protected
+  KeyframeView sse_decode_keyframe_view(SseDeserializer deserializer);
 
   @protected
   LibraryItemView sse_decode_library_item_view(SseDeserializer deserializer);
@@ -509,6 +527,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<ImportOutcome> sse_decode_list_import_outcome(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<KeyframeView> sse_decode_list_keyframe_view(
     SseDeserializer deserializer,
   );
 
@@ -605,6 +628,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ThumbnailView? sse_decode_opt_box_autoadd_thumbnail_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  TransformView? sse_decode_opt_box_autoadd_transform_view(
     SseDeserializer deserializer,
   );
 
@@ -846,6 +874,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_clip_sound_view(ClipSoundView self, SseSerializer serializer);
 
   @protected
+  void sse_encode_easing_view(EasingView self, SseSerializer serializer);
+
+  @protected
   void sse_encode_engine_failure(EngineFailure self, SseSerializer serializer);
 
   @protected
@@ -871,6 +902,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_import_outcome(ImportOutcome self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_keyframe_view(KeyframeView self, SseSerializer serializer);
 
   @protected
   void sse_encode_library_item_view(
@@ -914,6 +948,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_import_outcome(
     List<ImportOutcome> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_keyframe_view(
+    List<KeyframeView> self,
     SseSerializer serializer,
   );
 
@@ -1034,6 +1074,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_thumbnail_view(
     ThumbnailView? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_transform_view(
+    TransformView? self,
     SseSerializer serializer,
   );
 

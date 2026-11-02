@@ -138,6 +138,15 @@ class AnimateSheet extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(l10n.animate, style: Theme.of(context).textTheme.titleMedium),
+            SwitchListTile(
+              key: const ValueKey('keyframe-mode'),
+              contentPadding: EdgeInsets.zero,
+              title: Text(l10n.keyframes),
+              subtitle: Text(l10n.keyframesHelp),
+              value: ref.watch(keyframeModeProvider),
+              onChanged: (on) =>
+                  ref.read(keyframeModeProvider.notifier).set(on),
+            ),
             for (final (slot, label, current) in [
               (AnimSlotView.in_, l10n.animateIn, element.animIn),
               (AnimSlotView.loop, l10n.animateLoop, element.animLoop),

@@ -255,6 +255,7 @@ class FakeGateway implements ProjectGateway {
   Future<ProjectView> addShape(ShapeKindView shape, int atUs) {
     opened!.overlays.add(
       OverlayView(
+        keyframes: const [],
         animIn: null,
         animLoop: null,
         animOut: null,
@@ -283,6 +284,7 @@ class FakeGateway implements ProjectGateway {
   Future<ProjectView> addText(String content, int atUs) {
     opened!.overlays.add(
       OverlayView(
+        keyframes: const [],
         animIn: null,
         animLoop: null,
         animOut: null,
@@ -332,6 +334,7 @@ class FakeGateway implements ProjectGateway {
       animIn: old.animIn,
       animLoop: old.animLoop,
       animOut: old.animOut,
+      keyframes: old.keyframes,
     );
     return _overlay(
       'set $id ${text.content.replaceAll('\n', '|')} ${text.font} '
@@ -347,6 +350,51 @@ class FakeGateway implements ProjectGateway {
     PresetKindView? kind,
     int durationUs,
   ) => _overlay('preset $id ${slot.name} ${kind?.name} $durationUs');
+
+  /// Keyframe times per overlay, set by tests.
+  final keyframeTimes = <String, List<int>>{};
+
+  @override
+  TransformView? overlayTransformAt(String id, int timeUs) =>
+      const TransformView(
+        x: 540,
+        y: 960,
+        scale: 1,
+        rotation: 0,
+        opacity: 1,
+        flip: false,
+      );
+
+  final previewedKeys = <TransformView>[];
+
+  @override
+  void previewOverlayKey(String id, int timeUs, TransformView transform) =>
+      previewedKeys.add(transform);
+
+  @override
+  Future<ProjectView> keyOverlayTransform(
+    String id,
+    int timeUs,
+    TransformView t,
+  ) => _overlay(
+    'key $id $timeUs ${t.x.round()} ${t.y.round()} '
+    '${t.scale.toStringAsFixed(2)} ${t.rotation.round()} ${t.opacity}',
+  );
+
+  @override
+  Future<ProjectView> removeKeyframesAt(String id, int timeUs) =>
+      _overlay('unkey $id $timeUs');
+
+  @override
+  Future<ProjectView> moveKeyframes(String id, int fromUs, int toUs) =>
+      _overlay('rekey $id $fromUs $toUs');
+
+  @override
+  Future<ProjectView> setKeyframeEasing(
+    String id,
+    int timeUs,
+    EasingView easing,
+  ) => _overlay('ease $id $timeUs ${easing.name}');
 
   @override
   PresetSampleView presetSample(
@@ -419,6 +467,7 @@ class FakeGateway implements ProjectGateway {
   }) {
     opened!.overlays.add(
       OverlayView(
+        keyframes: const [],
         animIn: null,
         animLoop: null,
         animOut: null,

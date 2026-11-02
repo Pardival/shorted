@@ -119,6 +119,51 @@ void main() {
     expect(timings, hasLength(1));
   });
 
+  testWidgets('a keyframe diamond is tapped or dragged in time', (
+    tester,
+  ) async {
+    final playhead = ValueNotifier<int>(0);
+    addTearDown(playhead.dispose);
+    final taps = <String>[];
+    final moves = <String>[];
+    await tester.pumpWidget(
+      harness(
+        TimelineView(
+          tracks: const [
+            TimelineTrack(
+              kind: TrackKind.widgets,
+              label: 'W',
+              items: [
+                TimelineItem(
+                  id: 'o',
+                  startUs: 0,
+                  endUs: 4000000,
+                  keyframes: [1000000, 3000000],
+                ),
+              ],
+            ),
+          ],
+          durationUs: 4000000,
+          playheadUs: playhead,
+          selectedId: 'o',
+          onKeyframeTap: (item, time) => taps.add('${item.id} $time'),
+          onKeyframeMove: (item, from, to) =>
+              moves.add('${item.id} $from ${(to / 1e5).round() * 100000}'),
+          onOverlayTiming: (item, start, end) => moves.add('timing'),
+        ),
+      ),
+    );
+    final origin = tester.getTopLeft(find.byType(TimelineView));
+    // 1 s is x = 88 + 40 at the default 40 px/s.
+    await tester.tapAt(origin + const Offset(129, 40));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(taps, ['o 1000000']);
+
+    await tester.dragFrom(origin + const Offset(128, 40), const Offset(40, 0));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(moves, ['o 1000000 2000000']);
+  });
+
   test('tracks are found from y', () {
     expect(layout.trackAt(10, 2), isNull);
     expect(layout.trackAt(25, 2), 0);
