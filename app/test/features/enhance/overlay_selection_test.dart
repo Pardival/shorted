@@ -159,7 +159,8 @@ void main() {
     final gateway = await _editor(tester);
     await tester.tapAt(_at(tester, 540, 960));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Flip'));
+    // The section panel and the Properties column both offer it.
+    await tester.tap(find.byTooltip('Flip').first);
     await tester.pumpAndSettle();
     expect(gateway.overlayCalls.last, endsWith('1.0 true'));
   });

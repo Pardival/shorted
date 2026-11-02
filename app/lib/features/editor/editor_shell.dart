@@ -269,7 +269,7 @@ class _EditorShellState extends ConsumerState<EditorShell> {
                       ),
                     ),
                     SizedBox(width: 280, child: _panel(state)),
-                    if (inspector) const Inspector(),
+                    if (inspector) Inspector(view: state.view),
                   ],
                 ),
               ),

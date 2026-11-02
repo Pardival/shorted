@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../bridge/api/look.dart';
 import '../../bridge/api/overlays.dart';
 import '../../bridge/api/projects.dart';
 import '../../design_system/components.dart';
@@ -951,6 +952,7 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
                   _audioItem = item != null && _isSound(item) ? item.id : null;
                 });
                 ref.read(selectedClipProvider.notifier).set(_clip?.id);
+                ref.read(selectedSoundProvider.notifier).set(_audioItem);
                 ref
                     .read(selectedOverlayProvider.notifier)
                     .set(
@@ -1073,28 +1075,121 @@ class SectionRail extends StatelessWidget {
   }
 }
 
-class Inspector extends StatelessWidget {
-  const Inspector({super.key});
+/// The desktop Properties column: what is selected and what can be changed about it (T-1204).
+class Inspector extends ConsumerWidget {
+  const Inspector({super.key, required this.view});
+
+  final ProjectView view;
+
+  Widget? _soundOf(
+    BuildContext context,
+    String? id,
+    Future<void> Function(
+      Future<ProjectView> Function(ProjectGateway gateway) action,
+    )
+    run,
+  ) => id == null ? null : soundSettingsFor(context, view, id, run);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
+    final editor = ref.read(editorProvider(view.id).notifier);
+    Future<void> run(
+      Future<ProjectView> Function(ProjectGateway gateway) action,
+    ) async {
+      try {
+        await editor.apply(action);
+      } on Object catch (error) {
+        if (context.mounted) showToast(context, errorMessage(l10n, error));
+      }
+    }
+
+    final overlayId = ref.watch(selectedOverlayProvider);
+    final clipId = ref.watch(selectedClipProvider);
+    final soundId = ref.watch(selectedSoundProvider);
+    final muted = Theme.of(context).textTheme.bodySmall
+        ?.copyWith(color: ShortedColors.textMuted);
+    Widget heading(String text) => Padding(
+      padding: const EdgeInsets.only(bottom: ShortedSpace.s),
+      child: Text(text, style: Theme.of(context).textTheme.titleSmall),
+    );
+    String span(int startUs, int endUs) =>
+        '${formatTimecode(startUs)} – ${formatTimecode(endUs)}';
+
+    final children = <Widget>[];
+    OverlayView? overlay;
+    for (final candidate in view.overlays) {
+      if (candidate.id == overlayId) overlay = candidate;
+    }
+    var clipIndex = -1;
+    ClipLookView? look;
+    if (clipId != null) {
+      for (final (index, candidate) in view.look.clips.indexed) {
+        if (candidate.clipId == clipId) {
+          clipIndex = index;
+          look = candidate;
+        }
+      }
+    }
+    if (overlay != null) {
+      children
+        ..add(heading(overlay.text?.content ?? l10n.inspectorElement))
+        ..add(
+          Text(
+            span(overlay.startUs.toInt(), overlay.endUs.toInt()),
+            style: muted,
+          ),
+        )
+        ..add(const SizedBox(height: ShortedSpace.s))
+        ..add(
+          OverlayLook(key: ValueKey(overlay.id), overlay: overlay, run: run),
+        );
+    } else if (look != null && clipId != null) {
+      children
+        ..add(heading(l10n.clipNumber(clipIndex + 1)))
+        ..add(ClipLook(key: ValueKey(clipId), clip: look, run: run));
+      final sound = soundSettingsFor(context, view, clipId, run);
+      if (sound != null) {
+        children
+          ..add(const Divider(height: ShortedSpace.xl))
+          ..add(sound);
+      }
+    } else if (_soundOf(context, soundId, run) case final sound?) {
+      children
+        ..add(heading(l10n.soundSettings))
+        ..add(sound);
+    } else {
+      var sounds = 0;
+      for (final track in view.sound.tracks) {
+        sounds += track.items.length;
+      }
+      children
+        ..add(heading(view.title))
+        ..add(
+          Text(
+            l10n.projectSummary(
+              view.look.clips.length,
+              sounds,
+              formatTimecode(view.durationUs.toInt()),
+            ),
+            style: muted,
+          ),
+        )
+        ..add(const SizedBox(height: ShortedSpace.m))
+        ..add(Text(l10n.inspectorHint, style: muted));
+    }
     return Container(
       width: 280,
       color: ShortedColors.surface,
-      padding: const EdgeInsets.all(ShortedSpace.l),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: ListView(
+        padding: const EdgeInsets.all(ShortedSpace.l),
         children: [
           Text(
             l10n.inspectorTitle,
             style: Theme.of(context).textTheme.titleMedium,
           ),
-          const SizedBox(height: ShortedSpace.s),
-          Text(
-            l10n.nothingSelected,
-            style: const TextStyle(color: ShortedColors.textMuted),
-          ),
+          const SizedBox(height: ShortedSpace.m),
+          ...children,
         ],
       ),
     );

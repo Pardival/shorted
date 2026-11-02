@@ -328,5 +328,8 @@
   "openaiConsentBody": "Solo el sonido de tus clips y voces va a OpenAI, nunca la imagen. La transcripción se cobra a tu clave. Sustituye las transcripciones actuales, incluidas tus correcciones.",
   "captionTapHint": "En el vídeo: toca una palabra para resaltarla, dos veces para corregirla.",
   "originalSoundOf": "Sonido del clip {number}",
-  "soundSettings": "Sonido"
+  "soundSettings": "Sonido",
+  "inspectorElement": "Elemento",
+  "projectSummary": "{clips, plural, =1{1 clip} other{{clips} clips}} · {sounds, plural, =1{1 sonido} other{{sounds} sonidos}} · {duration}",
+  "inspectorHint": "Selecciona un clip, un sonido o un elemento en la línea de tiempo o el vídeo: sus ajustes aparecen aquí."
 }

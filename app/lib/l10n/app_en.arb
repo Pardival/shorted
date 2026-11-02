@@ -522,5 +522,21 @@
         "type": "int"
       }
     }
+  },
+  "inspectorElement": "Element",
+  "projectSummary": "{clips, plural, =1{1 clip} other{{clips} clips}} · {sounds, plural, =1{1 sound} other{{sounds} sounds}} · {duration}",
+  "inspectorHint": "Select a clip, a sound or an element on the timeline or the video: its settings show here.",
+  "@projectSummary": {
+    "placeholders": {
+      "clips": {
+        "type": "int"
+      },
+      "sounds": {
+        "type": "int"
+      },
+      "duration": {
+        "type": "String"
+      }
+    }
   }
 }

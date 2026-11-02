@@ -328,5 +328,8 @@
   "openaiConsentBody": "Seul le son de tes clips et voix part chez OpenAI, jamais l'image. La transcription est facturée sur ta clé. Elle remplace les transcriptions actuelles, tes corrections comprises.",
   "captionTapHint": "Sur la vidéo : touche un mot pour le mettre en valeur, deux fois pour le corriger.",
   "originalSoundOf": "Son du clip {number}",
-  "soundSettings": "Son"
+  "soundSettings": "Son",
+  "inspectorElement": "Élément",
+  "projectSummary": "{clips, plural, =0{0 clip} =1{1 clip} other{{clips} clips}} · {sounds, plural, =0{0 son} =1{1 son} other{{sounds} sons}} · {duration}",
+  "inspectorHint": "Sélectionne un clip, un son ou un élément sur la timeline ou la vidéo : ses réglages s'affichent ici."
 }

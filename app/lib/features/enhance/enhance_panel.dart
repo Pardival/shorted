@@ -114,7 +114,7 @@ class EnhancePanel extends ConsumerWidget {
           style: const TextStyle(color: ShortedColors.textMuted),
         )
       else
-        _ClipLook(key: ValueKey(clip.clipId), clip: clip, run: run),
+        ClipLook(key: ValueKey(clip.clipId), clip: clip, run: run),
     ]);
     final transitions = page([
       Text(
@@ -145,7 +145,7 @@ class EnhancePanel extends ConsumerWidget {
           if (selectedOverlay != null)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: ShortedSpace.m),
-              child: _OverlayLook(
+              child: OverlayLook(
                 key: ValueKey(selectedOverlay.id),
                 overlay: selectedOverlay,
                 run: run,
@@ -174,8 +174,8 @@ class EnhancePanel extends ConsumerWidget {
 }
 
 /// Opacity and flip of the selected element. The slider is recorded once, when it is let go.
-class _OverlayLook extends ConsumerStatefulWidget {
-  const _OverlayLook({super.key, required this.overlay, required this.run});
+class OverlayLook extends ConsumerStatefulWidget {
+  const OverlayLook({super.key, required this.overlay, required this.run});
 
   final OverlayView overlay;
   final Future<void> Function(
@@ -184,10 +184,10 @@ class _OverlayLook extends ConsumerStatefulWidget {
   run;
 
   @override
-  ConsumerState<_OverlayLook> createState() => _OverlayLookState();
+  ConsumerState<OverlayLook> createState() => OverlayLookState();
 }
 
-class _OverlayLookState extends ConsumerState<_OverlayLook> {
+class OverlayLookState extends ConsumerState<OverlayLook> {
   double? _opacity;
 
   void _set({double? opacity, bool? flip}) {
@@ -258,8 +258,8 @@ class _OverlayLookState extends ConsumerState<_OverlayLook> {
 }
 
 /// Sliders follow the finger locally; the engine hears once, when the finger lifts.
-class _ClipLook extends StatefulWidget {
-  const _ClipLook({super.key, required this.clip, required this.run});
+class ClipLook extends StatefulWidget {
+  const ClipLook({super.key, required this.clip, required this.run});
 
   final ClipLookView clip;
   final Future<void> Function(
@@ -268,10 +268,10 @@ class _ClipLook extends StatefulWidget {
   run;
 
   @override
-  State<_ClipLook> createState() => _ClipLookState();
+  State<ClipLook> createState() => ClipLookState();
 }
 
-class _ClipLookState extends State<_ClipLook> {
+class ClipLookState extends State<ClipLook> {
   double? _brightness;
   double? _contrast;
   double? _saturation;

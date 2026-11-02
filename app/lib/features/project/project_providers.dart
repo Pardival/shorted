@@ -110,6 +110,17 @@ class SelectedOverlay extends Notifier<String?> {
 final selectedOverlayProvider =
     NotifierProvider.autoDispose<SelectedOverlay, String?>(SelectedOverlay.new);
 
+/// The sound (music, voice) selected on the timeline (T-1204).
+class SelectedSound extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void set(String? id) => state = id;
+}
+
+final selectedSoundProvider =
+    NotifierProvider.autoDispose<SelectedSound, String?>(SelectedSound.new);
+
 final previewTransportProvider = Provider<PreviewTransport>(
   (ref) => throw UnimplementedError('previewTransportProvider is not set'),
 );

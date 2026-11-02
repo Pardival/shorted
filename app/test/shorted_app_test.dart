@@ -210,10 +210,46 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     await tester.tap(find.byTooltip('Sound'));
     await tester.pumpAndSettle();
-    expect(find.text('Sound of clip 1'), findsOneWidget);
-    await tester.tap(find.byTooltip('Mute').last);
+    final sheet = find.byType(BottomSheet);
+    expect(
+      find.descendant(of: sheet, matching: find.text('Sound of clip 1')),
+      findsOneWidget,
+    );
+    await tester.tap(
+      find.descendant(of: sheet, matching: find.byTooltip('Mute')),
+    );
     await tester.pumpAndSettle();
     expect(gateway.audioCalls.last, startsWith('clip c1'));
+  });
+
+  testWidgets('Properties shows the project, then the selected clip', (
+    tester,
+  ) async {
+    final project = FakeProject('p1', 'Mine')..clips.add('c1');
+    final gateway = FakeGateway()..projects.add(project);
+    await open(
+      tester,
+      '/editor/p1/clips',
+      size: const Size(1700, 1000),
+      gateway: gateway,
+    );
+    final inspector = find.byType(Inspector);
+    expect(
+      find.descendant(of: inspector, matching: find.textContaining('1 clip ·')),
+      findsOneWidget,
+    );
+    final timeline = tester.getTopLeft(find.byType(TimelineView));
+    await tester.tapAt(timeline + const Offset(100, 40));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(of: inspector, matching: find.text('Clip 1')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: inspector, matching: find.text('Sound of clip 1')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('a crop gesture follows the finger and records one step', (

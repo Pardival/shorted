@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shorted/bridge/api/overlays.dart';
 import 'package:shorted/features/editor/editor_parts.dart';
+import 'package:shorted/features/enhance/enhance_panel.dart';
 import 'package:shorted/features/enhance/overlay_selection.dart';
 import 'package:shorted/features/timeline/timeline_view.dart';
 
@@ -47,11 +48,16 @@ void main() {
     await tester.tap(find.widgetWithText(Tab, 'Clip'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('2.0×'));
+    // The Properties column shows the same controls: use the section's.
+    final panel = find.byType(EnhancePanel);
+    await tester.tap(find.descendant(of: panel, matching: find.text('2.0×')));
     await tester.pumpAndSettle();
     expect(gateway.lookCalls.last, 'speed c1 2.0');
 
-    await tester.drag(find.byType(Slider).first, const Offset(60, 0));
+    await tester.drag(
+      find.descendant(of: panel, matching: find.byType(Slider)).first,
+      const Offset(60, 0),
+    );
     await tester.pumpAndSettle();
     expect(gateway.lookCalls.last, startsWith('color c1'));
   });
