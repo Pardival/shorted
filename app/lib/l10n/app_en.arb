@@ -199,6 +199,14 @@
   "hideTrack": "Hide",
   "showTrack": "Show",
   "unmute": "Unmute",
+  "estimatedSize": "About {size} MB",
+  "@estimatedSize": {
+    "placeholders": {
+      "size": {
+        "type": "int"
+      }
+    }
+  },
   "split": "Split",
   "exportTitle": "Export your short",
   "exportResolution": "Resolution",

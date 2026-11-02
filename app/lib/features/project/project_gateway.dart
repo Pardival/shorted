@@ -81,6 +81,8 @@ abstract interface class ProjectGateway {
   Future<ProjectView> muteRange(int startUs, int endUs);
   Future<ProjectView> splitAllAt(int timeUs);
   Future<ProjectView> collectMedia();
+  Future<media.ThumbnailView?> cover(String projectId);
+  int exportSizeEstimate(int width, int fps, int durationUs);
   Future<int> cacheBytes();
   Future<void> clearCaches();
   Future<ProjectView> setClipSpeed(String id, double speed);
@@ -312,6 +314,17 @@ class EngineGateway implements ProjectGateway {
 
   @override
   Future<ProjectView> collectMedia() => media.collectMedia();
+
+  @override
+  Future<media.ThumbnailView?> cover(String projectId) =>
+      media.projectCover(root: root, id: projectId);
+
+  @override
+  int exportSizeEstimate(int width, int fps, int durationUs) =>
+      exporter.exportSizeEstimate(
+        settings: exporter.ExportSettings(width: width, fps: fps),
+        durationUs: durationUs,
+      );
 
   @override
   Future<int> cacheBytes() async =>

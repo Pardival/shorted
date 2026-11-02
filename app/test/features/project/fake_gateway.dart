@@ -270,6 +270,12 @@ class FakeGateway implements ProjectGateway {
   @override
   Future<ProjectView> splitAllAt(int timeUs) => _range('split $timeUs');
 
+  @override
+  Future<ThumbnailView?> cover(String projectId) async => null;
+
+  @override
+  int exportSizeEstimate(int width, int fps, int durationUs) => 5 * 1000 * 1000;
+
   var collected = 0;
 
   @override

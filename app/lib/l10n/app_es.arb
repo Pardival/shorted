@@ -129,6 +129,7 @@
   "hideTrack": "Ocultar",
   "showTrack": "Mostrar",
   "unmute": "Activar sonido",
+  "estimatedSize": "Unos {size} MB",
   "split": "Dividir",
   "exportTitle": "Exporta tu short",
   "exportResolution": "Resolución",

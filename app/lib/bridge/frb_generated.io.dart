@@ -75,6 +75,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ExportSettings dco_decode_box_autoadd_export_settings(dynamic raw);
 
   @protected
+  ThumbnailView dco_decode_box_autoadd_thumbnail_view(dynamic raw);
+
+  @protected
   TransitionKindView dco_decode_box_autoadd_transition_kind_view(dynamic raw);
 
   @protected
@@ -160,6 +163,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ErrorCode? dco_decode_opt_box_autoadd_error_code(dynamic raw);
+
+  @protected
+  ThumbnailView? dco_decode_opt_box_autoadd_thumbnail_view(dynamic raw);
 
   @protected
   TransitionKindView? dco_decode_opt_box_autoadd_transition_kind_view(
@@ -254,6 +260,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ExportSettings sse_decode_box_autoadd_export_settings(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ThumbnailView sse_decode_box_autoadd_thumbnail_view(
     SseDeserializer deserializer,
   );
 
@@ -361,6 +372,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ErrorCode? sse_decode_opt_box_autoadd_error_code(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ThumbnailView? sse_decode_opt_box_autoadd_thumbnail_view(
     SseDeserializer deserializer,
   );
 
@@ -473,6 +489,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_export_settings(
     ExportSettings self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_thumbnail_view(
+    ThumbnailView self,
     SseSerializer serializer,
   );
 
@@ -599,6 +621,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_error_code(
     ErrorCode? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_thumbnail_view(
+    ThumbnailView? self,
     SseSerializer serializer,
   );
 

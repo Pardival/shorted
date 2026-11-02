@@ -6,6 +6,7 @@ import '../design_system/tokens.g.dart';
 import '../features/editor/editor_section.dart';
 import '../features/editor/editor_shell.dart';
 import '../features/home/home_screen.dart';
+import '../features/home/splash_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../l10n/generated/app_localizations.dart';
 
@@ -16,8 +17,7 @@ GoRouter createRouter({
   return GoRouter(
     initialLocation: initialLocation,
     routes: [
-      // Splash (T-1002) has nothing to wait for yet: go straight to Home.
-      GoRoute(path: '/', redirect: (context, state) => '/home'),
+      GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
       GoRoute(
         path: '/onboarding',
         builder: (context, state) => const _OnboardingPlaceholder(),

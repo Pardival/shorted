@@ -39,7 +39,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1014069773;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1229061421;
 
 // Section: executor
 
@@ -692,6 +692,40 @@ fn wire__crate__api__export__export_blocked_impl(
         },
     )
 }
+fn wire__crate__api__export__export_size_estimate_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "export_size_estimate",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_settings = <crate::api::export::ExportSettings>::sse_decode(&mut deserializer);
+            let api_duration_us = <i64>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Ok::<_, ()>(crate::api::export::export_size_estimate(
+                    api_settings,
+                    api_duration_us,
+                ))?;
+                std::result::Result::Ok(output_ok)
+            })())
+        },
+    )
+}
 fn wire__crate__api__media__import_files_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -1316,6 +1350,44 @@ fn wire__crate__api__preview__preview_seek_impl(
                 })?;
                 std::result::Result::Ok(output_ok)
             })())
+        },
+    )
+}
+fn wire__crate__api__media__project_cover_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "project_cover",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_root = <String>::sse_decode(&mut deserializer);
+            let api_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, ()>(
+                    (move || async move {
+                        let output_ok =
+                            Ok::<_, ()>(crate::api::media::project_cover(api_root, api_id).await)?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
         },
     )
 }
@@ -2742,6 +2814,17 @@ impl SseDecode for Option<crate::error::ErrorCode> {
     }
 }
 
+impl SseDecode for Option<crate::api::media::ThumbnailView> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::media::ThumbnailView>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
 impl SseDecode for Option<crate::api::look::TransitionKindView> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -3001,45 +3084,46 @@ fn pde_ffi_dispatcher_primary_impl(
         14 => wire__crate__api__clips__delete_range_impl(port, ptr, rust_vec_len, data_len),
         15 => wire__crate__api__clips__duplicate_clip_impl(port, ptr, rust_vec_len, data_len),
         16 => wire__crate__api__projects__duplicate_project_impl(port, ptr, rust_vec_len, data_len),
-        19 => wire__crate__api__media__import_files_impl(port, ptr, rust_vec_len, data_len),
-        20 => wire__crate__api__init_app_impl(port, ptr, rust_vec_len, data_len),
-        21 => wire__crate__api__init_engine_impl(port, ptr, rust_vec_len, data_len),
-        22 => wire__crate__api__projects__list_projects_impl(port, ptr, rust_vec_len, data_len),
-        23 => wire__crate__api__projects__list_trash_impl(port, ptr, rust_vec_len, data_len),
-        24 => wire__crate__api__media__media_filmstrip_impl(port, ptr, rust_vec_len, data_len),
-        25 => wire__crate__api__audio__media_peaks_impl(port, ptr, rust_vec_len, data_len),
-        26 => wire__crate__api__audio__move_audio_impl(port, ptr, rust_vec_len, data_len),
-        27 => wire__crate__api__clips__move_clip_impl(port, ptr, rust_vec_len, data_len),
-        29 => wire__crate__api__clips__mute_range_impl(port, ptr, rust_vec_len, data_len),
-        30 => wire__crate__api__projects__open_project_impl(port, ptr, rust_vec_len, data_len),
-        31 => wire__crate__api__media__place_clips_impl(port, ptr, rust_vec_len, data_len),
-        37 => wire__crate__api__projects__project_view_impl(port, ptr, rust_vec_len, data_len),
-        38 => wire__crate__api__projects__redo_impl(port, ptr, rust_vec_len, data_len),
-        39 => wire__crate__api__media__relink_media_impl(port, ptr, rust_vec_len, data_len),
-        40 => wire__crate__api__audio__remove_audio_track_impl(port, ptr, rust_vec_len, data_len),
-        41 => wire__crate__api__audio__rename_audio_track_impl(port, ptr, rust_vec_len, data_len),
-        42 => wire__crate__api__projects__rename_project_impl(port, ptr, rust_vec_len, data_len),
-        43 => wire__crate__api__clips__reset_crop_impl(port, ptr, rust_vec_len, data_len),
-        44 => wire__crate__api__projects__restore_project_impl(port, ptr, rust_vec_len, data_len),
-        45 => wire__crate__api__projects__save_events_impl(port, ptr, rust_vec_len, data_len),
-        46 => wire__crate__api__audio__set_audio_loop_impl(port, ptr, rust_vec_len, data_len),
-        47 => wire__crate__api__audio__set_audio_role_impl(port, ptr, rust_vec_len, data_len),
-        48 => wire__crate__api__audio__set_audio_sound_impl(port, ptr, rust_vec_len, data_len),
-        49 => wire__crate__api__look__set_clip_color_impl(port, ptr, rust_vec_len, data_len),
-        50 => wire__crate__api__audio__set_clip_sound_impl(port, ptr, rust_vec_len, data_len),
-        51 => wire__crate__api__look__set_clip_speed_impl(port, ptr, rust_vec_len, data_len),
-        52 => wire__crate__api__audio__set_track_flags_impl(port, ptr, rust_vec_len, data_len),
-        53 => {
+        20 => wire__crate__api__media__import_files_impl(port, ptr, rust_vec_len, data_len),
+        21 => wire__crate__api__init_app_impl(port, ptr, rust_vec_len, data_len),
+        22 => wire__crate__api__init_engine_impl(port, ptr, rust_vec_len, data_len),
+        23 => wire__crate__api__projects__list_projects_impl(port, ptr, rust_vec_len, data_len),
+        24 => wire__crate__api__projects__list_trash_impl(port, ptr, rust_vec_len, data_len),
+        25 => wire__crate__api__media__media_filmstrip_impl(port, ptr, rust_vec_len, data_len),
+        26 => wire__crate__api__audio__media_peaks_impl(port, ptr, rust_vec_len, data_len),
+        27 => wire__crate__api__audio__move_audio_impl(port, ptr, rust_vec_len, data_len),
+        28 => wire__crate__api__clips__move_clip_impl(port, ptr, rust_vec_len, data_len),
+        30 => wire__crate__api__clips__mute_range_impl(port, ptr, rust_vec_len, data_len),
+        31 => wire__crate__api__projects__open_project_impl(port, ptr, rust_vec_len, data_len),
+        32 => wire__crate__api__media__place_clips_impl(port, ptr, rust_vec_len, data_len),
+        38 => wire__crate__api__media__project_cover_impl(port, ptr, rust_vec_len, data_len),
+        39 => wire__crate__api__projects__project_view_impl(port, ptr, rust_vec_len, data_len),
+        40 => wire__crate__api__projects__redo_impl(port, ptr, rust_vec_len, data_len),
+        41 => wire__crate__api__media__relink_media_impl(port, ptr, rust_vec_len, data_len),
+        42 => wire__crate__api__audio__remove_audio_track_impl(port, ptr, rust_vec_len, data_len),
+        43 => wire__crate__api__audio__rename_audio_track_impl(port, ptr, rust_vec_len, data_len),
+        44 => wire__crate__api__projects__rename_project_impl(port, ptr, rust_vec_len, data_len),
+        45 => wire__crate__api__clips__reset_crop_impl(port, ptr, rust_vec_len, data_len),
+        46 => wire__crate__api__projects__restore_project_impl(port, ptr, rust_vec_len, data_len),
+        47 => wire__crate__api__projects__save_events_impl(port, ptr, rust_vec_len, data_len),
+        48 => wire__crate__api__audio__set_audio_loop_impl(port, ptr, rust_vec_len, data_len),
+        49 => wire__crate__api__audio__set_audio_role_impl(port, ptr, rust_vec_len, data_len),
+        50 => wire__crate__api__audio__set_audio_sound_impl(port, ptr, rust_vec_len, data_len),
+        51 => wire__crate__api__look__set_clip_color_impl(port, ptr, rust_vec_len, data_len),
+        52 => wire__crate__api__audio__set_clip_sound_impl(port, ptr, rust_vec_len, data_len),
+        53 => wire__crate__api__look__set_clip_speed_impl(port, ptr, rust_vec_len, data_len),
+        54 => wire__crate__api__audio__set_track_flags_impl(port, ptr, rust_vec_len, data_len),
+        55 => {
             wire__crate__api__look__set_transition_for_all_impl(port, ptr, rust_vec_len, data_len)
         }
-        54 => wire__crate__api__clips__split_all_at_impl(port, ptr, rust_vec_len, data_len),
-        55 => wire__crate__api__clips__split_clip_impl(port, ptr, rust_vec_len, data_len),
-        56 => wire__crate__api__start_demo_task_impl(port, ptr, rust_vec_len, data_len),
-        57 => wire__crate__api__export__start_export_impl(port, ptr, rust_vec_len, data_len),
-        58 => wire__crate__api__clips__toggle_slow_zoom_impl(port, ptr, rust_vec_len, data_len),
-        59 => wire__crate__api__projects__trash_project_impl(port, ptr, rust_vec_len, data_len),
-        60 => wire__crate__api__clips__trim_clip_impl(port, ptr, rust_vec_len, data_len),
-        61 => wire__crate__api__projects__undo_impl(port, ptr, rust_vec_len, data_len),
+        56 => wire__crate__api__clips__split_all_at_impl(port, ptr, rust_vec_len, data_len),
+        57 => wire__crate__api__clips__split_clip_impl(port, ptr, rust_vec_len, data_len),
+        58 => wire__crate__api__start_demo_task_impl(port, ptr, rust_vec_len, data_len),
+        59 => wire__crate__api__export__start_export_impl(port, ptr, rust_vec_len, data_len),
+        60 => wire__crate__api__clips__toggle_slow_zoom_impl(port, ptr, rust_vec_len, data_len),
+        61 => wire__crate__api__projects__trash_project_impl(port, ptr, rust_vec_len, data_len),
+        62 => wire__crate__api__clips__trim_clip_impl(port, ptr, rust_vec_len, data_len),
+        63 => wire__crate__api__projects__undo_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -3055,12 +3139,13 @@ fn pde_ffi_dispatcher_sync_impl(
         5 => wire__crate__api__cancel_task_impl(ptr, rust_vec_len, data_len),
         17 => wire__crate__api__engine_version_impl(ptr, rust_vec_len, data_len),
         18 => wire__crate__api__export__export_blocked_impl(ptr, rust_vec_len, data_len),
-        28 => wire__crate__api__clips__move_crop_impl(ptr, rust_vec_len, data_len),
-        32 => wire__crate__api__preview__preview_is_playing_impl(ptr, rust_vec_len, data_len),
-        33 => wire__crate__api__preview__preview_pause_impl(ptr, rust_vec_len, data_len),
-        34 => wire__crate__api__preview__preview_play_impl(ptr, rust_vec_len, data_len),
-        35 => wire__crate__api__preview__preview_position_us_impl(ptr, rust_vec_len, data_len),
-        36 => wire__crate__api__preview__preview_seek_impl(ptr, rust_vec_len, data_len),
+        19 => wire__crate__api__export__export_size_estimate_impl(ptr, rust_vec_len, data_len),
+        29 => wire__crate__api__clips__move_crop_impl(ptr, rust_vec_len, data_len),
+        33 => wire__crate__api__preview__preview_is_playing_impl(ptr, rust_vec_len, data_len),
+        34 => wire__crate__api__preview__preview_pause_impl(ptr, rust_vec_len, data_len),
+        35 => wire__crate__api__preview__preview_play_impl(ptr, rust_vec_len, data_len),
+        36 => wire__crate__api__preview__preview_position_us_impl(ptr, rust_vec_len, data_len),
+        37 => wire__crate__api__preview__preview_seek_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -3978,6 +4063,16 @@ impl SseEncode for Option<crate::error::ErrorCode> {
         <bool>::sse_encode(self.is_some(), serializer);
         if let Some(value) = self {
             <crate::error::ErrorCode>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<crate::api::media::ThumbnailView> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::media::ThumbnailView>::sse_encode(value, serializer);
         }
     }
 }

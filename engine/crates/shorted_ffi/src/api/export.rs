@@ -19,6 +19,7 @@ use crate::transport::transport;
 const REFERENCE_BITS_PER_SECOND: f64 = 12_000_000.0;
 const REFERENCE_PIXEL_RATE: f64 = 1080.0 * 1920.0 * 30.0;
 const AUDIO_CHUNK_FRAMES: i64 = 1_024;
+const AUDIO_BITS_PER_SECOND: f64 = 192_000.0;
 
 #[derive(Clone, Copy)]
 pub struct ExportSettings {
@@ -177,6 +178,14 @@ pub fn start_export(path: String, settings: ExportSettings, events: StreamSink<T
         });
 }
 
+/// About how many bytes an export will take, sound included.
+#[flutter_rust_bridge::frb(sync)]
+pub fn export_size_estimate(settings: ExportSettings, duration_us: i64) -> i64 {
+    let (width, height) = output_size(settings.width);
+    let bits = f64::from(bits_per_second(width, height, settings.fps)) + AUDIO_BITS_PER_SECOND;
+    (bits / 8.0 * duration_us as f64 / 1e6) as i64
+}
+
 /// The code an export ends on when the project cannot be exported as it is.
 #[flutter_rust_bridge::frb(sync)]
 pub fn export_blocked(duration_us: i64) -> Option<ErrorCode> {
@@ -287,6 +296,16 @@ mod tests {
         );
         let ratio = rms(&exported) / rms(&source);
         assert!((ratio - 0.5).abs() < 0.05, "{ratio}");
+    }
+
+    #[test]
+    fn size_estimates_follow_bitrate_and_duration() {
+        let settings = ExportSettings {
+            width: 1080,
+            fps: 30,
+        };
+        assert_eq!(export_size_estimate(settings, 8_000_000), 12_192_000);
+        assert_eq!(export_size_estimate(settings, 0), 0);
     }
 
     #[test]

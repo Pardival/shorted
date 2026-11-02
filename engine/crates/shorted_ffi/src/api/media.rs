@@ -23,6 +23,7 @@ const MAX_THUMBNAILS: i64 = 120;
 const MAX_THUMBNAIL_WIDTH: u32 = 256;
 const STRIP_HEADER_BYTES: usize = 8;
 const FRAME_HEADER_BYTES: usize = 8;
+const COVER_FILE: &str = "cover.bin";
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum MediaKindView {
@@ -508,7 +509,12 @@ fn strip_cache(media: &MediaRef, folder: &Path) -> Option<PathBuf> {
 }
 
 /// A still image is one thumbnail, repeated along its clip.
-fn send_still(path: &Path, (width, height): (u32, u32), sink: &StreamSink<ThumbnailView>) {
+fn send_still(
+    path: &Path,
+    (width, height): (u32, u32),
+    sink: &StreamSink<ThumbnailView>,
+    cover: Option<&Path>,
+) {
     let Some((from_width, from_height, mut pixels)) = shorted_render::compositor::load_image(path)
     else {
         return;
@@ -523,26 +529,70 @@ fn send_still(path: &Path, (width, height): (u32, u32), sink: &StreamSink<Thumbn
         0,
         (width as usize, height as usize),
     );
-    let _ = sink.add(ThumbnailView {
+    let frame = ThumbnailView {
         time_us: 0,
         width,
         height,
         rgba,
-    });
+    };
+    if let Some(cover) = cover {
+        write_cover(cover, &frame);
+    }
+    let _ = sink.add(frame);
 }
 
-fn send_strip(media: &MediaRef, folder: &Path, sink: &StreamSink<ThumbnailView>) {
+/// The Home card's picture. Losing it only costs the placeholder.
+fn write_cover(file: &Path, frame: &ThumbnailView) {
+    let single = ThumbnailView {
+        time_us: frame.time_us,
+        width: frame.width,
+        height: frame.height,
+        rgba: frame.rgba.clone(),
+    };
+    let written = file
+        .parent()
+        .map_or(Ok(()), std::fs::create_dir_all)
+        .and_then(|()| std::fs::write(file, encode_strip(&[single])));
+    if let Err(error) = written {
+        tracing::warn!(%error, "cover not written");
+    }
+}
+
+/// The picture of a project's first clip, once its filmstrip has been made.
+pub async fn project_cover(root: String, id: String) -> Option<ThumbnailView> {
+    let id: Id = id.parse().ok()?;
+    let file = shorted_store::session::project_folder(Path::new(&root), id)
+        .join("cache")
+        .join(COVER_FILE);
+    read_cover(&std::fs::read(file).ok()?)
+}
+
+fn read_cover(bytes: &[u8]) -> Option<ThumbnailView> {
+    let width = u32::from_le_bytes(bytes.get(..4)?.try_into().ok()?);
+    let height = u32::from_le_bytes(bytes.get(4..8)?.try_into().ok()?);
+    if width == 0 || width > MAX_THUMBNAIL_WIDTH || height != THUMBNAIL_HEIGHT {
+        return None;
+    }
+    decode_strip(bytes, width, height)?.into_iter().next()
+}
+
+fn send_strip(media: &MediaRef, folder: &Path, sink: &StreamSink<ThumbnailView>, first_clip: bool) {
+    let cover_file = folder.join("cache").join(COVER_FILE);
+    let cover = first_clip.then_some(cover_file.as_path());
     let Some(path) = resolve(media, folder) else {
         return;
     };
     let (width, height) = thumbnail_size(&media.probe);
     if media.kind == MediaKind::Image {
-        send_still(&path, (width, height), sink);
+        send_still(&path, (width, height), sink, cover);
         return;
     }
     let cache = strip_cache(media, folder);
     let cached = cache.as_ref().and_then(|file| std::fs::read(file).ok());
     if let Some(frames) = cached.and_then(|bytes| decode_strip(&bytes, width, height)) {
+        if let (Some(cover), Some(frame)) = (cover, frames.first()) {
+            write_cover(cover, frame);
+        }
         for frame in frames {
             if sink.add(frame).is_err() {
                 return;
@@ -561,6 +611,9 @@ fn send_strip(media: &MediaRef, folder: &Path, sink: &StreamSink<ThumbnailView>)
     let Some(cache) = cache else {
         return;
     };
+    if let (Some(cover), Some(frame)) = (cover, frames.first()) {
+        write_cover(cover, frame);
+    }
     // Losing the cache only costs decoding again.
     let written = cache
         .parent()
@@ -577,7 +630,7 @@ pub fn media_filmstrip(media_id: String, sink: StreamSink<ThumbnailView>) {
         let state = transport();
         (state.project.clone(), state.folder.clone())
     };
-    let media = project.and_then(|project| {
+    let media = project.as_ref().and_then(|project| {
         project
             .media
             .iter()
@@ -590,9 +643,13 @@ pub fn media_filmstrip(media_id: String, sink: StreamSink<ThumbnailView>) {
     let Some(media) = media else {
         return;
     };
+    let first_clip = project
+        .as_ref()
+        .and_then(|project| project.timeline.clips.first())
+        .is_some_and(|clip| clip.media_id == media.id);
     let started = thread::Builder::new()
         .name("shorted-filmstrip".into())
-        .spawn(move || send_strip(&media, &folder, &sink));
+        .spawn(move || send_strip(&media, &folder, &sink, first_clip));
     if let Err(error) = started {
         tracing::error!(%error, "filmstrip not started");
     }
@@ -637,6 +694,21 @@ mod filmstrip_tests {
         assert!(cache_folders(&root).is_empty());
         assert!(project.join("project.json").exists());
         std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn covers_are_checked_before_use() {
+        let good = ThumbnailView {
+            time_us: 0,
+            width: 2,
+            height: THUMBNAIL_HEIGHT,
+            rgba: vec![1; 2 * THUMBNAIL_HEIGHT as usize * 4],
+        };
+        let bytes = encode_strip(&[good]);
+        assert_eq!(read_cover(&bytes).unwrap().width, 2);
+        assert!(read_cover(&bytes[..20]).is_none());
+        assert!(read_cover(&encode_strip(&[frame(0)])).is_none());
+        assert!(read_cover(&[1]).is_none());
     }
 
     #[test]

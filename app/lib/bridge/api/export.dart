@@ -21,6 +21,15 @@ Stream<TaskEvent> startExport({
   settings: settings,
 );
 
+/// About how many bytes an export will take, sound included.
+PlatformInt64 exportSizeEstimate({
+  required ExportSettings settings,
+  required PlatformInt64 durationUs,
+}) => RustLib.instance.api.crateApiExportExportSizeEstimate(
+  settings: settings,
+  durationUs: durationUs,
+);
+
 /// The code an export ends on when the project cannot be exported as it is.
 ErrorCode? exportBlocked({required PlatformInt64 durationUs}) =>
     RustLib.instance.api.crateApiExportExportBlocked(durationUs: durationUs);

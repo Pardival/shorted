@@ -17,6 +17,8 @@ const _widths = {720: '720p', 1080: '1080p'};
 const _frameRates = [30, 60];
 const _maxDurationUs = 120000000;
 
+const _bytesPerMegabyte = 1000 * 1000;
+
 class ExportPanel extends ConsumerStatefulWidget {
   const ExportPanel({super.key, required this.durationUs, this.chooseFile});
 
@@ -148,6 +150,16 @@ class _ExportPanelState extends ConsumerState<ExportPanel> {
             selected: _fps,
             onSelected: (value) => setState(() => _fps = value),
           ),
+          if (blocked == null)
+            Text(
+              l10n.estimatedSize(
+                ref
+                        .read(projectGatewayProvider)
+                        .exportSizeEstimate(_width, _fps, widget.durationUs) ~/
+                    _bytesPerMegabyte,
+              ),
+              style: const TextStyle(color: ShortedColors.textMuted),
+            ),
           if (blocked != null)
             Text(
               blocked,

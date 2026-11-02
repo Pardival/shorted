@@ -331,6 +331,12 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('the splash hands over to Home', (tester) async {
+    await open(tester, '/');
+    expect(find.text('New short'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('a project that cannot open shows a human message', (
     tester,
   ) async {
