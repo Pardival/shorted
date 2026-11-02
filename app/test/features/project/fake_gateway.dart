@@ -258,6 +258,10 @@ class FakeGateway implements ProjectGateway {
   Future<ProjectView> deleteAudio(String id) => _audio('delete $id');
 
   @override
+  Future<ProjectView> setDucking(String id, double? strength) =>
+      _audio('duck $id $strength');
+
+  @override
   Future<ProjectView> moveAudio(String id, int startUs, String? trackId) =>
       _audio('move $id $startUs $trackId');
 

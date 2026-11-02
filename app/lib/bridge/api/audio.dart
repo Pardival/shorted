@@ -62,6 +62,10 @@ Future<ProjectView> setAudioRole({
   required AudioRoleView role,
 }) => RustLib.instance.api.crateApiAudioSetAudioRole(id: id, role: role);
 
+/// Lowers music under speech, by `strength` from 0 to 1; None turns it off.
+Future<ProjectView> setDucking({required String id, double? strength}) =>
+    RustLib.instance.api.crateApiAudioSetDucking(id: id, strength: strength);
+
 Future<ProjectView> deleteAudio({required String id}) =>
     RustLib.instance.api.crateApiAudioDeleteAudio(id: id);
 
@@ -141,6 +145,9 @@ class AudioItemView {
   final PlatformInt64 fadeOutUs;
   final bool looped;
 
+  /// Set when the item dips under speech.
+  final double? ducking;
+
   const AudioItemView({
     required this.id,
     required this.mediaId,
@@ -149,6 +156,7 @@ class AudioItemView {
     required this.fadeInUs,
     required this.fadeOutUs,
     required this.looped,
+    this.ducking,
   });
 
   @override
@@ -159,7 +167,8 @@ class AudioItemView {
       volume.hashCode ^
       fadeInUs.hashCode ^
       fadeOutUs.hashCode ^
-      looped.hashCode;
+      looped.hashCode ^
+      ducking.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -172,7 +181,8 @@ class AudioItemView {
           volume == other.volume &&
           fadeInUs == other.fadeInUs &&
           fadeOutUs == other.fadeOutUs &&
-          looped == other.looped;
+          looped == other.looped &&
+          ducking == other.ducking;
 }
 
 enum AudioRoleView { voiceOver, importedVoice, music, soundEffect }

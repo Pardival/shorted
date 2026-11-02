@@ -68,6 +68,7 @@ abstract interface class ProjectGateway {
   });
   Future<ProjectView> setAudioLoop(String id, {required bool looped});
   Future<ProjectView> deleteAudio(String id);
+  Future<ProjectView> setDucking(String id, double? strength);
   Future<ProjectView> moveAudio(String id, int startUs, String? trackId);
   Future<ProjectView> trimAudio(
     String id, {
@@ -298,6 +299,10 @@ class EngineGateway implements ProjectGateway {
 
   @override
   Future<ProjectView> deleteAudio(String id) => audio.deleteAudio(id: id);
+
+  @override
+  Future<ProjectView> setDucking(String id, double? strength) =>
+      audio.setDucking(id: id, strength: strength);
 
   @override
   Future<ProjectView> moveAudio(String id, int startUs, String? trackId) =>

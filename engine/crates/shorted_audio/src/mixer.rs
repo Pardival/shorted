@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use shorted_core::evaluate::clip_positions;
-use shorted_core::model::{AudioItem, AudioTrackRef, ClipAudio, Id, Project};
+use shorted_core::model::{AudioItem, AudioRole, AudioTrackRef, ClipAudio, Id, Project};
 
 pub const SAMPLE_RATE: u32 = 48_000;
 pub const CHANNELS: usize = 2;
@@ -34,6 +34,61 @@ fn fade_gain(offset_us: i64, length_us: i64, fade_in_us: i64, fade_out_us: i64) 
     gain.clamp(0.0, 1.0)
 }
 
+/// How long the music takes to dip and to come back.
+const DUCK_RAMP_US: i64 = 150_000;
+
+/// Timeline spans where someone speaks: words of the clips' original sound, and voice items.
+pub fn speech_spans(project: &Project) -> Vec<(i64, i64)> {
+    let timeline = &project.timeline;
+    let mut spans = Vec::new();
+    for ((_, start, end), clip) in clip_positions(project).into_iter().zip(&timeline.clips) {
+        if clip.original_audio.muted {
+            continue;
+        }
+        let Some(transcript) = &clip.transcript else {
+            continue;
+        };
+        let words = transcript.segments.iter().flat_map(|s| &s.words);
+        for word in words.filter(|w| !w.deleted) {
+            let at = |source_us: i64| {
+                let local = (source_us - clip.source_in_us) as f64 / f64::from(clip.speed);
+                (start + local.round() as i64).clamp(start, end)
+            };
+            if word.end_us > clip.source_in_us && word.start_us < clip.source_out_us {
+                spans.push((at(word.start_us), at(word.end_us)));
+            }
+        }
+    }
+    let voices = timeline
+        .audio
+        .iter()
+        .filter(|item| matches!(item.role, AudioRole::VoiceOver | AudioRole::ImportedVoice));
+    spans.extend(voices.map(|item| (item.start_us, item.end_us())));
+    spans.sort_unstable();
+    spans
+}
+
+/// Gain under speech at `time_us`: down by `strength` inside a span, ramping at its edges.
+fn duck_gain(time_us: i64, spans: &[(i64, i64)], strength: f32) -> f32 {
+    let distance = spans
+        .iter()
+        .map(|(start, end)| {
+            if time_us < *start {
+                start - time_us
+            } else if time_us > *end {
+                time_us - end
+            } else {
+                0
+            }
+        })
+        .min();
+    let Some(distance) = distance.filter(|d| *d < DUCK_RAMP_US) else {
+        return 1.0;
+    };
+    let depth = strength.clamp(0.0, 1.0) * (1.0 - distance as f32 / DUCK_RAMP_US as f32);
+    1.0 - depth
+}
+
 /// A span of the timeline fed by one source.
 struct Voice<'a> {
     samples: &'a [f32],
@@ -46,11 +101,13 @@ struct Voice<'a> {
     volume: f32,
     fade_in_us: i64,
     fade_out_us: i64,
+    /// Music under speech: how deep it dips.
+    ducking: Option<f32>,
 }
 
 impl Voice<'_> {
     /// Adds this voice to `out`, which starts at timeline frame `first`.
-    fn add_to(&self, first: i64, out: &mut [f32]) {
+    fn add_to(&self, first: i64, out: &mut [f32], speech: &[(i64, i64)]) {
         let frames = (out.len() / CHANNELS) as i64;
         let from = self.start_frame.max(first);
         let to = self.end_frame.min(first + frames);
@@ -65,7 +122,11 @@ impl Voice<'_> {
             let Some(pair) = self.samples.get(source..source + CHANNELS) else {
                 continue;
             };
+            let duck = self.ducking.map_or(1.0, |strength| {
+                duck_gain(frames_to_us(frame), speech, strength)
+            });
             let gain = self.volume
+                * duck
                 * fade_gain(
                     frames_to_us(local),
                     length_us,
@@ -98,6 +159,7 @@ fn clip_voice<'a>(
         volume: audio.volume,
         fade_in_us: audio.fade_in_us,
         fade_out_us: audio.fade_out_us,
+        ducking: None,
     }
 }
 
@@ -129,6 +191,7 @@ fn item_voice<'a>(samples: &'a [f32], item: &AudioItem, project: &Project) -> Op
         volume: item.volume,
         fade_in_us: item.fade_in_us,
         fade_out_us: item.fade_out_us,
+        ducking: item.ducking.map(|ducking| ducking.strength),
     })
 }
 
@@ -137,6 +200,12 @@ fn item_voice<'a>(samples: &'a [f32], item: &AudioItem, project: &Project) -> Op
 pub fn mix(project: &Project, sources: &HashMap<Id, Samples>, first: i64, out: &mut [f32]) {
     out.fill(0.0);
     let timeline = &project.timeline;
+    let ducked = timeline.audio.iter().any(|item| item.ducking.is_some());
+    let speech = if ducked {
+        speech_spans(project)
+    } else {
+        Vec::new()
+    };
     if !timeline.track_flags.video.muted {
         for ((_, start, end), clip) in clip_positions(project).into_iter().zip(&timeline.clips) {
             let audio = &clip.original_audio;
@@ -145,7 +214,7 @@ pub fn mix(project: &Project, sources: &HashMap<Id, Samples>, first: i64, out: &
             }
             if let Some(samples) = sources.get(&clip.media_id) {
                 clip_voice(samples, audio, start, end, clip.source_in_us, clip.speed)
-                    .add_to(first, out);
+                    .add_to(first, out, &speech);
             }
         }
     }
@@ -154,7 +223,7 @@ pub fn mix(project: &Project, sources: &HashMap<Id, Samples>, first: i64, out: &
             .get(&item.media_id)
             .and_then(|samples| item_voice(samples, item, project))
         {
-            voice.add_to(first, out);
+            voice.add_to(first, out, &speech);
         }
     }
     for sample in out.iter_mut() {
@@ -330,6 +399,42 @@ mod tests {
         let map = sources(&project, Arc::new(vec![0.5; 8]));
         mix(&project, &map, 96_000_000, &mut out);
         assert_eq!(out, [0.0; 4]);
+    }
+
+    #[test]
+    fn music_dips_under_speech_and_comes_back() {
+        let mut project = fixture();
+        project.timeline.clips[0].original_audio.muted = true;
+        let mut music = item(AudioTrackRef::VoiceOver, id(12));
+        music.start_us = 0;
+        music.source_out_us = 3_000_000;
+        music.ducking = Some(Ducking { strength: 0.5 });
+        let mut voice = item(AudioTrackRef::VoiceOver, id(13));
+        voice.id = id(41);
+        voice.role = AudioRole::VoiceOver;
+        voice.start_us = 1_000_000;
+        voice.source_out_us = 500_000;
+        project.timeline.audio = vec![music, voice];
+        let map = HashMap::from([(id(12), Arc::new(vec![0.8; 480_000]))]);
+        let level = |at_us: i64| {
+            let mut out = [0.0; 2];
+            mix(&project, &map, us_to_frames(at_us), &mut out);
+            out[0]
+        };
+        assert_eq!(level(200_000), 0.8);
+        assert!((level(1_200_000) - 0.4).abs() < 1e-6);
+        let edge = level(1_550_000);
+        assert!(edge > 0.4 && edge < 0.8, "{edge}");
+        assert_eq!(level(2_000_000), 0.8);
+    }
+
+    #[test]
+    fn spoken_words_become_timeline_spans() {
+        let mut project = fixture();
+        project.timeline.clips[0].source_in_us = 1_000_000;
+        let spans = speech_spans(&project);
+        let start = clip_positions(&project)[0].1;
+        assert!(spans.iter().all(|(from, to)| from >= &start && to >= from));
     }
 
     #[test]

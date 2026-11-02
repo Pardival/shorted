@@ -21,6 +21,7 @@ const _audioTypes = XTypeGroup(
 const _maxFadeUs = 5000000.0;
 const _maxVolume = 2.0;
 const _maxUserTracks = 8;
+const _defaultDucking = 0.6;
 
 /// Screen S20: the original sound of clips, then every audio track.
 class AudioPanel extends ConsumerWidget {
@@ -331,6 +332,10 @@ class _Track extends StatelessWidget {
             onLooped: (looped) =>
                 run((gateway) => gateway.setAudioLoop(item.id, looped: looped)),
             onDelete: () => run((gateway) => gateway.deleteAudio(item.id)),
+            ducking: item.role == AudioRoleView.music ? item.ducking : null,
+            showDucking: item.role == AudioRoleView.music,
+            onDucking: (strength) =>
+                run((gateway) => gateway.setDucking(item.id, strength)),
             onChanged: (volume, fadeInUs, fadeOutUs) => run(
               (gateway) => gateway.setAudioSound(
                 item.id,
@@ -359,6 +364,9 @@ class _SoundRow extends StatefulWidget {
     this.looped,
     this.onLooped,
     this.onDelete,
+    this.ducking,
+    this.showDucking = false,
+    this.onDucking,
   });
 
   final String title;
@@ -371,6 +379,11 @@ class _SoundRow extends StatefulWidget {
   final bool? looped;
   final ValueChanged<bool>? onLooped;
   final VoidCallback? onDelete;
+
+  /// Music only: how deep it dips under speech, null when it does not.
+  final double? ducking;
+  final bool showDucking;
+  final ValueChanged<double?>? onDucking;
 
   @override
   State<_SoundRow> createState() => _SoundRowState();
@@ -448,6 +461,14 @@ class _SoundRowState extends State<_SoundRow> {
               ),
           ],
         ),
+        if (widget.showDucking)
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.duckUnderSpeech),
+            value: widget.ducking != null,
+            onChanged: (on) =>
+                widget.onDucking?.call(on ? _defaultDucking : null),
+          ),
         _slider(
           l10n.volume,
           _volume ?? widget.volume,

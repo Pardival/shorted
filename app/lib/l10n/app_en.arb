@@ -269,6 +269,7 @@
   "animationTypewriter": "Typewriter",
   "toggleEmphasis": "Tap to highlight, long press to fix",
   "exportSrt": "Also save captions (.srt)",
+  "duckUnderSpeech": "Lower under speech",
   "split": "Split",
   "exportTitle": "Export your short",
   "exportResolution": "Resolution",

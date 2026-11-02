@@ -23,6 +23,7 @@ use crate::transport::transport;
 /// Peaks per second of sound: fine enough for the closest timeline zoom.
 const PEAKS_PER_SECOND: usize = 100;
 const MIN_ITEM_US: i64 = 100_000;
+const DEFAULT_DUCKING: f32 = 0.6;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum AudioRoleView {
@@ -70,6 +71,8 @@ pub struct AudioItemView {
     pub fade_in_us: i64,
     pub fade_out_us: i64,
     pub looped: bool,
+    /// Set when the item dips under speech.
+    pub ducking: Option<f32>,
 }
 
 pub struct AudioTrackView {
@@ -103,6 +106,7 @@ fn item_views(project: &Project, track: AudioTrackRef) -> Vec<AudioItemView> {
             fade_in_us: item.fade_in_us,
             fade_out_us: item.fade_out_us,
             looped: item.loop_,
+            ducking: item.ducking.map(|ducking| ducking.strength),
         })
         .collect()
 }
@@ -188,7 +192,10 @@ fn audio_item(media: &MediaRef, role: AudioRole, start_us: i64, track: Id) -> Au
         fade_in_us: 0,
         fade_out_us: 0,
         loop_: false,
-        ducking: None,
+        // FR-AUD-06: on by default for music.
+        ducking: (role == AudioRole::Music).then_some(Ducking {
+            strength: DEFAULT_DUCKING,
+        }),
         transcript: None,
     }
 }
@@ -263,6 +270,18 @@ pub async fn set_audio_role(id: String, role: AudioRoleView) -> Result<ProjectVi
         Ok(Command::SetAudioRole {
             id: parse(&id)?,
             role: role.into(),
+        })
+    })
+}
+
+/// Lowers music under speech, by `strength` from 0 to 1; None turns it off.
+pub async fn set_ducking(id: String, strength: Option<f32>) -> Result<ProjectView, EngineFailure> {
+    edit(move |_| {
+        Ok(Command::SetDucking {
+            id: parse(&id)?,
+            ducking: strength.map(|strength| Ducking {
+                strength: strength.clamp(0.0, 1.0),
+            }),
         })
     })
 }
@@ -635,6 +654,17 @@ mod tests {
         ] {
             assert_eq!(AudioRole::from(AudioRoleView::from(role)), role);
         }
+    }
+
+    #[test]
+    fn new_music_dips_under_speech_and_voices_do_not() {
+        let json = include_str!("../../../../fixtures/projects/v1_full.json");
+        let media = Project::from_json(json).unwrap().media.remove(0);
+        assert!(audio_item(&media, AudioRole::Music, 0, Uuid::nil())
+            .ducking
+            .is_some());
+        let voice = audio_item(&media, AudioRole::ImportedVoice, 0, Uuid::nil());
+        assert!(voice.ducking.is_none());
     }
 
     #[test]

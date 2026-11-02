@@ -18,6 +18,7 @@ AudioItemView item(String id) => AudioItemView(
   fadeInUs: big(0),
   fadeOutUs: big(0),
   looped: false,
+  ducking: 0.6,
 );
 
 void main() {
@@ -83,6 +84,9 @@ void main() {
     await tester.tap(find.byTooltip('Loop'));
     await tester.pumpAndSettle();
     expect(gateway.audioCalls, ['add track', 'loop a1 true']);
+    await tester.tap(find.text('Lower under speech'));
+    await tester.pumpAndSettle();
+    expect(gateway.audioCalls.last, 'duck a1 null');
   });
 
   testWidgets('recording counts in, plays the video and saves the take', (

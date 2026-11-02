@@ -171,6 +171,7 @@
   "animationTypewriter": "Machine à écrire",
   "toggleEmphasis": "Touchez pour mettre en avant, appui long pour corriger",
   "exportSrt": "Enregistrer aussi les sous-titres (.srt)",
+  "duckUnderSpeech": "Baisser sous la voix",
   "split": "Couper",
   "exportTitle": "Exporter votre short",
   "exportResolution": "Résolution",
