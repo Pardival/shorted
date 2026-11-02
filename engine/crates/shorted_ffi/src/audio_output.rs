@@ -136,13 +136,24 @@ fn start() -> Option<(cpal::Stream, Arc<AtomicU64>)> {
     Some((stream, played))
 }
 
-/// Starts sound once. Without a device, playback goes on silently on the system clock.
+/// Starts sound once, in the background: opening a device can take a while, and the frames it
+/// plays are the clock. Until it answers, or without a device, playback runs on the system clock.
 pub fn ensure_started() {
     STARTED.call_once(|| {
-        if let Some((stream, played)) = start() {
-            transport().audio_frames = Some(played);
-            // Lives as long as the app.
-            std::mem::forget(stream);
+        let opening = thread::Builder::new()
+            .name("shorted-audio-open".into())
+            .spawn(|| {
+                if let Some((stream, played)) = start() {
+                    let mut state = transport();
+                    let position = state.position_us();
+                    state.audio_frames = Some(played);
+                    state.set_position(position);
+                    // Lives as long as the app.
+                    std::mem::forget(stream);
+                }
+            });
+        if let Err(error) = opening {
+            tracing::error!(%error, "sound output not started");
         }
     });
 }
