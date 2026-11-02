@@ -7,6 +7,8 @@ use crate::error::ModelError;
 use crate::model::*;
 
 pub const MAX_DOCUMENT_BYTES: usize = 64 * 1024 * 1024;
+/// A journal line carries one command, at most a whole list of clips or a group.
+pub const MAX_JOURNAL_LINE_BYTES: usize = 8 * 1024 * 1024;
 pub const MAX_CLIPS: usize = 100;
 pub const MAX_OVERLAYS: usize = 200;
 pub const MAX_AUDIO_TRACKS: usize = 8;

@@ -2018,7 +2018,13 @@ dependencies = [
 name = "shorted_store"
 version = "0.0.1"
 dependencies = [
+ "serde",
+ "serde_json",
  "shorted_core",
+ "tempfile",
+ "thiserror",
+ "tracing",
+ "uuid",
 ]
 
 [[package]]
