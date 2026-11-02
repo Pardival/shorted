@@ -14,7 +14,9 @@ use uuid::Uuid;
 
 use crate::api::clips::{edit, parse};
 use crate::api::media::{make_media, resolve};
-use crate::api::projects::{on_command_thread, view_of, with_active, ProjectView, TrackKindView};
+use crate::api::projects::{
+    active_folder, on_command_thread, view_of, with_active, ProjectView, TrackKindView,
+};
 use crate::error::{EngineError, EngineFailure};
 use crate::transport::transport;
 
