@@ -1,0 +1,14 @@
+[package]
+name = "shorted_render"
+description = "wgpu compositor shared by preview and export."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+shorted_core = { path = "../shorted_core" }
+shorted_media = { path = "../shorted_media" }

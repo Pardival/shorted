@@ -1,0 +1,10 @@
+[package]
+name = "shorted_media"
+description = "MediaBackend trait and per-platform decode, encode, mux, probe and proxies."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[lints]
+workspace = true

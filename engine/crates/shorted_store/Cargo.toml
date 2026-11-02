@@ -1,0 +1,13 @@
+[package]
+name = "shorted_store"
+description = "Project folder, autosave journal, snapshots, atomic writes and schema migrations."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+shorted_core = { path = "../shorted_core" }

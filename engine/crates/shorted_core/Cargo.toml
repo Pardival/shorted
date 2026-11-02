@@ -1,0 +1,10 @@
+[package]
+name = "shorted_core"
+description = "Project model, commands, undo stack and timeline evaluation. Pure: no I/O, no threads, no GPU."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[lints]
+workspace = true

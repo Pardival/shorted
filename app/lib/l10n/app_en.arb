@@ -1,0 +1,6 @@
+{
+  "@@locale": "en",
+  "appTitle": "Shorted",
+  "placeholderTagline": "Your clips, a polished short.",
+  "@placeholderTagline": { "description": "Tagline on the temporary placeholder screen." }
+}
