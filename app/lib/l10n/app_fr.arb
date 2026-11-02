@@ -248,5 +248,13 @@
   "easingOut": "Ralentir",
   "easingInOut": "Doux",
   "easingSpring": "Ressort",
-  "deleteKeyframe": "Supprimer l'image clé"
+  "deleteKeyframe": "Supprimer l'image clé",
+  "path": "Trajectoire",
+  "recordHalfSpeed": "Enregistrer à 0,5×",
+  "recordFullSpeed": "Enregistrer à 1×",
+  "dragToRecord": "Faites glisser l'élément sur l'aperçu",
+  "smoothing": "Lissage",
+  "orientToPath": "Suivre la direction",
+  "fitPath": "Étirer sur toute la durée",
+  "clearPath": "Effacer la trajectoire"
 }

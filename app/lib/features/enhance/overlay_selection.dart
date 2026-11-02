@@ -7,10 +7,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../bridge/api/overlays.dart';
+import '../../bridge/api/projects.dart';
 import '../../design_system/components.dart';
 import '../../design_system/tokens.g.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../project/project_dialogs.dart';
+import '../project/project_gateway.dart';
 import '../project/project_providers.dart';
 import 'library_section.dart';
 import 'text_section.dart';
@@ -127,7 +129,92 @@ class OverlaySelection extends ConsumerStatefulWidget {
   ConsumerState<OverlaySelection> createState() => _OverlaySelectionState();
 }
 
-class _OverlaySelectionState extends ConsumerState<OverlaySelection> {
+class _OverlaySelectionState extends ConsumerState<OverlaySelection>
+    with SingleTickerProviderStateMixin {
+  // Path mode (T-0708): recording follows the finger at each frame of a slowed playback.
+  Ticker? _recorder;
+  final _recorded = <PathPointView>[];
+  Offset? _finger;
+  int? _pointDrag;
+  Offset? _pointAt;
+
+  /// The selected element, when its path is being edited.
+  String? get _pathId {
+    final id = ref.read(pathEditingProvider);
+    return id != null && id == ref.read(selectedOverlayProvider) ? id : null;
+  }
+
+  int? _pointNear(OverlayView overlay, Offset point) {
+    final points = overlay.path?.points ?? const <PathPointView>[];
+    final slop = _touchSlop / _scale;
+    for (final (index, candidate) in points.indexed) {
+      if ((Offset(candidate.x, candidate.y) - point).distance <= slop) {
+        return index;
+      }
+    }
+    return null;
+  }
+
+  void _beginRecording(OverlayView overlay, Offset point, double rate) {
+    final transport = ref.read(previewTransportProvider);
+    final gateway = ref.read(projectGatewayProvider);
+    _recorded.clear();
+    _finger = point;
+    final end = overlay.endUs.toInt();
+    transport.playAt(rate);
+    _recorder = createTicker((_) {
+      final finger = _finger;
+      if (finger == null) return;
+      final time = transport.positionUs;
+      _recorded.add(PathPointView(timeUs: time, x: finger.dx, y: finger.dy));
+      final base = overlay.transform;
+      gateway.previewOverlayTransform(
+        overlay.id,
+        TransformView(
+          x: finger.dx,
+          y: finger.dy,
+          scale: base.scale,
+          rotation: base.rotation,
+          opacity: base.opacity,
+          flip: base.flip,
+        ),
+      );
+      setState(() {});
+      if (time >= end || !transport.isPlaying) _finishRecording(overlay.id);
+    })..start();
+  }
+
+  Future<void> _finishRecording(String id) async {
+    final recorder = _recorder;
+    if (recorder == null) return;
+    _recorder = null;
+    recorder.dispose();
+    ref.read(previewTransportProvider).pause();
+    ref.read(recordingPathProvider.notifier).set(null);
+    final samples = List.of(_recorded);
+    setState(_recorded.clear);
+    if (samples.length < 2) return;
+    final l10n = AppLocalizations.of(context);
+    try {
+      await ref
+          .read(editorProvider(widget.projectId).notifier)
+          .apply((gateway) => gateway.setRecordedPath(id, samples));
+    } on Object catch (error) {
+      if (mounted) showToast(context, errorMessage(l10n, error));
+    }
+  }
+
+  Future<void> _applyPath(
+    Future<ProjectView> Function(ProjectGateway gateway) action,
+  ) async {
+    final l10n = AppLocalizations.of(context);
+    try {
+      await ref.read(editorProvider(widget.projectId).notifier).apply(action);
+    } on Object catch (error) {
+      if (mounted) showToast(context, errorMessage(l10n, error));
+    }
+  }
+
   double _scale = 1;
   _Gesture? _gesture;
   TransformView? _shown;
@@ -156,6 +243,7 @@ class _OverlaySelectionState extends ConsumerState<OverlaySelection> {
 
   @override
   void dispose() {
+    _recorder?.dispose();
     _words.dispose();
     _wordsFocus.dispose();
     super.dispose();
@@ -244,9 +332,24 @@ class _OverlaySelectionState extends ConsumerState<OverlaySelection> {
     final now = SchedulerBinding.instance.currentSystemFrameTimeStamp;
     final last = _lastTap;
     _lastTap = (now, details.localPosition);
-    if (last != null &&
+    final twice =
+        last != null &&
         now - last.$1 <= kDoubleTapTimeout &&
-        (details.localPosition - last.$2).distance <= kDoubleTapSlop) {
+        (details.localPosition - last.$2).distance <= kDoubleTapSlop;
+    final pathId = _pathId;
+    if (pathId != null) {
+      // On a path, a double tap deletes the point under it; nothing else selects.
+      final overlay = _overlay(pathId);
+      final index = overlay == null
+          ? null
+          : _pointNear(overlay, details.localPosition / _scale);
+      if (twice && index != null) {
+        _lastTap = null;
+        _applyPath((gateway) => gateway.deletePathPoint(pathId, index));
+      }
+      return;
+    }
+    if (twice) {
       _lastTap = null;
       _doubleTapAt = details.localPosition;
       _startTyping();
@@ -284,6 +387,18 @@ class _OverlaySelectionState extends ConsumerState<OverlaySelection> {
 
   void _start(ScaleStartDetails details) {
     final point = (_down ?? details.localFocalPoint) / _scale;
+    final pathId = _pathId;
+    if (pathId != null) {
+      final overlay = _overlay(pathId);
+      if (overlay == null) return;
+      final rate = ref.read(recordingPathProvider);
+      if (rate != null) {
+        _beginRecording(overlay, point, rate);
+      } else {
+        _pointDrag = _pointNear(overlay, point);
+      }
+      return;
+    }
     final boxes = _boxes;
     final selected = ref.read(selectedOverlayProvider);
     OverlayBoxView? target;
@@ -320,6 +435,14 @@ class _OverlaySelectionState extends ConsumerState<OverlaySelection> {
   }
 
   void _update(ScaleUpdateDetails details) {
+    if (_recorder != null) {
+      _finger = details.localFocalPoint / _scale;
+      return;
+    }
+    if (_pointDrag != null) {
+      setState(() => _pointAt = details.localFocalPoint / _scale);
+      return;
+    }
     final gesture = _gesture;
     if (gesture == null) return;
     final point = details.localFocalPoint / _scale;
@@ -372,6 +495,25 @@ class _OverlaySelectionState extends ConsumerState<OverlaySelection> {
   }
 
   Future<void> _end(ScaleEndDetails details) async {
+    final pathId = _pathId;
+    if (_recorder != null && pathId != null) {
+      await _finishRecording(pathId);
+      return;
+    }
+    final dragged = _pointDrag;
+    final at = _pointAt;
+    if (dragged != null) {
+      setState(() {
+        _pointDrag = null;
+        _pointAt = null;
+      });
+      if (pathId != null && at != null) {
+        await _applyPath(
+          (gateway) => gateway.movePathPoint(pathId, dragged, at.dx, at.dy),
+        );
+      }
+      return;
+    }
     final gesture = _gesture;
     final shown = _shown;
     _gesture = null;
@@ -401,7 +543,27 @@ class _OverlaySelectionState extends ConsumerState<OverlaySelection> {
     // Rebuilt after every edit, so a moved or deleted element is redrawn at once.
     ref.watch(editorProvider(widget.projectId));
     final selected = ref.watch(selectedOverlayProvider);
+    final editingPath = ref.watch(pathEditingProvider);
+    ref.watch(recordingPathProvider);
     final gateway = ref.read(projectGatewayProvider);
+    final pathOverlay = editingPath != null && editingPath == selected
+        ? _overlay(editingPath)
+        : null;
+    final pathPoints = [
+      for (final (index, point)
+          in (pathOverlay?.path?.points ?? const <PathPointView>[]).indexed)
+        index == _pointDrag && _pointAt != null
+            ? _pointAt!
+            : Offset(point.x, point.y),
+    ];
+    final curve = _recorder != null
+        ? [for (final point in _recorded) Offset(point.x, point.y)]
+        : pathOverlay == null
+        ? const <Offset>[]
+        : [
+            for (final point in gateway.pathCurve(pathOverlay.id))
+              Offset(point.x, point.y),
+          ];
     return LayoutBuilder(
       builder: (context, box) {
         _scale = box.maxWidth / canvasWidth;
@@ -441,6 +603,8 @@ class _OverlaySelectionState extends ConsumerState<OverlaySelection> {
                       box: shown,
                       scale: _scale,
                       guides: _guides,
+                      curve: curve,
+                      points: _recorder == null ? pathPoints : const [],
                     ),
                   );
                   if (typing == null) return selection;
@@ -465,15 +629,22 @@ class SelectionPainter extends CustomPainter {
     required this.box,
     required this.scale,
     this.guides = const {},
+    this.curve = const [],
+    this.points = const [],
   });
 
   final OverlayBoxView? box;
   final double scale;
   final Set<Guide> guides;
 
+  /// A recorded path in canvas units: the curve the element follows, and its points.
+  final List<Offset> curve;
+  final List<Offset> points;
+
   @override
   void paint(Canvas canvas, Size size) {
     _paintGuides(canvas, size);
+    _paintPath(canvas);
     final shown = box;
     if (shown == null) return;
     final width = shown.width * scale;
@@ -508,6 +679,38 @@ class SelectionPainter extends CustomPainter {
     canvas.drawLine(top, knob, line);
     canvas.drawCircle(knob, _handleRadius, handle);
     canvas.restore();
+  }
+
+  /// The lime trail of S40, with a handle on each kept point.
+  void _paintPath(Canvas canvas) {
+    if (curve.length > 1) {
+      final trail = Path()
+        ..moveTo(curve.first.dx * scale, curve.first.dy * scale);
+      for (final point in curve.skip(1)) {
+        trail.lineTo(point.dx * scale, point.dy * scale);
+      }
+      canvas.drawPath(
+        trail,
+        Paint()
+          ..color = ShortedColors.accent
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.5
+          ..strokeJoin = StrokeJoin.round,
+      );
+    }
+    for (final point in points) {
+      final at = point * scale;
+      canvas.drawCircle(
+        at,
+        _handleRadius + 1,
+        Paint()..color = ShortedColors.bg,
+      );
+      canvas.drawCircle(
+        at,
+        _handleRadius,
+        Paint()..color = ShortedColors.accent,
+      );
+    }
   }
 
   void _paintGuides(Canvas canvas, Size size) {
@@ -552,6 +755,8 @@ class SelectionPainter extends CustomPainter {
   bool shouldRepaint(SelectionPainter old) =>
       old.scale != scale ||
       old.guides != guides ||
+      old.curve != curve ||
+      old.points != points ||
       old.box?.id != box?.id ||
       old.box?.centerX != box?.centerX ||
       old.box?.centerY != box?.centerY ||

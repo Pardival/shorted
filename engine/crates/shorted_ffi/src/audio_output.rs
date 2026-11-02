@@ -58,7 +58,8 @@ fn worker(mut ring: Producer<f32>, flush: Arc<AtomicBool>) {
             (
                 state.project.clone(),
                 state.folder.clone(),
-                state.playing(),
+                // A slowed playback, for recording a path, is silent.
+                state.playing() && state.rate == 1.0,
                 start,
                 generation,
                 state.revision,

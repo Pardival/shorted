@@ -21,6 +21,14 @@ class FakeTransport implements PreviewTransport {
   @override
   void play() => isPlaying = true;
 
+  double? rate;
+
+  @override
+  void playAt(double rate) {
+    this.rate = rate;
+    isPlaying = true;
+  }
+
   @override
   void pause() => isPlaying = false;
 }

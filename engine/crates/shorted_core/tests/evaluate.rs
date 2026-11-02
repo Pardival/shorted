@@ -6,6 +6,7 @@ use proptest::prelude::*;
 use shorted_core::command::AnimSlot;
 use shorted_core::evaluate::{
     Modifier, ease, evaluate, keyframe_times, keys_for, preset_modifier, property_value,
+    simplify_path,
 };
 use shorted_core::model::*;
 use uuid::Uuid;
@@ -639,4 +640,56 @@ fn a_change_at_the_playhead_keys_only_what_changed() {
         keyframe_times(item),
         vec![(0, Easing::Spring), (1_000_000, Easing::Linear)]
     );
+}
+
+fn sample(t_us: i64, x: f32, y: f32) -> PathSample {
+    PathSample { t_us, x, y }
+}
+
+fn corner(smoothing: f32) -> MotionPath {
+    MotionPath {
+        samples: vec![
+            sample(0, 0.0, 0.0),
+            sample(1_000_000, 100.0, 0.0),
+            sample(2_000_000, 100.0, 100.0),
+        ],
+        smoothing,
+        orient_to_path: false,
+    }
+}
+
+#[test]
+fn smoothing_rounds_a_corner_but_keeps_the_samples() {
+    let at = |smoothing, t| {
+        let project = overlay_only(|item| item.path = Some(corner(smoothing)));
+        evaluate(&project, t).overlays[0].position
+    };
+    let straight = at(0.0, 1_500_000);
+    let smooth = at(1.0, 1_500_000);
+    assert_eq!((straight.x, straight.y), (100.0, 50.0));
+    assert!(
+        smooth.x > 100.0,
+        "the curve bulges out of the corner: {smooth:?}"
+    );
+    let half = at(0.5, 1_500_000);
+    assert!(half.x > straight.x && half.x < smooth.x);
+    for t in [0, 1_000_000] {
+        let (a, b) = (at(0.0, t), at(1.0, t));
+        assert!((a.x - b.x).abs() < 1e-3 && (a.y - b.y).abs() < 1e-3);
+    }
+}
+
+#[test]
+fn simplification_keeps_corners_and_drops_straight_runs() {
+    let mut samples: Vec<PathSample> = (0..=10)
+        .map(|i| sample(i * 100_000, i as f32 * 10.0, 0.0))
+        .collect();
+    samples.extend((1..=10).map(|i| sample(1_000_000 + i * 100_000, 100.0, i as f32 * 10.0)));
+    samples[3].y = 0.5;
+    let kept = simplify_path(&samples, 2.0);
+    assert_eq!(
+        kept.iter().map(|s| s.t_us).collect::<Vec<_>>(),
+        vec![0, 1_000_000, 2_000_000]
+    );
+    assert_eq!(simplify_path(&samples[..2], 2.0).len(), 2);
 }

@@ -248,5 +248,13 @@
   "easingOut": "Desacelerar",
   "easingInOut": "Suave",
   "easingSpring": "Mola",
-  "deleteKeyframe": "Excluir quadro-chave"
+  "deleteKeyframe": "Excluir quadro-chave",
+  "path": "Trajetória",
+  "recordHalfSpeed": "Gravar a 0,5×",
+  "recordFullSpeed": "Gravar a 1×",
+  "dragToRecord": "Arraste o elemento na prévia",
+  "smoothing": "Suavização",
+  "orientToPath": "Girar com a trajetória",
+  "fitPath": "Esticar por toda a duração",
+  "clearPath": "Apagar trajetória"
 }

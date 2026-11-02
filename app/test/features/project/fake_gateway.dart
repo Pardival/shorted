@@ -255,6 +255,7 @@ class FakeGateway implements ProjectGateway {
   Future<ProjectView> addShape(ShapeKindView shape, int atUs) {
     opened!.overlays.add(
       OverlayView(
+        path: null,
         keyframes: const [],
         animIn: null,
         animLoop: null,
@@ -284,6 +285,7 @@ class FakeGateway implements ProjectGateway {
   Future<ProjectView> addText(String content, int atUs) {
     opened!.overlays.add(
       OverlayView(
+        path: null,
         keyframes: const [],
         animIn: null,
         animLoop: null,
@@ -335,6 +337,7 @@ class FakeGateway implements ProjectGateway {
       animLoop: old.animLoop,
       animOut: old.animOut,
       keyframes: old.keyframes,
+      path: old.path,
     );
     return _overlay(
       'set $id ${text.content.replaceAll('\n', '|')} ${text.font} '
@@ -395,6 +398,35 @@ class FakeGateway implements ProjectGateway {
     int timeUs,
     EasingView easing,
   ) => _overlay('ease $id $timeUs ${easing.name}');
+
+  @override
+  Future<ProjectView> setRecordedPath(String id, List<PathPointView> samples) =>
+      _overlay('record $id ${samples.length}');
+
+  @override
+  Future<ProjectView> setPathOptions(
+    String id, {
+    required double smoothing,
+    required bool orientToPath,
+  }) => _overlay('path $id ${smoothing.toStringAsFixed(1)} $orientToPath');
+
+  @override
+  Future<ProjectView> movePathPoint(String id, int index, double x, double y) =>
+      _overlay('point $id $index ${x.round()} ${y.round()}');
+
+  @override
+  Future<ProjectView> deletePathPoint(String id, int index) =>
+      _overlay('unpoint $id $index');
+
+  @override
+  Future<ProjectView> stretchPath(String id, int lengthUs) =>
+      _overlay('stretch $id $lengthUs');
+
+  @override
+  Future<ProjectView> clearPath(String id) => _overlay('clear $id');
+
+  @override
+  List<PathPointView> pathCurve(String id) => const [];
 
   @override
   PresetSampleView presetSample(
@@ -467,6 +499,7 @@ class FakeGateway implements ProjectGateway {
   }) {
     opened!.overlays.add(
       OverlayView(
+        path: null,
         keyframes: const [],
         animIn: null,
         animLoop: null,

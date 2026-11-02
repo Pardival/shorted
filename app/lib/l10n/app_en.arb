@@ -360,5 +360,13 @@
   "easingOut": "Ease out",
   "easingInOut": "Ease in and out",
   "easingSpring": "Spring",
-  "deleteKeyframe": "Delete keyframe"
+  "deleteKeyframe": "Delete keyframe",
+  "path": "Path",
+  "recordHalfSpeed": "Record at 0.5×",
+  "recordFullSpeed": "Record at 1×",
+  "dragToRecord": "Drag the element on the preview",
+  "smoothing": "Smoothing",
+  "orientToPath": "Turn along the path",
+  "fitPath": "Stretch over the element",
+  "clearPath": "Clear path"
 }

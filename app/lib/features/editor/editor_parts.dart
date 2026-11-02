@@ -15,6 +15,7 @@ import '../captions/captions_panel.dart';
 import '../clips/clips_panel.dart';
 import '../enhance/animate_sheet.dart';
 import '../enhance/enhance_panel.dart';
+import '../enhance/path_bar.dart';
 import '../enhance/overlay_selection.dart';
 import '../export/export_panel.dart';
 import '../project/project_dialogs.dart';
@@ -622,6 +623,13 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
                 ),
         ),
         ShortedIconButton(
+          icon: Icons.gesture,
+          tooltip: l10n.path,
+          onPressed: overlay.locked
+              ? null
+              : () => ref.read(pathEditingProvider.notifier).set(overlay.id),
+        ),
+        ShortedIconButton(
           icon: Icons.flip_to_front,
           tooltip: l10n.bringForward,
           onPressed: () =>
@@ -740,6 +748,7 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
     final selectedOverlay = ref.watch(selectedOverlayProvider);
     final overlay = _overlay(selectedOverlay);
     final picked = ref.watch(selectedKeyframeProvider);
+    final pathEditing = ref.watch(pathEditingProvider);
     KeyframeView? keyframe;
     if (overlay != null && picked?.overlayId == overlay.id) {
       for (final key in overlay.keyframes) {
@@ -795,6 +804,11 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
                   onPressed: () => setState(() => _range = null),
                 ),
               ],
+            )
+          else if (overlay != null && pathEditing == overlay.id)
+            PathBar(
+              overlay: overlay,
+              run: (action) => _guard(() => _editor.apply(action)),
             )
           else if (overlay != null && keyframe != null)
             _keyframeTools(l10n, overlay, keyframe)

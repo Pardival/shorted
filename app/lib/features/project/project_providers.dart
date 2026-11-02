@@ -75,6 +75,29 @@ final selectedKeyframeProvider =
       ({String overlayId, int timeUs})?
     >(SelectedKeyframe.new);
 
+/// The element whose recorded path is shown and edited on the preview (T-0708).
+class PathEditing extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void set(String? id) => state = id;
+}
+
+final pathEditingProvider = NotifierProvider.autoDispose<PathEditing, String?>(
+  PathEditing.new,
+);
+
+/// Set while a path recording waits for the finger: the playback speed.
+class RecordingPath extends Notifier<double?> {
+  @override
+  double? build() => null;
+
+  void set(double? rate) => state = rate;
+}
+
+final recordingPathProvider =
+    NotifierProvider.autoDispose<RecordingPath, double?>(RecordingPath.new);
+
 /// The overlay selected on the preview or the Widgets track.
 class SelectedOverlay extends Notifier<String?> {
   @override

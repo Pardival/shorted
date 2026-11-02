@@ -85,6 +85,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   double dco_decode_box_autoadd_f_32(dynamic raw);
 
   @protected
+  PathView dco_decode_box_autoadd_path_view(dynamic raw);
+
+  @protected
   PictureView dco_decode_box_autoadd_picture_view(dynamic raw);
 
   @protected
@@ -199,6 +202,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<OverlayView> dco_decode_list_overlay_view(dynamic raw);
 
   @protected
+  List<PathPointView> dco_decode_list_path_point_view(dynamic raw);
+
+  @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
   @protected
@@ -244,6 +250,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   double? dco_decode_opt_box_autoadd_f_32(dynamic raw);
 
   @protected
+  PathView? dco_decode_opt_box_autoadd_path_view(dynamic raw);
+
+  @protected
   PictureView? dco_decode_opt_box_autoadd_picture_view(dynamic raw);
 
   @protected
@@ -274,6 +283,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   OverlayView dco_decode_overlay_view(dynamic raw);
+
+  @protected
+  PathPointView dco_decode_path_point_view(dynamic raw);
+
+  @protected
+  PathView dco_decode_path_view(dynamic raw);
 
   @protected
   PictureView dco_decode_picture_view(dynamic raw);
@@ -404,6 +419,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   double sse_decode_box_autoadd_f_32(SseDeserializer deserializer);
+
+  @protected
+  PathView sse_decode_box_autoadd_path_view(SseDeserializer deserializer);
 
   @protected
   PictureView sse_decode_box_autoadd_picture_view(SseDeserializer deserializer);
@@ -554,6 +572,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<OverlayView> sse_decode_list_overlay_view(SseDeserializer deserializer);
 
   @protected
+  List<PathPointView> sse_decode_list_path_point_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
 
   @protected
@@ -607,6 +630,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   double? sse_decode_opt_box_autoadd_f_32(SseDeserializer deserializer);
 
   @protected
+  PathView? sse_decode_opt_box_autoadd_path_view(SseDeserializer deserializer);
+
+  @protected
   PictureView? sse_decode_opt_box_autoadd_picture_view(
     SseDeserializer deserializer,
   );
@@ -649,6 +675,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   OverlayView sse_decode_overlay_view(SseDeserializer deserializer);
+
+  @protected
+  PathPointView sse_decode_path_point_view(SseDeserializer deserializer);
+
+  @protected
+  PathView sse_decode_path_view(SseDeserializer deserializer);
 
   @protected
   PictureView sse_decode_picture_view(SseDeserializer deserializer);
@@ -797,6 +829,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_box_autoadd_f_32(double self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_path_view(
+    PathView self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_box_autoadd_picture_view(
@@ -982,6 +1020,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_path_point_view(
+    List<PathPointView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_prim_u_8_strict(
     Uint8List self,
     SseSerializer serializer,
@@ -1048,6 +1092,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_opt_box_autoadd_f_32(double? self, SseSerializer serializer);
 
   @protected
+  void sse_encode_opt_box_autoadd_path_view(
+    PathView? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_box_autoadd_picture_view(
     PictureView? self,
     SseSerializer serializer,
@@ -1103,6 +1153,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_overlay_view(OverlayView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_path_point_view(PathPointView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_path_view(PathView self, SseSerializer serializer);
 
   @protected
   void sse_encode_picture_view(PictureView self, SseSerializer serializer);

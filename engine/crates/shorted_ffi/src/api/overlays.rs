@@ -4,6 +4,7 @@
 use shorted_core::command::{AnimSlot, Command};
 use shorted_core::evaluate::{
     evaluate, keyframe_times, keys_for, path_position_at, preset_modifier, property_value,
+    simplify_path,
 };
 use shorted_core::model::*;
 use shorted_render::captions::parse_color;
@@ -249,6 +250,21 @@ pub struct KeyframeView {
     pub easing: EasingView,
 }
 
+/// A point of a recorded path: timeline time, canvas units.
+#[derive(Clone, Copy)]
+pub struct PathPointView {
+    pub time_us: i64,
+    pub x: f32,
+    pub y: f32,
+}
+
+#[derive(Clone)]
+pub struct PathView {
+    pub points: Vec<PathPointView>,
+    pub smoothing: f32,
+    pub orient_to_path: bool,
+}
+
 /// One element, bottom first in `ProjectView::overlays`.
 pub struct OverlayView {
     pub id: String,
@@ -265,6 +281,7 @@ pub struct OverlayView {
     pub anim_loop: Option<PresetView>,
     pub anim_out: Option<PresetView>,
     pub keyframes: Vec<KeyframeView>,
+    pub path: Option<PathView>,
 }
 
 /// An element's own placement, before animation: centre in canvas units, degrees clockwise.
@@ -374,6 +391,19 @@ pub(crate) fn overlay_views(project: &Project) -> Vec<OverlayView> {
                     easing: easing.into(),
                 })
                 .collect(),
+            path: item.path.as_ref().map(|path| PathView {
+                points: path
+                    .samples
+                    .iter()
+                    .map(|sample| PathPointView {
+                        time_us: item.start_us + sample.t_us,
+                        x: sample.x,
+                        y: sample.y,
+                    })
+                    .collect(),
+                smoothing: path.smoothing,
+                orient_to_path: path.orient_to_path,
+            }),
         })
         .collect()
 }
@@ -796,6 +826,173 @@ pub async fn set_keyframe_easing(
     })
 }
 
+/// How far a recorded sample may stray from the kept line before it is kept, in canvas units.
+const PATH_TOLERANCE: f32 = 3.0;
+const DEFAULT_SMOOTHING: f32 = 0.6;
+/// Steps per second when the curve is drawn on the preview.
+const CURVE_STEPS_PER_SECOND: i64 = 60;
+const MAX_CURVE_POINTS: i64 = 2_000;
+
+fn edit_path(
+    id: String,
+    change: impl FnOnce(&OverlayItem, &mut MotionPath) -> Result<(), EngineError> + Send + 'static,
+) -> Result<ProjectView, EngineFailure> {
+    edit(move |project| {
+        let item = find(project, parse(&id)?)?;
+        let mut path = item
+            .path
+            .clone()
+            .ok_or_else(|| EngineError::Internal("no path".into()))?;
+        change(item, &mut path)?;
+        Ok(Command::SetMotionPath {
+            id: item.id,
+            path: Some(path),
+        })
+    })
+}
+
+/// Stores what a finger drew during playback: timeline times, canvas units. The samples are
+/// simplified, then smoothed when drawn. One undo step.
+pub async fn set_recorded_path(
+    id: String,
+    samples: Vec<PathPointView>,
+) -> Result<ProjectView, EngineFailure> {
+    edit(move |project| {
+        let item = find(project, parse(&id)?)?;
+        let length = item.end_us - item.start_us;
+        let mut recorded: Vec<PathSample> = samples
+            .iter()
+            .map(|point| PathSample {
+                t_us: (point.time_us - item.start_us).clamp(0, length),
+                x: point.x,
+                y: point.y,
+            })
+            .collect();
+        recorded.sort_by_key(|sample| sample.t_us);
+        recorded.dedup_by_key(|sample| sample.t_us);
+        if recorded.len() < 2 {
+            return Err(EngineError::Internal("a path needs two points".into()));
+        }
+        Ok(Command::SetMotionPath {
+            id: item.id,
+            path: Some(MotionPath {
+                samples: simplify_path(&recorded, PATH_TOLERANCE),
+                smoothing: DEFAULT_SMOOTHING,
+                orient_to_path: item.path.as_ref().is_some_and(|p| p.orient_to_path),
+            }),
+        })
+    })
+}
+
+pub async fn set_path_options(
+    id: String,
+    smoothing: f32,
+    orient_to_path: bool,
+) -> Result<ProjectView, EngineFailure> {
+    edit_path(id, move |_, path| {
+        path.smoothing = smoothing.clamp(0.0, 1.0);
+        path.orient_to_path = orient_to_path;
+        Ok(())
+    })
+}
+
+pub async fn move_path_point(
+    id: String,
+    index: u32,
+    x: f32,
+    y: f32,
+) -> Result<ProjectView, EngineFailure> {
+    edit_path(id, move |_, path| {
+        let point = path
+            .samples
+            .get_mut(index as usize)
+            .ok_or_else(|| EngineError::Internal("no such point".into()))?;
+        point.x = x;
+        point.y = y;
+        Ok(())
+    })
+}
+
+/// Removes a point; a path keeps at least two.
+pub async fn delete_path_point(id: String, index: u32) -> Result<ProjectView, EngineFailure> {
+    edit_path(id, move |_, path| {
+        let index = index as usize;
+        if path.samples.len() <= 2 || index >= path.samples.len() {
+            return Err(EngineError::Internal("a path keeps two points".into()));
+        }
+        path.samples.remove(index);
+        Ok(())
+    })
+}
+
+/// Re-times the path by stretching it to last `length_us` from its first point, kept inside
+/// the element.
+pub async fn stretch_path(id: String, length_us: i64) -> Result<ProjectView, EngineFailure> {
+    edit_path(id, move |item, path| {
+        let (Some(first), Some(last)) = (path.samples.first(), path.samples.last()) else {
+            return Ok(());
+        };
+        let (start, span) = (first.t_us, last.t_us - first.t_us);
+        if span <= 0 {
+            return Ok(());
+        }
+        let room = item.end_us - item.start_us - start;
+        let target = length_us.clamp(MIN_LENGTH_US, room.max(MIN_LENGTH_US));
+        for sample in &mut path.samples {
+            sample.t_us =
+                start + ((sample.t_us - start) as f64 * target as f64 / span as f64).round() as i64;
+        }
+        Ok(())
+    })
+}
+
+pub async fn clear_path(id: String) -> Result<ProjectView, EngineFailure> {
+    edit(move |project| {
+        let item = find(project, parse(&id)?)?;
+        Ok(Command::SetMotionPath {
+            id: item.id,
+            path: None,
+        })
+    })
+}
+
+/// The smoothed curve the element follows, for drawing on the preview: canvas units.
+#[flutter_rust_bridge::frb(sync)]
+pub fn path_curve(id: String) -> Vec<PathPointView> {
+    let Ok(id) = parse(&id) else {
+        return Vec::new();
+    };
+    let Some(project) = transport().project.clone() else {
+        return Vec::new();
+    };
+    let Some(item) = project.timeline.overlays.iter().find(|item| item.id == id) else {
+        return Vec::new();
+    };
+    curve(item)
+}
+
+fn curve(item: &OverlayItem) -> Vec<PathPointView> {
+    let Some(path) = &item.path else {
+        return Vec::new();
+    };
+    let (Some(first), Some(last)) = (path.samples.first(), path.samples.last()) else {
+        return Vec::new();
+    };
+    let span = last.t_us - first.t_us;
+    let steps = (span * CURVE_STEPS_PER_SECOND / 1_000_000).clamp(1, MAX_CURVE_POINTS);
+    (0..=steps)
+        .filter_map(|step| {
+            let local = first.t_us + span * step / steps;
+            let point = path_position_at(path, local)?;
+            Some(PathPointView {
+                time_us: item.start_us + local,
+                x: point.x,
+                y: point.y,
+            })
+        })
+        .collect()
+}
+
 /// A copy just above the original, a little down and to the right.
 pub async fn duplicate_overlay(id: String) -> Result<ProjectView, EngineFailure> {
     edit(move |project| {
@@ -960,5 +1157,41 @@ mod tests {
         let start = own_transform(&project.timeline.overlays[0], 0).position;
         let shown = evaluate(&project, 0).overlays[0].position;
         assert_eq!((shown.x, shown.y), (start.x, start.y));
+    }
+
+    #[test]
+    fn the_drawn_curve_starts_and_ends_on_the_path() {
+        let (mut project, _) = project_with(OverlayKind::Shape {
+            shape: ShapeKind::Rectangle,
+            fill: DEFAULT_FILL.into(),
+        });
+        let item = &mut project.timeline.overlays[0];
+        item.start_us = 1_000_000;
+        item.path = Some(MotionPath {
+            samples: vec![
+                PathSample {
+                    t_us: 0,
+                    x: 0.0,
+                    y: 0.0,
+                },
+                PathSample {
+                    t_us: 500_000,
+                    x: 100.0,
+                    y: 0.0,
+                },
+                PathSample {
+                    t_us: 1_000_000,
+                    x: 100.0,
+                    y: 100.0,
+                },
+            ],
+            smoothing: 1.0,
+            orient_to_path: false,
+        });
+        let drawn = curve(item);
+        assert_eq!(drawn.len(), 61);
+        assert_eq!(drawn[0].time_us, 1_000_000);
+        let end = drawn.last().unwrap();
+        assert_eq!((end.x, end.y, end.time_us), (100.0, 100.0, 2_000_000));
     }
 }

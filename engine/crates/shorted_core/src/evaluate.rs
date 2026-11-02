@@ -232,27 +232,119 @@ pub fn path_position_at(path: &MotionPath, t: i64) -> Option<Vec2> {
     path_position(path, t).map(|(point, _)| point)
 }
 
-/// Position along a recorded path. Smoothing is applied by T-0708.
+/// Position along a recorded path, and its heading in degrees. Between two samples the way is
+/// straight at smoothing 0 and a Catmull-Rom curve through the neighbours at 1 (T-0708).
 pub(crate) fn path_position(path: &MotionPath, t: i64) -> Option<(Vec2, f32)> {
-    let samples = &path.samples;
-    let first = samples.first()?;
-    let next = samples.partition_point(|s| s.t_us <= t);
-    let point = |s: &PathSample| Vec2 { x: s.x, y: s.y };
-    let (from, to) = match next {
-        0 => (first, samples.get(1).unwrap_or(first)),
-        n if n == samples.len() => (
-            samples.get(n.saturating_sub(2)).unwrap_or(first),
-            &samples[n - 1],
-        ),
-        n => (&samples[n - 1], &samples[n]),
-    };
-    let position = lerp_vec(
-        point(from),
-        point(to),
-        fraction(t, from.t_us, to.t_us).clamp(0.0, 1.0),
+    const HEADING_STEP_US: i64 = 1_000;
+    let point = path_point(path, t)?;
+    let (before, after) = (
+        path_point(path, t - HEADING_STEP_US)?,
+        path_point(path, t + HEADING_STEP_US)?,
     );
-    let heading = (to.y - from.y).atan2(to.x - from.x).to_degrees();
-    Some((position, heading))
+    let heading = if before == after {
+        segment_heading(path, t)
+    } else {
+        (after.y - before.y).atan2(after.x - before.x).to_degrees()
+    };
+    Some((point, heading))
+}
+
+/// The direction of the straight segment at `t`, for the ends where the curve stops moving.
+fn segment_heading(path: &MotionPath, t: i64) -> f32 {
+    let samples = &path.samples;
+    let Some((from, to)) = segment(samples, t) else {
+        return 0.0;
+    };
+    let (from, to) = (&samples[from], &samples[to]);
+    (to.y - from.y).atan2(to.x - from.x).to_degrees()
+}
+
+/// The two samples around `t`: the first two before the path, the last two after it.
+fn segment(samples: &[PathSample], t: i64) -> Option<(usize, usize)> {
+    let count = samples.len();
+    if count == 0 {
+        return None;
+    }
+    if count == 1 {
+        return Some((0, 0));
+    }
+    let next = samples.partition_point(|s| s.t_us <= t);
+    Some(match next {
+        0 => (0, 1),
+        n if n == count => (n - 2, n - 1),
+        n => (n - 1, n),
+    })
+}
+
+fn path_point(path: &MotionPath, t: i64) -> Option<Vec2> {
+    let samples = &path.samples;
+    let (from, to) = segment(samples, t)?;
+    let at = |i: usize| Vec2 {
+        x: samples[i].x,
+        y: samples[i].y,
+    };
+    let progress = fraction(t, samples[from].t_us, samples[to].t_us).clamp(0.0, 1.0);
+    let straight = lerp_vec(at(from), at(to), progress);
+    let smoothing = path.smoothing.clamp(0.0, 1.0);
+    if smoothing == 0.0 || from == to {
+        return Some(straight);
+    }
+    let before = at(from.saturating_sub(1));
+    let after = at((to + 1).min(samples.len() - 1));
+    let curve = catmull_rom(before, at(from), at(to), after, progress);
+    Some(lerp_vec(straight, curve, smoothing))
+}
+
+fn catmull_rom(p0: Vec2, p1: Vec2, p2: Vec2, p3: Vec2, t: f32) -> Vec2 {
+    let (t2, t3) = (t * t, t * t * t);
+    let axis = |a: f32, b: f32, c: f32, d: f32| {
+        0.5 * (2.0 * b
+            + (c - a) * t
+            + (2.0 * a - 5.0 * b + 4.0 * c - d) * t2
+            + (3.0 * b - a - 3.0 * c + d) * t3)
+    };
+    Vec2 {
+        x: axis(p0.x, p1.x, p2.x, p3.x),
+        y: axis(p0.y, p1.y, p2.y, p3.y),
+    }
+}
+
+/// Drops samples that lie within `tolerance` canvas units of the line between their neighbours
+/// (Ramer-Douglas-Peucker), keeping the first and last. Timing stays with the kept samples.
+pub fn simplify_path(samples: &[PathSample], tolerance: f32) -> Vec<PathSample> {
+    if samples.len() < 3 {
+        return samples.to_vec();
+    }
+    let mut keep = vec![false; samples.len()];
+    keep[0] = true;
+    keep[samples.len() - 1] = true;
+    let mut spans = vec![(0, samples.len() - 1)];
+    while let Some((first, last)) = spans.pop() {
+        let (a, b) = (&samples[first], &samples[last]);
+        let (dx, dy) = (b.x - a.x, b.y - a.y);
+        let length = dx.hypot(dy);
+        let mut farthest = (0.0, first);
+        for (index, sample) in samples.iter().enumerate().take(last).skip(first + 1) {
+            let distance = if length == 0.0 {
+                (sample.x - a.x).hypot(sample.y - a.y)
+            } else {
+                ((sample.x - a.x) * dy - (sample.y - a.y) * dx).abs() / length
+            };
+            if distance > farthest.0 {
+                farthest = (distance, index);
+            }
+        }
+        if farthest.0 > tolerance {
+            keep[farthest.1] = true;
+            spans.push((first, farthest.1));
+            spans.push((farthest.1, last));
+        }
+    }
+    samples
+        .iter()
+        .zip(keep)
+        .filter_map(|(sample, kept)| kept.then_some(*sample))
+        .collect()
 }
 
 /// Relative changes a preset makes; they compose with paths and keyframes (docs/06 §3).

@@ -12,6 +12,10 @@ void previewSeek({required PlatformInt64 timeUs}) =>
 
 void previewPlay() => RustLib.instance.api.crateApiPreviewPreviewPlay();
 
+/// Plays slower or faster, silent unless `rate` is 1: for recording a path (T-0708).
+void previewPlayAt({required double rate}) =>
+    RustLib.instance.api.crateApiPreviewPreviewPlayAt(rate: rate);
+
 void previewPause() => RustLib.instance.api.crateApiPreviewPreviewPause();
 
 PlatformInt64 previewPositionUs() =>

@@ -171,6 +171,20 @@ abstract interface class ProjectGateway {
     int timeUs,
     overlays.EasingView easing,
   );
+  Future<ProjectView> setRecordedPath(
+    String id,
+    List<overlays.PathPointView> samples,
+  );
+  Future<ProjectView> setPathOptions(
+    String id, {
+    required double smoothing,
+    required bool orientToPath,
+  });
+  Future<ProjectView> movePathPoint(String id, int index, double x, double y);
+  Future<ProjectView> deletePathPoint(String id, int index);
+  Future<ProjectView> stretchPath(String id, int lengthUs);
+  Future<ProjectView> clearPath(String id);
+  List<overlays.PathPointView> pathCurve(String id);
   overlays.PresetSampleView presetSample(
     overlays.PresetKindView kind,
     overlays.AnimSlotView slot,
@@ -511,6 +525,42 @@ class EngineGateway implements ProjectGateway {
     int timeUs,
     overlays.EasingView easing,
   ) => overlays.setKeyframeEasing(id: id, timeUs: timeUs, easing: easing);
+
+  @override
+  Future<ProjectView> setRecordedPath(
+    String id,
+    List<overlays.PathPointView> samples,
+  ) => overlays.setRecordedPath(id: id, samples: samples);
+
+  @override
+  Future<ProjectView> setPathOptions(
+    String id, {
+    required double smoothing,
+    required bool orientToPath,
+  }) => overlays.setPathOptions(
+    id: id,
+    smoothing: smoothing,
+    orientToPath: orientToPath,
+  );
+
+  @override
+  Future<ProjectView> movePathPoint(String id, int index, double x, double y) =>
+      overlays.movePathPoint(id: id, index: index, x: x, y: y);
+
+  @override
+  Future<ProjectView> deletePathPoint(String id, int index) =>
+      overlays.deletePathPoint(id: id, index: index);
+
+  @override
+  Future<ProjectView> stretchPath(String id, int lengthUs) =>
+      overlays.stretchPath(id: id, lengthUs: lengthUs);
+
+  @override
+  Future<ProjectView> clearPath(String id) => overlays.clearPath(id: id);
+
+  @override
+  List<overlays.PathPointView> pathCurve(String id) =>
+      overlays.pathCurve(id: id);
 
   @override
   overlays.PresetSampleView presetSample(

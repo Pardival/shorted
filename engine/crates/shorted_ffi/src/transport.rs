@@ -18,6 +18,8 @@ pub(crate) struct Transport {
     playing_since: Option<Instant>,
     /// Frames the sound output has played since `play`. It paces the video when present.
     pub audio_frames: Option<Arc<AtomicU64>>,
+    /// Playback speed. Anything but 1 runs silent, on the system clock (recording a path).
+    pub rate: f32,
 }
 
 static TRANSPORT: Mutex<Transport> = Mutex::new(Transport {
@@ -28,6 +30,7 @@ static TRANSPORT: Mutex<Transport> = Mutex::new(Transport {
     generation: 0,
     playing_since: None,
     audio_frames: None,
+    rate: 1.0,
 });
 
 pub(crate) fn transport() -> MutexGuard<'static, Transport> {
@@ -41,17 +44,21 @@ impl Transport {
             .map_or(0, |project| project.duration_us())
     }
 
-    /// Without audio yet, the clock is the system's. T-0403 moves it to the audio output.
-    pub fn position_us(&mut self) -> i64 {
-        let duration = self.duration_us();
-        let elapsed = self
-            .playing_since
+    /// Time played since the last start: the sound output's frames when it runs at normal
+    /// speed, else the system clock scaled by the rate.
+    fn elapsed_us(&self) -> i64 {
+        self.playing_since
             .map_or(0, |since| match &self.audio_frames {
-                Some(frames) => {
+                Some(frames) if self.rate == 1.0 => {
                     frames.load(Ordering::Relaxed) as i64 * 1_000_000 / i64::from(SAMPLE_RATE)
                 }
-                None => since.elapsed().as_micros() as i64,
-            });
+                _ => (since.elapsed().as_micros() as f64 * f64::from(self.rate)) as i64,
+            })
+    }
+
+    pub fn position_us(&mut self) -> i64 {
+        let duration = self.duration_us();
+        let elapsed = self.elapsed_us();
         let position = self.position_us + elapsed;
         if position >= duration && self.playing_since.is_some() {
             self.playing_since = None;
@@ -74,9 +81,15 @@ impl Transport {
     }
 
     pub fn play(&mut self) {
+        self.play_at(1.0);
+    }
+
+    /// Plays at `rate` times normal speed; sound only plays at 1.
+    pub fn play_at(&mut self, rate: f32) {
         if self.playing() {
             return;
         }
+        self.rate = rate.clamp(0.1, 4.0);
         // Playing from the very end starts over.
         if self.position_us() >= self.duration_us() {
             self.position_us = 0;
@@ -198,6 +211,7 @@ mod tests {
             generation: 0,
             playing_since: None,
             audio_frames: Some(frames.clone()),
+            rate: 1.0,
         };
         state.play();
         frames.store(24_000, super::Ordering::Relaxed);
@@ -229,6 +243,7 @@ mod tests {
             generation: 0,
             playing_since: None,
             audio_frames: None,
+            rate: 1.0,
         };
         state.set_position(-5);
         assert_eq!(state.position_us(), 0);
@@ -255,8 +270,31 @@ mod tests {
             generation: 0,
             playing_since: None,
             audio_frames: None,
+            rate: 1.0,
         };
         state.set_position(1_000);
         assert_eq!(state.position_us(), 0);
+    }
+
+    #[test]
+    fn half_speed_runs_on_the_system_clock_at_half_the_pace() {
+        let mut state = super::Transport {
+            project: None,
+            folder: PathBuf::new(),
+            revision: 0,
+            position_us: 0,
+            generation: 0,
+            playing_since: None,
+            audio_frames: Some(super::Arc::new(super::AtomicU64::new(0))),
+            rate: 1.0,
+        };
+        state.play_at(0.5);
+        state.playing_since =
+            Some(std::time::Instant::now() - std::time::Duration::from_millis(400));
+        let elapsed = state.elapsed_us();
+        assert!((190_000..300_000).contains(&elapsed), "{elapsed}");
+        state.pause();
+        state.play();
+        assert_eq!(state.rate, 1.0);
     }
 }

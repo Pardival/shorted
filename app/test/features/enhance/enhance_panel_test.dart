@@ -108,6 +108,7 @@ void main() {
       ];
     project.overlays.add(
       OverlayView(
+        path: null,
         keyframes: const [],
         animIn: null,
         animLoop: null,

@@ -14,8 +14,8 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'projects.dart';
 import 'transcribe.dart';
 
-// These functions are ignored because they are not marked as `pub`: `boxes`, `find`, `keys_at`, `natural_size`, `new_overlay`, `overlay_views`, `own_transform`, `preset_view`, `text_look`, `text_view`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`
+// These functions are ignored because they are not marked as `pub`: `boxes`, `curve`, `edit_path`, `find`, `keys_at`, `natural_size`, `new_overlay`, `overlay_views`, `own_transform`, `preset_view`, `text_look`, `text_view`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`
 
 /// The elements on screen at `time_us`, as the renderer places them, top first.
 List<OverlayBoxView> overlayBoxes({required PlatformInt64 timeUs}) =>
@@ -173,6 +173,59 @@ Future<ProjectView> setKeyframeEasing({
   easing: easing,
 );
 
+/// Stores what a finger drew during playback: timeline times, canvas units. The samples are
+/// simplified, then smoothed when drawn. One undo step.
+Future<ProjectView> setRecordedPath({
+  required String id,
+  required List<PathPointView> samples,
+}) => RustLib.instance.api.crateApiOverlaysSetRecordedPath(
+  id: id,
+  samples: samples,
+);
+
+Future<ProjectView> setPathOptions({
+  required String id,
+  required double smoothing,
+  required bool orientToPath,
+}) => RustLib.instance.api.crateApiOverlaysSetPathOptions(
+  id: id,
+  smoothing: smoothing,
+  orientToPath: orientToPath,
+);
+
+Future<ProjectView> movePathPoint({
+  required String id,
+  required int index,
+  required double x,
+  required double y,
+}) => RustLib.instance.api.crateApiOverlaysMovePathPoint(
+  id: id,
+  index: index,
+  x: x,
+  y: y,
+);
+
+/// Removes a point; a path keeps at least two.
+Future<ProjectView> deletePathPoint({required String id, required int index}) =>
+    RustLib.instance.api.crateApiOverlaysDeletePathPoint(id: id, index: index);
+
+/// Re-times the path by stretching it to last `length_us` from its first point, kept inside
+/// the element.
+Future<ProjectView> stretchPath({
+  required String id,
+  required PlatformInt64 lengthUs,
+}) => RustLib.instance.api.crateApiOverlaysStretchPath(
+  id: id,
+  lengthUs: lengthUs,
+);
+
+Future<ProjectView> clearPath({required String id}) =>
+    RustLib.instance.api.crateApiOverlaysClearPath(id: id);
+
+/// The smoothed curve the element follows, for drawing on the preview: canvas units.
+List<PathPointView> pathCurve({required String id}) =>
+    RustLib.instance.api.crateApiOverlaysPathCurve(id: id);
+
 /// A copy just above the original, a little down and to the right.
 Future<ProjectView> duplicateOverlay({required String id}) =>
     RustLib.instance.api.crateApiOverlaysDuplicateOverlay(id: id);
@@ -264,6 +317,7 @@ class OverlayView {
   final PresetView? animLoop;
   final PresetView? animOut;
   final List<KeyframeView> keyframes;
+  final PathView? path;
 
   const OverlayView({
     required this.id,
@@ -279,6 +333,7 @@ class OverlayView {
     this.animLoop,
     this.animOut,
     required this.keyframes,
+    this.path,
   });
 
   @override
@@ -295,7 +350,8 @@ class OverlayView {
       animIn.hashCode ^
       animLoop.hashCode ^
       animOut.hashCode ^
-      keyframes.hashCode;
+      keyframes.hashCode ^
+      path.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -314,7 +370,54 @@ class OverlayView {
           animIn == other.animIn &&
           animLoop == other.animLoop &&
           animOut == other.animOut &&
-          keyframes == other.keyframes;
+          keyframes == other.keyframes &&
+          path == other.path;
+}
+
+/// A point of a recorded path: timeline time, canvas units.
+class PathPointView {
+  final PlatformInt64 timeUs;
+  final double x;
+  final double y;
+
+  const PathPointView({required this.timeUs, required this.x, required this.y});
+
+  @override
+  int get hashCode => timeUs.hashCode ^ x.hashCode ^ y.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PathPointView &&
+          runtimeType == other.runtimeType &&
+          timeUs == other.timeUs &&
+          x == other.x &&
+          y == other.y;
+}
+
+class PathView {
+  final List<PathPointView> points;
+  final double smoothing;
+  final bool orientToPath;
+
+  const PathView({
+    required this.points,
+    required this.smoothing,
+    required this.orientToPath,
+  });
+
+  @override
+  int get hashCode =>
+      points.hashCode ^ smoothing.hashCode ^ orientToPath.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PathView &&
+          runtimeType == other.runtimeType &&
+          points == other.points &&
+          smoothing == other.smoothing &&
+          orientToPath == other.orientToPath;
 }
 
 /// The presets of FR-ENH-20.
