@@ -304,5 +304,12 @@
   "aiUnavailable": "El proveedor tiene problemas. Inténtalo más tarde.",
   "aiUnreachable": "Sin respuesta. Comprueba tu conexión y la dirección del servidor.",
   "aiNotConfigured": "Elige primero un proveedor y añade su clave.",
-  "aiKeyStorage": "Este dispositivo aún no tiene un lugar seguro para la clave, así que no se guardó."
+  "aiKeyStorage": "Este dispositivo aún no tiene un lugar seguro para la clave, así que no se guardó.",
+  "arrangeWithAi": "Montar con IA",
+  "aiConsentTitle": "¿Enviar a la IA?",
+  "aiConsentWhat": "Solo las palabras dichas y los tiempos de tus clips. Sin vídeo, sin sonido, sin nombres de archivo. Esto es exactamente lo que se envía:",
+  "aiConsentRemember": "Recordar para este proyecto",
+  "aiConsentSend": "Enviar",
+  "aiFellBack": "El plan de la IA no se pudo usar, así que se muestra el local.",
+  "aiConsentTo": "A {provider}, modelo {model}."
 }

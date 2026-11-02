@@ -16,7 +16,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'projects.dart';
 import 'transcribe.dart';
 
-// These functions are ignored because they are not marked as `pub`: `before`, `restore_command`
+// These functions are ignored because they are not marked as `pub`: `before`, `consents`, `restore_command`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `eq`
 
 /// Analyses the open project in the background; the plan then waits for review (T-0803).
@@ -35,6 +35,67 @@ Future<ArrangeReviewView> applyArrangement() =>
 /// itself one edit, which Undo takes back.
 Future<ProjectView> undoArrangement() =>
     RustLib.instance.api.crateApiArrangeUndoArrangement();
+
+/// Builds the AI request for the open project, without sending it.
+Future<AiPayloadView> prepareAiArrangement({
+  required String root,
+  required String language,
+}) => RustLib.instance.api.crateApiArrangePrepareAiArrangement(
+  root: root,
+  language: language,
+);
+
+/// Sends exactly the request the user saw; the plan then waits for review like a local one.
+Stream<TaskEvent> sendAiArrangement() =>
+    RustLib.instance.api.crateApiArrangeSendAiArrangement();
+
+/// True when the AI's plan stayed invalid and the local plan stands in.
+bool aiArrangementFellBack() =>
+    RustLib.instance.api.crateApiArrangeAiArrangementFellBack();
+
+/// Whether the user ticked "Remember for this project" before.
+bool aiConsentRemembered({required String root, required String projectId}) =>
+    RustLib.instance.api.crateApiArrangeAiConsentRemembered(
+      root: root,
+      projectId: projectId,
+    );
+
+Future<void> rememberAiConsent({
+  required String root,
+  required String projectId,
+}) => RustLib.instance.api.crateApiArrangeRememberAiConsent(
+  root: root,
+  projectId: projectId,
+);
+
+/// What the consent sheet shows: who receives the request, and its exact body (docs/07 §4).
+class AiPayloadView {
+  final String provider;
+  final String model;
+  final String url;
+  final String body;
+
+  const AiPayloadView({
+    required this.provider,
+    required this.model,
+    required this.url,
+    required this.body,
+  });
+
+  @override
+  int get hashCode =>
+      provider.hashCode ^ model.hashCode ^ url.hashCode ^ body.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AiPayloadView &&
+          runtimeType == other.runtimeType &&
+          provider == other.provider &&
+          model == other.model &&
+          url == other.url &&
+          body == other.body;
+}
 
 class ArrangeReviewView {
   final PlatformInt64 beforeUs;

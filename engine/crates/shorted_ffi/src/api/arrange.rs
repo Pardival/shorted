@@ -7,6 +7,10 @@ use shorted_core::command::Command;
 use shorted_core::model::{Id, Project};
 
 use crate::api::projects::{on_command_thread, view_of, with_active, ProjectView};
+use std::path::Path;
+
+use crate::ai_access::{DeviceHttp, SystemKeychain};
+use crate::ai_arrange::{last_outcome, prepare, prepared, run, Outcome};
 use crate::derush::{pending, plan_locally};
 use crate::error::{EngineError, EngineFailure};
 use crate::frb_generated::StreamSink;
@@ -189,4 +193,89 @@ mod tests {
         assert_eq!(project.captions, original.captions);
         assert_eq!(project.title, "Later", "only the arrangement is undone");
     }
+}
+
+/// What the consent sheet shows: who receives the request, and its exact body (docs/07 §4).
+pub struct AiPayloadView {
+    pub provider: String,
+    pub model: String,
+    pub url: String,
+    pub body: String,
+}
+
+/// Builds the AI request for the open project, without sending it.
+pub async fn prepare_ai_arrangement(
+    root: String,
+    language: String,
+) -> Result<AiPayloadView, EngineFailure> {
+    on_command_thread(move || {
+        let project = transport()
+            .project
+            .clone()
+            .ok_or_else(|| EngineError::Internal("no project".into()))?;
+        let ready = prepare(Path::new(&root), &SystemKeychain, &project, &language)?;
+        let view = AiPayloadView {
+            provider: ready.provider.config.kind.id().into(),
+            model: ready.provider.config.model.clone(),
+            url: ready.request.url.clone(),
+            body: ready.request.body.clone().unwrap_or_default(),
+        };
+        *prepared() = Some(ready);
+        Ok(view)
+    })
+}
+
+/// Sends exactly the request the user saw; the plan then waits for review like a local one.
+pub fn send_ai_arrangement(events: StreamSink<TaskEvent>) {
+    let (project, folder) = {
+        let state = transport();
+        (state.project.clone(), state.folder.clone())
+    };
+    let ready = prepared().take();
+    runtime::global()
+        .background
+        .spawn(Priority::Normal, events, move |task| {
+            let ready = ready.ok_or_else(|| EngineError::Internal("nothing prepared".into()))?;
+            let project = project.ok_or_else(|| EngineError::Internal("no project".into()))?;
+            if ready.project != project.id {
+                return Err(EngineError::Internal("another project is open".into()));
+            }
+            let (plan, outcome) = run(&ready, &DeviceHttp, &project, &folder, Some(task))?;
+            *pending() = Some(plan);
+            *last_outcome() = outcome;
+            Ok(())
+        });
+}
+
+/// True when the AI's plan stayed invalid and the local plan stands in.
+#[flutter_rust_bridge::frb(sync)]
+pub fn ai_arrangement_fell_back() -> bool {
+    *last_outcome() == Outcome::Local
+}
+
+const CONSENT_FILE: &str = "ai-consent.json";
+
+fn consents(root: &Path) -> Vec<String> {
+    std::fs::read(root.join(CONSENT_FILE))
+        .ok()
+        .and_then(|bytes| serde_json::from_slice(&bytes).ok())
+        .unwrap_or_default()
+}
+
+/// Whether the user ticked "Remember for this project" before.
+#[flutter_rust_bridge::frb(sync)]
+pub fn ai_consent_remembered(root: String, project_id: String) -> bool {
+    consents(Path::new(&root)).contains(&project_id)
+}
+
+pub fn remember_ai_consent(root: String, project_id: String) -> Result<(), EngineFailure> {
+    let root = Path::new(&root);
+    let mut known = consents(root);
+    if !known.contains(&project_id) {
+        known.push(project_id);
+    }
+    let bytes = serde_json::to_vec(&known)
+        .map_err(|_| EngineError::Internal("consent not written".into()))?;
+    std::fs::write(root.join(CONSENT_FILE), bytes).map_err(EngineError::from)?;
+    Ok(())
 }

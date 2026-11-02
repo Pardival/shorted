@@ -60,6 +60,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String dco_decode_String(dynamic raw);
 
   @protected
+  AiPayloadView dco_decode_ai_payload_view(dynamic raw);
+
+  @protected
   AiProviderView dco_decode_ai_provider_view(dynamic raw);
 
   @protected
@@ -431,6 +434,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   String sse_decode_String(SseDeserializer deserializer);
+
+  @protected
+  AiPayloadView sse_decode_ai_payload_view(SseDeserializer deserializer);
 
   @protected
   AiProviderView sse_decode_ai_provider_view(SseDeserializer deserializer);
@@ -885,6 +891,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_String(String self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_ai_payload_view(AiPayloadView self, SseSerializer serializer);
 
   @protected
   void sse_encode_ai_provider_view(

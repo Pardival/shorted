@@ -14,6 +14,8 @@ import '../../design_system/task_progress.dart';
 import '../../design_system/tokens.g.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../project/project_dialogs.dart';
+import '../settings/ai_settings_section.dart';
+import 'ai_consent.dart';
 import 'arrange_review.dart';
 import '../project/project_providers.dart';
 import '../timeline/timeline_layout.dart';
@@ -67,10 +69,32 @@ class _ClipsPanelState extends ConsumerState<ClipsPanel> {
     super.dispose();
   }
 
-  void _arrange() {
+  void _arrange() =>
+      _follow(ref.read(projectGatewayProvider).analyseForArrange());
+
+  /// AI arrangement (T-0806): the exact request is shown for consent, unless the user asked to
+  /// be asked only once for this project.
+  Future<void> _arrangeWithAi() async {
+    final l10n = AppLocalizations.of(context);
+    final gateway = ref.read(projectGatewayProvider);
+    final language = Localizations.localeOf(context).languageCode;
+    try {
+      final payload = await gateway.prepareAiArrangement(language);
+      if (!mounted) return;
+      if (!gateway.aiConsentRemembered(widget.projectId)) {
+        final consent = await askAiConsent(context, payload);
+        if (!consent.send || !mounted) return;
+        if (consent.remember) await gateway.rememberAiConsent(widget.projectId);
+      }
+      _follow(gateway.sendAiArrangement(), ai: true);
+    } on Object catch (error) {
+      if (mounted) showToast(context, connectionError(l10n, error));
+    }
+  }
+
+  void _follow(Stream<TaskEvent> events, {bool ai = false}) {
     final l10n = AppLocalizations.of(context);
     setState(() => _arranging = 0);
-    final events = ref.read(projectGatewayProvider).analyseForArrange();
     _arrangeEvents = events.listen((event) async {
       if (!mounted) return;
       switch (event) {
@@ -80,12 +104,15 @@ class _ClipsPanelState extends ConsumerState<ClipsPanel> {
           setState(() => _arranging = fraction);
         case TaskEvent_Finished():
           setState(() => _arranging = null);
+          if (ai && ref.read(projectGatewayProvider).aiArrangementFellBack()) {
+            showToast(context, l10n.aiFellBack);
+          }
           await _review();
         case TaskEvent_Cancelled():
           setState(() => _arranging = null);
         case TaskEvent_Failed(:final code):
           setState(() => _arranging = null);
-          showToast(context, errorMessage(l10n, EngineFailure(code: code)));
+          showToast(context, connectionError(l10n, EngineFailure(code: code)));
       }
     });
   }
@@ -203,6 +230,12 @@ class _ClipsPanelState extends ConsumerState<ClipsPanel> {
                       ),
                     },
                   ),
+                  if (_arranging == null)
+                    ShortedIconButton(
+                      icon: Icons.auto_awesome,
+                      tooltip: l10n.arrangeWithAi,
+                      onPressed: _arrangeWithAi,
+                    ),
                 ],
               ),
               if (isDesktop && media.isNotEmpty) ...[

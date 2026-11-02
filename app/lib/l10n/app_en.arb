@@ -481,5 +481,22 @@
   "aiUnavailable": "The provider is having trouble. Try again later.",
   "aiUnreachable": "No answer. Check your connection and the server address.",
   "aiNotConfigured": "Choose a provider and add its key first.",
-  "aiKeyStorage": "This device has no safe place for the key yet, so it was not kept."
+  "aiKeyStorage": "This device has no safe place for the key yet, so it was not kept.",
+  "arrangeWithAi": "Arrange with AI",
+  "aiConsentTitle": "Send to the AI?",
+  "aiConsentWhat": "Only the words spoken and the timings of your clips. No video, no sound, no file names. Here is exactly what is sent:",
+  "aiConsentRemember": "Remember for this project",
+  "aiConsentSend": "Send",
+  "aiFellBack": "The AI's plan could not be used, so the local one is shown.",
+  "aiConsentTo": "To {provider}, model {model}.",
+  "@aiConsentTo": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      },
+      "model": {
+        "type": "String"
+      }
+    }
+  }
 }

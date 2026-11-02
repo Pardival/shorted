@@ -304,5 +304,12 @@
   "aiUnavailable": "Le fournisseur rencontre un problème. Réessayez plus tard.",
   "aiUnreachable": "Pas de réponse. Vérifiez votre connexion et l'adresse du serveur.",
   "aiNotConfigured": "Choisissez d'abord un fournisseur et ajoutez sa clé.",
-  "aiKeyStorage": "Cet appareil n'a pas encore d'endroit sûr pour la clé : elle n'a pas été gardée."
+  "aiKeyStorage": "Cet appareil n'a pas encore d'endroit sûr pour la clé : elle n'a pas été gardée.",
+  "arrangeWithAi": "Monter avec l'IA",
+  "aiConsentTitle": "Envoyer à l'IA ?",
+  "aiConsentWhat": "Seulement les mots prononcés et les durées de vos clips. Pas de vidéo, pas de son, pas de noms de fichiers. Voici exactement ce qui part :",
+  "aiConsentRemember": "Se souvenir pour ce projet",
+  "aiConsentSend": "Envoyer",
+  "aiFellBack": "Le plan de l'IA n'était pas utilisable : voici le plan local.",
+  "aiConsentTo": "À {provider}, modèle {model}."
 }

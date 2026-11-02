@@ -244,6 +244,42 @@ class FakeGateway implements ProjectGateway {
     );
   }
 
+  final consented = <String>{};
+  bool fellBack = false;
+  static const payload =
+      '{"model":"m","messages":[{"role":"user","content":"Clips: c1"}]}';
+
+  @override
+  Future<AiPayloadView> prepareAiArrangement(String language) async {
+    arrangeCalls.add('prepare $language');
+    final code = aiTestFails;
+    if (code != null) throw EngineFailure(code: code);
+    return const AiPayloadView(
+      provider: 'anthropic',
+      model: 'claude-sonnet-5-5',
+      url: 'https://api.anthropic.com/v1/messages',
+      body: payload,
+    );
+  }
+
+  @override
+  Stream<TaskEvent> sendAiArrangement() {
+    arrangeCalls.add('send');
+    final events = StreamController<TaskEvent>();
+    arranging = events;
+    return events.stream;
+  }
+
+  @override
+  bool aiArrangementFellBack() => fellBack;
+
+  @override
+  bool aiConsentRemembered(String projectId) => consented.contains(projectId);
+
+  @override
+  Future<void> rememberAiConsent(String projectId) async =>
+      consented.add(projectId);
+
   @override
   Future<ProjectView> undoArrangement() {
     arrangeCalls.add('undo');

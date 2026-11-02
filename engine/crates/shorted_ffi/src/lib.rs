@@ -3,6 +3,7 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 
 mod ai_access;
+mod ai_arrange;
 pub mod api;
 #[cfg(target_vendor = "apple")]
 mod audio_output;
