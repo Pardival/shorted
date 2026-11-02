@@ -513,5 +513,14 @@
   "openaiKeyTitle": "Your OpenAI key",
   "openaiConsentTitle": "Send the sound to OpenAI?",
   "openaiConsentBody": "Only the sound of your clips and voices goes to OpenAI, never the picture. Their transcription is billed to your key. It replaces the current transcripts, your corrections included.",
-  "captionTapHint": "On the video: tap a word to highlight it, tap twice to correct it."
+  "captionTapHint": "On the video: tap a word to highlight it, tap twice to correct it.",
+  "originalSoundOf": "Sound of clip {number}",
+  "soundSettings": "Sound",
+  "@originalSoundOf": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  }
 }

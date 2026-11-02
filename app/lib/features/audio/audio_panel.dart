@@ -86,7 +86,7 @@ class AudioPanel extends ConsumerWidget {
           ),
         _Heading(l10n.originalSound),
         for (final (index, clip) in view.sound.clips.indexed)
-          _SoundRow(
+          SoundSettings(
             key: ValueKey(clip.clipId),
             title: l10n.clipNumber(index + 1),
             volume: clip.volume,
@@ -322,7 +322,7 @@ class _Track extends StatelessWidget {
           ],
         ),
         for (final item in track.items)
-          _SoundRow(
+          SoundSettings(
             key: ValueKey(item.id),
             title: _nameOf(item),
             volume: item.volume,
@@ -351,8 +351,8 @@ class _Track extends StatelessWidget {
 }
 
 /// Sliders follow the finger locally; the engine hears once, when the finger lifts.
-class _SoundRow extends StatefulWidget {
-  const _SoundRow({
+class SoundSettings extends StatefulWidget {
+  const SoundSettings({
     super.key,
     required this.title,
     required this.volume,
@@ -386,10 +386,10 @@ class _SoundRow extends StatefulWidget {
   final ValueChanged<double?>? onDucking;
 
   @override
-  State<_SoundRow> createState() => _SoundRowState();
+  State<SoundSettings> createState() => SoundSettingsState();
 }
 
-class _SoundRowState extends State<_SoundRow> {
+class SoundSettingsState extends State<SoundSettings> {
   double? _volume;
   double? _fadeIn;
   double? _fadeOut;
@@ -491,3 +491,119 @@ class _SoundRowState extends State<_SoundRow> {
     );
   }
 }
+
+/// The sound settings of a clip or a sound of the timeline, or null for anything else (T-1203).
+Widget? soundSettingsFor(
+  BuildContext context,
+  ProjectView view,
+  String id,
+  Future<void> Function(
+    Future<ProjectView> Function(ProjectGateway gateway) action,
+  )
+  run,
+) {
+  final l10n = AppLocalizations.of(context);
+  for (final (index, clip) in view.sound.clips.indexed) {
+    if (clip.clipId != id) continue;
+    return SoundSettings(
+      key: ValueKey(clip.clipId),
+      title: l10n.originalSoundOf(index + 1),
+      volume: clip.volume,
+      fadeInUs: clip.fadeInUs.toInt(),
+      fadeOutUs: clip.fadeOutUs.toInt(),
+      muted: clip.muted,
+      onMuted: (muted) => run(
+        (gateway) => gateway.setClipSound(
+          clip.clipId,
+          volume: clip.volume,
+          muted: muted,
+          fadeInUs: clip.fadeInUs.toInt(),
+          fadeOutUs: clip.fadeOutUs.toInt(),
+        ),
+      ),
+      onChanged: (volume, fadeInUs, fadeOutUs) => run(
+        (gateway) => gateway.setClipSound(
+          clip.clipId,
+          volume: volume,
+          muted: clip.muted,
+          fadeInUs: fadeInUs,
+          fadeOutUs: fadeOutUs,
+        ),
+      ),
+    );
+  }
+  for (final track in view.sound.tracks) {
+    for (final item in track.items) {
+      if (item.id != id) continue;
+      var name = '';
+      for (final entry in view.media) {
+        if (entry.id == item.mediaId) name = entry.name;
+      }
+      return SoundSettings(
+        key: ValueKey(item.id),
+        title: name,
+        volume: item.volume,
+        fadeInUs: item.fadeInUs.toInt(),
+        fadeOutUs: item.fadeOutUs.toInt(),
+        looped: item.looped,
+        onLooped: (looped) =>
+            run((gateway) => gateway.setAudioLoop(item.id, looped: looped)),
+        ducking: item.role == AudioRoleView.music ? item.ducking : null,
+        showDucking: item.role == AudioRoleView.music,
+        onDucking: (strength) =>
+            run((gateway) => gateway.setDucking(item.id, strength)),
+        onChanged: (volume, fadeInUs, fadeOutUs) => run(
+          (gateway) => gateway.setAudioSound(
+            item.id,
+            volume: volume,
+            fadeInUs: fadeInUs,
+            fadeOutUs: fadeOutUs,
+          ),
+        ),
+      );
+    }
+  }
+  return null;
+}
+
+/// Opens the sound settings of a clip or sound selected on the timeline, kept up to date.
+Future<void> showSoundSheet(
+  BuildContext context,
+  String projectId,
+  String id,
+) => showModalBottomSheet<void>(
+  context: context,
+  showDragHandle: true,
+  builder: (context) => Consumer(
+    builder: (context, ref, _) {
+      final view = ref.watch(editorProvider(projectId)).value?.view;
+      if (view == null) return const SizedBox.shrink();
+      final l10n = AppLocalizations.of(context);
+      Future<void> run(
+        Future<ProjectView> Function(ProjectGateway gateway) action,
+      ) async {
+        try {
+          await ref.read(editorProvider(projectId).notifier).apply(action);
+        } on Object catch (error) {
+          if (context.mounted) {
+            showToast(context, errorMessage(l10n, error));
+          }
+        }
+      }
+
+      final settings = soundSettingsFor(context, view, id, run);
+      if (settings == null) return const SizedBox.shrink();
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            ShortedSpace.m,
+            0,
+            ShortedSpace.m,
+            ShortedSpace.m,
+          ),
+          child: settings,
+        ),
+      );
+    },
+  ),
+);

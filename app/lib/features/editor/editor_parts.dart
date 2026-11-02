@@ -682,6 +682,9 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
     );
   }
 
+  bool _hasSound(String clipId) =>
+      widget.view.sound.clips.any((clip) => clip.clipId == clipId);
+
   bool _isClip(TimelineItem item) => widget.view.tracks.any(
     (track) =>
         track.kind == TrackKindView.video &&
@@ -738,6 +741,8 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
         if (mediaId == null) continue;
         if (track.kind == TrackKindView.video) {
           _filmstrips.request(mediaId);
+          // A clip shows its own sound too: every sound heard is on the timeline.
+          if (_hasSound(item.id)) _waveforms.request(mediaId);
         } else {
           _waveforms.request(mediaId);
         }
@@ -819,6 +824,12 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 ShortedIconButton(
+                  icon: Icons.graphic_eq,
+                  tooltip: l10n.soundSettings,
+                  onPressed: () =>
+                      showSoundSheet(context, widget.view.id, sound),
+                ),
+                ShortedIconButton(
                   icon: Icons.delete_outline,
                   tooltip: l10n.delete,
                   onPressed: () {
@@ -844,6 +855,13 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
                   tooltip: l10n.duplicate,
                   onPressed: () => _guard(() => _editor.duplicateClip(clip.id)),
                 ),
+                if (_hasSound(clip.id))
+                  ShortedIconButton(
+                    icon: Icons.graphic_eq,
+                    tooltip: l10n.soundSettings,
+                    onPressed: () =>
+                        showSoundSheet(context, widget.view.id, clip.id),
+                  ),
                 if (slowZoom != null)
                   ShortedIconButton(
                     icon: slowZoom ? Icons.zoom_in_map : Icons.zoom_out_map,

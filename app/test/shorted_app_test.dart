@@ -194,6 +194,28 @@ void main() {
     expect(find.byTooltip('Split'), findsNothing);
   });
 
+  testWidgets('a clip selected on the timeline opens its own sound', (
+    tester,
+  ) async {
+    final project = FakeProject('p1', 'Mine')..clips.add('c1');
+    final gateway = FakeGateway()..projects.add(project);
+    await open(
+      tester,
+      '/editor/p1/clips',
+      size: const Size(1280, 800),
+      gateway: gateway,
+    );
+    final timeline = tester.getTopLeft(find.byType(TimelineView));
+    await tester.tapAt(timeline + const Offset(100, 40));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.byTooltip('Sound'));
+    await tester.pumpAndSettle();
+    expect(find.text('Sound of clip 1'), findsOneWidget);
+    await tester.tap(find.byTooltip('Mute').last);
+    await tester.pumpAndSettle();
+    expect(gateway.audioCalls.last, startsWith('clip c1'));
+  });
+
   testWidgets('a crop gesture follows the finger and records one step', (
     tester,
   ) async {

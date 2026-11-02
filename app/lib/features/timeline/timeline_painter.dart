@@ -5,6 +5,9 @@ import 'filmstrips.dart';
 import 'timeline_layout.dart';
 import 'waveforms.dart';
 
+/// Share of a clip's height given to its sound, and how dark behind it.
+const _soundBand = 0.35;
+const _soundBandAlpha = 0.55;
 const _itemRadius = Radius.circular(ShortedRadius.s);
 const _itemGap = 2.0;
 const _waveformStep = 2.0;
@@ -135,21 +138,26 @@ class TimelinePainter extends CustomPainter {
     Canvas canvas,
     TimelineItem item,
     Rect rect,
-    double viewportWidth,
-  ) {
+    double viewportWidth, {
+    Color color = ShortedColors.bg,
+  }) {
     final mediaId = item.mediaId;
     final peaks = waveforms;
     if (mediaId == null || peaks == null) return;
     final bar = Paint()
-      ..color = ShortedColors.bg
+      ..color = color
       ..strokeWidth = 1;
     final left = rect.left.clamp(layout.headerWidth, viewportWidth);
     final right = rect.right.clamp(layout.headerWidth, viewportWidth);
     final middle = rect.center.dy;
     for (var x = left; x < right; x += _waveformStep) {
-      final from = layout.timeForX(x) - item.startUs + item.sourceInUs;
+      final from =
+          item.sourceInUs +
+          ((layout.timeForX(x) - item.startUs) * item.speed).round();
       final to =
-          layout.timeForX(x + _waveformStep) - item.startUs + item.sourceInUs;
+          item.sourceInUs +
+          ((layout.timeForX(x + _waveformStep) - item.startUs) * item.speed)
+              .round();
       final level = peaks.level(mediaId, from, to);
       if (level == null) return;
       final reach = level * rect.height / 2;
@@ -232,6 +240,27 @@ class TimelinePainter extends CustomPainter {
       canvas.drawRRect(shape, fill);
       if (track.kind == TrackKind.video) {
         _paintFilmstrip(canvas, item, shape, size.width);
+        // The clip's own sound, along its bottom.
+        final band = Rect.fromLTRB(
+          rect.left,
+          rect.bottom - rect.height * _soundBand,
+          rect.right,
+          rect.bottom,
+        );
+        canvas.save();
+        canvas.clipRRect(shape);
+        canvas.drawRect(
+          band,
+          Paint()..color = ShortedColors.bg.withValues(alpha: _soundBandAlpha),
+        );
+        _paintWaveform(
+          canvas,
+          item,
+          band,
+          size.width,
+          color: ShortedColors.accent,
+        );
+        canvas.restore();
       } else if (track.kind == TrackKind.widgets) {
         if (item.animated) _paintDiamonds(canvas, rect);
         _paintKeyframes(canvas, item, rect);
