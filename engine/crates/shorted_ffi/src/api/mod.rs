@@ -1,5 +1,7 @@
 //! Public API exposed to Dart. Generated bindings live in `app/lib/bridge/`.
 
+pub mod projects;
+
 use std::path::Path;
 use std::thread;
 use std::time::Duration;

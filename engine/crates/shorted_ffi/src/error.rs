@@ -1,6 +1,7 @@
 //! Engine errors. Dart only ever receives a stable [`ErrorCode`], never a message: messages may
 //! hold paths or user content.
 
+use shorted_store::session::StoreError;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -13,6 +14,8 @@ pub enum EngineError {
     Logging(String),
     #[error("internal failure")]
     Internal(String),
+    #[error("project storage failed")]
+    Store(#[from] shorted_store::session::StoreError),
 }
 
 /// User-safe error code. The app maps each code to a localised message.
@@ -21,6 +24,12 @@ pub enum ErrorCode {
     Cancelled,
     Storage,
     Internal,
+    /// Saved by a newer version of the app.
+    NewerProject,
+    /// The project file cannot be read.
+    DamagedProject,
+    /// An edit was refused: invalid values, or nothing is open.
+    InvalidEdit,
 }
 
 impl EngineError {
@@ -29,6 +38,12 @@ impl EngineError {
             Self::Cancelled => ErrorCode::Cancelled,
             Self::Io(_) => ErrorCode::Storage,
             Self::Logging(_) | Self::Internal(_) => ErrorCode::Internal,
+            Self::Store(error) => match error {
+                StoreError::Io(_) | StoreError::WriterStopped => ErrorCode::Storage,
+                StoreError::NewerVersion { .. } => ErrorCode::NewerProject,
+                StoreError::Malformed => ErrorCode::DamagedProject,
+                StoreError::Model(_) => ErrorCode::InvalidEdit,
+            },
         }
     }
 }

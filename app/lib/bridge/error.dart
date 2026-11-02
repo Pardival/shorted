@@ -25,4 +25,17 @@ class EngineFailure implements FrbException {
 }
 
 /// User-safe error code. The app maps each code to a localised message.
-enum ErrorCode { cancelled, storage, internal }
+enum ErrorCode {
+  cancelled,
+  storage,
+  internal,
+
+  /// Saved by a newer version of the app.
+  newerProject,
+
+  /// The project file cannot be read.
+  damagedProject,
+
+  /// An edit was refused: invalid values, or nothing is open.
+  invalidEdit,
+}
