@@ -80,7 +80,15 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
+<<<<<<< HEAD
   int get rustContentHash => 50123463;
+=======
+<<<<<<< HEAD
+  int get rustContentHash => 375634181;
+=======
+  int get rustContentHash => -58079375;
+>>>>>>> t-0504-voice-over
+>>>>>>> t-0603-captions
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -220,8 +228,6 @@ abstract class RustLibApi extends BaseApi {
     required String root,
     required String id,
   });
-
-  void crateApiAudioPauseVoiceOver({required bool paused});
 
   Future<ProjectView> crateApiMediaPlaceClips({required List<String> mediaIds});
 
@@ -1519,6 +1525,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "open_project", argNames: ["root", "id"]);
 
   @override
+<<<<<<< HEAD
   void crateApiAudioPauseVoiceOver({required bool paused}) {
     return handler.executeSync(
       SyncTask(
@@ -1542,6 +1549,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "pause_voice_over", argNames: ["paused"]);
 
   @override
+=======
+>>>>>>> t-0504-voice-over
   Future<ProjectView> crateApiMediaPlaceClips({
     required List<String> mediaIds,
   }) {
@@ -1553,7 +1562,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
+<<<<<<< HEAD
             funcId: 38,
+=======
+            funcId: 32,
+>>>>>>> t-0504-voice-over
             port: port_,
           );
         },
@@ -1577,7 +1590,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
+<<<<<<< HEAD
           return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 39)!;
+=======
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 33)!;
+>>>>>>> t-0504-voice-over
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_bool,
@@ -1599,7 +1616,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
+<<<<<<< HEAD
           return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 40)!;
+=======
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 34)!;
+>>>>>>> t-0504-voice-over
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1621,7 +1642,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
+<<<<<<< HEAD
           return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 41)!;
+=======
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 35)!;
+>>>>>>> t-0504-voice-over
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1643,7 +1668,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
+<<<<<<< HEAD
           return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 42)!;
+=======
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 36)!;
+>>>>>>> t-0504-voice-over
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_i_64,
@@ -1666,7 +1695,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_i_64(timeUs, serializer);
+<<<<<<< HEAD
           return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 43)!;
+=======
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 37)!;
+>>>>>>> t-0504-voice-over
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1696,7 +1729,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
+<<<<<<< HEAD
             funcId: 44,
+=======
+            funcId: 38,
+>>>>>>> t-0504-voice-over
             port: port_,
           );
         },
@@ -1723,7 +1760,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
+<<<<<<< HEAD
             funcId: 45,
+=======
+            funcId: 39,
+>>>>>>> t-0504-voice-over
             port: port_,
           );
         },
@@ -1750,7 +1791,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
+<<<<<<< HEAD
             funcId: 46,
+=======
+            funcId: 40,
+>>>>>>> t-0504-voice-over
             port: port_,
           );
         },
@@ -1782,7 +1827,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
+<<<<<<< HEAD
             funcId: 47,
+=======
+            funcId: 41,
+>>>>>>> t-0504-voice-over
             port: port_,
           );
         },
@@ -1810,7 +1859,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
+<<<<<<< HEAD
             funcId: 48,
+=======
+            funcId: 42,
+>>>>>>> t-0504-voice-over
             port: port_,
           );
         },
@@ -1842,7 +1895,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
+<<<<<<< HEAD
             funcId: 49,
+=======
+            funcId: 43,
+>>>>>>> t-0504-voice-over
             port: port_,
           );
         },
@@ -1879,7 +1936,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
+<<<<<<< HEAD
             funcId: 50,
+=======
+            funcId: 44,
+>>>>>>> t-0504-voice-over
             port: port_,
           );
         },
@@ -1914,7 +1975,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
+<<<<<<< HEAD
             funcId: 51,
+=======
+            funcId: 45,
+>>>>>>> t-0504-voice-over
             port: port_,
           );
         },
@@ -1945,7 +2010,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
+<<<<<<< HEAD
             funcId: 52,
+=======
+            funcId: 46,
+>>>>>>> t-0504-voice-over
             port: port_,
           );
         },
@@ -1977,7 +2046,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
+<<<<<<< HEAD
             funcId: 53,
+=======
+            funcId: 47,
+>>>>>>> t-0504-voice-over
             port: port_,
           );
         },
@@ -2010,7 +2083,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
+<<<<<<< HEAD
               funcId: 54,
+=======
+              funcId: 48,
+>>>>>>> t-0504-voice-over
               port: port_,
             );
           },
@@ -2044,7 +2121,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
+<<<<<<< HEAD
             funcId: 55,
+=======
+            funcId: 49,
+>>>>>>> t-0504-voice-over
             port: port_,
           );
         },
@@ -2078,7 +2159,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
+<<<<<<< HEAD
             funcId: 56,
+=======
+            funcId: 50,
+>>>>>>> t-0504-voice-over
             port: port_,
           );
         },
@@ -2116,7 +2201,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
+<<<<<<< HEAD
             funcId: 57,
+=======
+            funcId: 51,
+>>>>>>> t-0504-voice-over
             port: port_,
           );
         },
@@ -2303,7 +2392,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
+<<<<<<< HEAD
             funcId: 62,
+=======
+<<<<<<< HEAD
+            funcId: 58,
+=======
+            funcId: 52,
+>>>>>>> t-0504-voice-over
+>>>>>>> t-0603-captions
             port: port_,
           );
         },
@@ -2343,7 +2440,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
+<<<<<<< HEAD
             funcId: 63,
+=======
+<<<<<<< HEAD
+            funcId: 59,
+=======
+            funcId: 53,
+>>>>>>> t-0504-voice-over
+>>>>>>> t-0603-captions
             port: port_,
           );
         },
@@ -2377,7 +2482,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
+<<<<<<< HEAD
             funcId: 64,
+=======
+<<<<<<< HEAD
+            funcId: 60,
+=======
+            funcId: 54,
+>>>>>>> t-0504-voice-over
+>>>>>>> t-0603-captions
             port: port_,
           );
         },
@@ -2417,7 +2530,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
+<<<<<<< HEAD
             funcId: 65,
+=======
+<<<<<<< HEAD
+            funcId: 61,
+=======
+            funcId: 55,
+>>>>>>> t-0504-voice-over
+>>>>>>> t-0603-captions
             port: port_,
           );
         },
@@ -2449,7 +2570,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
+<<<<<<< HEAD
             funcId: 66,
+=======
+<<<<<<< HEAD
+            funcId: 62,
+=======
+            funcId: 56,
+>>>>>>> t-0504-voice-over
+>>>>>>> t-0603-captions
             port: port_,
           );
         },
@@ -2503,7 +2632,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
+<<<<<<< HEAD
             funcId: 68,
+=======
+<<<<<<< HEAD
+            funcId: 64,
+=======
+            funcId: 57,
+>>>>>>> t-0504-voice-over
+>>>>>>> t-0603-captions
             port: port_,
           );
         },
@@ -2535,7 +2672,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
+<<<<<<< HEAD
             funcId: 69,
+=======
+<<<<<<< HEAD
+            funcId: 65,
+=======
+            funcId: 58,
+>>>>>>> t-0504-voice-over
+>>>>>>> t-0603-captions
             port: port_,
           );
         },
@@ -2566,7 +2711,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
+<<<<<<< HEAD
               funcId: 70,
+=======
+<<<<<<< HEAD
+              funcId: 66,
+=======
+              funcId: 59,
+>>>>>>> t-0504-voice-over
+>>>>>>> t-0603-captions
               port: port_,
             );
           },
@@ -2605,7 +2758,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
+<<<<<<< HEAD
               funcId: 71,
+=======
+<<<<<<< HEAD
+              funcId: 67,
+=======
+              funcId: 60,
+>>>>>>> t-0504-voice-over
+>>>>>>> t-0603-captions
               port: port_,
             );
           },
@@ -2636,7 +2797,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
+<<<<<<< HEAD
             funcId: 72,
+=======
+<<<<<<< HEAD
+            funcId: 68,
+=======
+            funcId: 61,
+>>>>>>> t-0504-voice-over
+>>>>>>> t-0603-captions
             port: port_,
           );
         },
@@ -2666,7 +2835,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
+<<<<<<< HEAD
             funcId: 73,
+=======
+<<<<<<< HEAD
+            funcId: 69,
+=======
+            funcId: 62,
+>>>>>>> t-0504-voice-over
+>>>>>>> t-0603-captions
             port: port_,
           );
         },
@@ -2733,7 +2910,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
+<<<<<<< HEAD
             funcId: 75,
+=======
+<<<<<<< HEAD
+            funcId: 70,
+=======
+            funcId: 63,
+>>>>>>> t-0504-voice-over
+>>>>>>> t-0603-captions
             port: port_,
           );
         },
@@ -2803,7 +2988,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
+<<<<<<< HEAD
             funcId: 77,
+=======
+<<<<<<< HEAD
+            funcId: 72,
+=======
+            funcId: 64,
+>>>>>>> t-0504-voice-over
+>>>>>>> t-0603-captions
             port: port_,
           );
         },
@@ -2837,7 +3030,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
+<<<<<<< HEAD
             funcId: 78,
+=======
+<<<<<<< HEAD
+            funcId: 73,
+=======
+            funcId: 65,
+>>>>>>> t-0504-voice-over
+>>>>>>> t-0603-captions
             port: port_,
           );
         },
@@ -2873,7 +3074,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
+<<<<<<< HEAD
             funcId: 79,
+=======
+<<<<<<< HEAD
+            funcId: 74,
+=======
+            funcId: 66,
+>>>>>>> t-0504-voice-over
+>>>>>>> t-0603-captions
             port: port_,
           );
         },
@@ -2902,7 +3111,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
+<<<<<<< HEAD
             funcId: 80,
+=======
+<<<<<<< HEAD
+            funcId: 75,
+=======
+            funcId: 67,
+>>>>>>> t-0504-voice-over
+>>>>>>> t-0603-captions
             port: port_,
           );
         },
@@ -2926,7 +3143,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
+<<<<<<< HEAD
           return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 81)!;
+=======
+<<<<<<< HEAD
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 76)!;
+=======
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 68)!;
+>>>>>>> t-0504-voice-over
+>>>>>>> t-0603-captions
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_f_32,

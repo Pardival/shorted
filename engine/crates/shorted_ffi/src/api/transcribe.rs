@@ -12,6 +12,7 @@ use shorted_transcribe::{group_words, SpokenWord, BASE_MODEL};
 use uuid::Uuid;
 
 use crate::api::clips::{edit, parse};
+#[cfg(target_vendor = "apple")]
 use crate::api::media::resolve;
 use crate::api::projects::{on_command_thread, view_of, with_active, ProjectView};
 use crate::error::{EngineError, EngineFailure};
