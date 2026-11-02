@@ -550,5 +550,9 @@
         "type": "int"
       }
     }
-  }
+  },
+  "selectPart": "Select a part",
+  "zoomIn": "Zoom in",
+  "zoomOut": "Zoom out",
+  "zoomFit": "Show everything"
 }

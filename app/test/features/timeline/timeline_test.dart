@@ -1,9 +1,11 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shorted/design_system/theme.dart';
 import 'package:shorted/features/timeline/timeline_layout.dart';
 import 'package:shorted/features/timeline/timeline_view.dart';
+import 'package:shorted/l10n/generated/app_localizations.dart';
 
 const layout = TimelineLayout(
   pixelsPerSecond: 100,
@@ -20,6 +22,8 @@ List<TimelineItem> items(int count) => [
 
 Widget harness(Widget child) => MaterialApp(
   theme: shortedTheme(),
+  localizationsDelegates: AppLocalizations.localizationsDelegates,
+  supportedLocales: AppLocalizations.supportedLocales,
   home: Scaffold(body: SizedBox(width: 800, height: 200, child: child)),
 );
 
@@ -276,6 +280,99 @@ void main() {
     await tester.pump();
     expect(playhead.value, 4000000);
     await gesture.up();
+  });
+
+  testWidgets('a part is selected with the mouse in two steps, ends move', (
+    tester,
+  ) async {
+    final playhead = ValueNotifier<int>(0);
+    addTearDown(playhead.dispose);
+    (int, int)? range;
+    late StateSetter rebuild;
+    await tester.pumpWidget(
+      harness(
+        StatefulBuilder(
+          builder: (context, setState) {
+            rebuild = setState;
+            return TimelineView(
+              tracks: [
+                TimelineTrack(
+                  kind: TrackKind.video,
+                  label: 'V',
+                  items: items(4),
+                ),
+              ],
+              durationUs: 4000000,
+              playheadUs: playhead,
+              rangeUs: range,
+              onRange: (next) => rebuild(() => range = next),
+            );
+          },
+        ),
+      ),
+    );
+    await tester.tap(find.byTooltip('Select a part'));
+    await tester.pump();
+    final origin = tester.getTopLeft(find.byType(TimelineView));
+    // 88 px of headers, 40 px a second.
+    final mouse = await tester.startGesture(
+      origin + const Offset(128, 40),
+      kind: PointerDeviceKind.mouse,
+    );
+    await mouse.moveTo(origin + const Offset(208, 40));
+    await mouse.up();
+    await tester.pump();
+    expect(range!.$1, closeTo(1000000, 30000));
+    expect(range!.$2, closeTo(3000000, 30000));
+
+    final edge = await tester.startGesture(
+      origin + const Offset(208, 10),
+      kind: PointerDeviceKind.mouse,
+    );
+    await edge.moveTo(origin + const Offset(168, 10));
+    await edge.up();
+    await tester.pump();
+    expect(range!.$2, closeTo(2000000, 30000));
+  });
+
+  testWidgets('a mouse drag on the tracks moves the view; buttons zoom', (
+    tester,
+  ) async {
+    final playhead = ValueNotifier<int>(0);
+    addTearDown(playhead.dispose);
+    await tester.pumpWidget(
+      harness(
+        TimelineView(
+          tracks: [
+            TimelineTrack(kind: TrackKind.video, label: 'V', items: items(60)),
+          ],
+          durationUs: 60000000,
+          playheadUs: playhead,
+        ),
+      ),
+    );
+    final origin = tester.getTopLeft(find.byType(TimelineView));
+    final mouse = await tester.startGesture(
+      origin + const Offset(400, 40),
+      kind: PointerDeviceKind.mouse,
+    );
+    await mouse.moveBy(const Offset(-200, 0));
+    await mouse.up();
+    await tester.pump();
+    expect(playhead.value, 0, reason: 'panning does not scrub');
+    final tracks = find.byKey(TimelineView.tracksKey);
+    final painter = tester.widget<CustomPaint>(tracks).painter! as dynamic;
+    expect(painter.layout.scrollUs, closeTo(5000000, 100000));
+
+    await tester.tap(find.byTooltip('Zoom in'));
+    await tester.pump();
+    final zoomed = tester.widget<CustomPaint>(tracks).painter! as dynamic;
+    expect(zoomed.layout.pixelsPerSecond, closeTo(60, 0.1));
+    await tester.tap(find.byTooltip('Show everything'));
+    await tester.pump();
+    final fitted = tester.widget<CustomPaint>(tracks).painter! as dynamic;
+    expect(fitted.layout.scrollUs, 0);
+    expect(fitted.layout.pixelsPerSecond, lessThan(15));
   });
 
   testWidgets('tapping an item selects it, tapping empty space clears', (

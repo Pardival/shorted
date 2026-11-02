@@ -132,6 +132,27 @@ class TimelinePainter extends CustomPainter {
       ),
       Paint()..color = ShortedColors.accent.withValues(alpha: _rangeTint),
     );
+    // Its ends can be dragged: show them as handles.
+    final handle = Paint()..color = ShortedColors.accent;
+    for (final time in [start, end]) {
+      final x = layout.xForTime(time);
+      canvas.drawLine(
+        Offset(x, 0),
+        Offset(x, size.height),
+        handle..strokeWidth = 2,
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(
+            center: Offset(x, layout.rulerHeight / 2),
+            width: 8,
+            height: layout.rulerHeight,
+          ),
+          const Radius.circular(3),
+        ),
+        handle,
+      );
+    }
   }
 
   void _paintWaveform(

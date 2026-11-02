@@ -336,5 +336,9 @@
   "originalColours": "Couleurs d'origine",
   "customColour": "Autre couleur",
   "selectedCount": "{count} sélectionnés",
-  "clearSelection": "Tout désélectionner"
+  "clearSelection": "Tout désélectionner",
+  "selectPart": "Sélectionner une partie",
+  "zoomIn": "Zoomer",
+  "zoomOut": "Dézoomer",
+  "zoomFit": "Tout afficher"
 }

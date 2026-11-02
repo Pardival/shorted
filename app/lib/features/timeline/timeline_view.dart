@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../design_system/tokens.g.dart';
+import '../../l10n/generated/app_localizations.dart';
 import 'timeline_layout.dart';
 import 'filmstrips.dart';
 import 'timeline_painter.dart';
@@ -17,7 +19,26 @@ const _wheelZoomSpeed = 0.002;
 const _handleWidth = 14.0;
 const _snapPixels = 8.0;
 
-enum _DragKind { scrub, trimStart, trimEnd, move, keyframe }
+enum _DragKind {
+  scrub,
+  trimStart,
+  trimEnd,
+  move,
+  keyframe,
+
+  /// A mouse drag on the tracks moves the view, like a hand (T-1208).
+  pan,
+
+  /// In range mode, a drag on the tracks selects the part between its ends.
+  range,
+
+  /// An end of the selected range, dragged.
+  rangeStart,
+  rangeEnd,
+}
+
+const _zoomStep = 1.5;
+const _controlSize = 36.0;
 
 /// Multi-track timeline. Collapsed and expanded modes come with T-0207.
 class TimelineView extends StatefulWidget {
@@ -119,6 +140,10 @@ class _TimelineViewState extends State<TimelineView> {
   int? _lastSnap;
   var _pointers = 0;
   int? _rangeAnchor;
+  Offset? _panFrom;
+
+  /// While on, a drag on the tracks selects a part instead of moving things.
+  var _rangeMode = false;
   int? _keyframeFrom;
   (int, int)? _keyframeDrag;
   StreamSubscription<double>? _zoomRequests;
@@ -197,7 +222,7 @@ class _TimelineViewState extends State<TimelineView> {
     }
     _pointers++;
     if (_pointers == 1) {
-      _beginDrag(event.localPosition);
+      _beginDrag(event.localPosition, event.kind);
     } else {
       // A second finger means zoom: the edit is dropped.
       setState(() => _dragPreview = null);
@@ -209,13 +234,134 @@ class _TimelineViewState extends State<TimelineView> {
   void _pointerGone(PointerEvent event) {
     _headerDragY = null;
     _pointers--;
-    if (_drag != _DragKind.scrub) _endDrag();
+    _panFrom = null;
+    if (_isRangeDrag || _drag == _DragKind.pan) {
+      _rangeAnchor = null;
+    } else if (_drag != _DragKind.scrub) {
+      _endDrag();
+    }
     _drag = _DragKind.scrub;
   }
 
+  bool get _isRangeDrag =>
+      _drag == _DragKind.range ||
+      _drag == _DragKind.rangeStart ||
+      _drag == _DragKind.rangeEnd;
+
+  void _pan(Offset position) {
+    final from = _panFrom;
+    if (from == null) return;
+    _panFrom = position;
+    final delta = position - from;
+    final deltaUs = (delta.dx / _layout.pixelsPerSecond * 1e6).round();
+    final most = _current.maxScrollY(widget.tracks.length, _viewportHeight);
+    setState(() {
+      _layout = _current.copyWith(
+        scrollUs: math.max(0, _layout.scrollUs - deltaUs),
+        scrollY: (_current.scrollY - delta.dy).clamp(0, most),
+      );
+    });
+  }
+
+  void _dragRange(double x) {
+    final time = _clampedTime(x);
+    final range = widget.rangeUs;
+    final (int, int)? next = switch (_drag) {
+      _DragKind.range => () {
+        final anchor = _rangeAnchor;
+        if (anchor == null || anchor == time) return null;
+        return time < anchor ? (time, anchor) : (anchor, time);
+      }(),
+      _DragKind.rangeStart when range != null =>
+        time < range.$2 ? (time, range.$2) : null,
+      _DragKind.rangeEnd when range != null =>
+        time > range.$1 ? (range.$1, time) : null,
+      _ => null,
+    };
+    if (next != null) widget.onRange?.call(next);
+  }
+
+  /// Shows the whole project in the width there is.
+  void _fit() {
+    final width = context.size?.width ?? 0;
+    final seconds = widget.durationUs / 1e6;
+    if (seconds <= 0 || width <= _current.headerWidth) return;
+    final target = (width - _current.headerWidth - _handleWidth) / seconds;
+    setState(() {
+      _layout = _layout
+          .copyWith(scrollUs: 0)
+          .zoomed(target / _layout.pixelsPerSecond, _current.headerWidth);
+    });
+  }
+
+  Widget _controls(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    Widget button(
+      IconData icon,
+      String tooltip,
+      VoidCallback onPressed, {
+      bool on = false,
+    }) => IconButton(
+      icon: Icon(icon, size: 18),
+      tooltip: tooltip,
+      onPressed: onPressed,
+      isSelected: on,
+      color: on ? ShortedColors.onAccent : ShortedColors.text,
+      style: IconButton.styleFrom(
+        backgroundColor: on ? ShortedColors.accent : null,
+      ),
+      constraints: const BoxConstraints.tightFor(
+        width: _controlSize,
+        height: _controlSize,
+      ),
+    );
+    return Material(
+      color: ShortedColors.surfaceRaised.withValues(alpha: 0.92),
+      borderRadius: BorderRadius.circular(ShortedRadius.pill),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          button(
+            Icons.highlight_alt,
+            l10n.selectPart,
+            () => setState(() => _rangeMode = !_rangeMode),
+            on: _rangeMode,
+          ),
+          button(Icons.zoom_out, l10n.zoomOut, () => _zoomBy(1 / _zoomStep)),
+          button(Icons.zoom_in, l10n.zoomIn, () => _zoomBy(_zoomStep)),
+          button(Icons.fit_screen_outlined, l10n.zoomFit, _fit),
+        ],
+      ),
+    );
+  }
+
   /// Decides at touch down what this drag does: only the selected item can be edited.
-  void _beginDrag(Offset position) {
+  void _beginDrag(Offset position, PointerDeviceKind device) {
     _drag = _DragKind.scrub;
+    final onTracks =
+        position.dy >= _rulerHeight && position.dx >= _current.headerWidth;
+    final range = widget.rangeUs;
+    if (range != null && position.dx >= _current.headerWidth) {
+      final slop = (_handleWidth / _layout.pixelsPerSecond * 1e6).round();
+      final time = _layout.timeForX(position.dx);
+      if ((time - range.$1).abs() <= slop) {
+        _drag = _DragKind.rangeStart;
+        return;
+      }
+      if ((time - range.$2).abs() <= slop) {
+        _drag = _DragKind.rangeEnd;
+        return;
+      }
+    }
+    if (onTracks && _rangeMode) {
+      _drag = _DragKind.range;
+      _rangeAnchor = _clampedTime(position.dx);
+      return;
+    }
+    if (onTracks && device == PointerDeviceKind.mouse) {
+      _drag = _DragKind.pan;
+      _panFrom = position;
+    }
     final index = _current.trackAt(position.dy, widget.tracks.length);
     if (index == null || _selectedId == null) return;
     if (widget.tracks[index].locked) return;
@@ -345,7 +491,12 @@ class _TimelineViewState extends State<TimelineView> {
         case _DragKind.move:
           final track = widget.tracks[_dragTrack];
           widget.onAudioMove?.call(item, start < 0 ? 0 : start, track);
-        case _DragKind.scrub || _DragKind.keyframe:
+        case _DragKind.scrub ||
+            _DragKind.keyframe ||
+            _DragKind.pan ||
+            _DragKind.range ||
+            _DragKind.rangeStart ||
+            _DragKind.rangeEnd:
           break;
       }
       return;
@@ -363,7 +514,12 @@ class _TimelineViewState extends State<TimelineView> {
               (other.startUs + other.endUs) ~/ 2 < centre;
         }).length;
         if (to != items.indexOf(item)) widget.onMove?.call(item, to);
-      case _DragKind.scrub || _DragKind.keyframe:
+      case _DragKind.scrub ||
+          _DragKind.keyframe ||
+          _DragKind.pan ||
+          _DragKind.range ||
+          _DragKind.rangeStart ||
+          _DragKind.rangeEnd:
         break;
     }
   }
@@ -446,6 +602,10 @@ class _TimelineViewState extends State<TimelineView> {
         if (headerY != null) {
           _scrollBy(headerY - event.localPosition.dy);
           _headerDragY = event.localPosition.dy;
+        } else if (_drag == _DragKind.pan) {
+          _pan(event.localPosition);
+        } else if (_isRangeDrag) {
+          _dragRange(event.localPosition.dx);
         } else if (_drag != _DragKind.scrub) {
           _updateDrag(event.localPosition.dx, event.localPosition.dy);
         }
@@ -499,6 +659,12 @@ class _TimelineViewState extends State<TimelineView> {
                 ),
               ),
             ),
+            if (!widget.collapsed)
+              Positioned(
+                right: ShortedSpace.s,
+                bottom: ShortedSpace.s,
+                child: _controls(context),
+              ),
           ],
         ),
       ),
