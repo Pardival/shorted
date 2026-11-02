@@ -4,6 +4,7 @@
 
 #[cfg(target_vendor = "apple")]
 pub mod apple;
+pub mod captions;
 pub mod compositor;
 pub mod spike;
 

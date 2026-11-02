@@ -6,11 +6,14 @@ use std::path::Path;
 
 use objc2_core_foundation::CFRetained;
 use objc2_io_surface::IOSurfaceRef;
-use shorted_core::evaluate::{evaluate, ClipLayer, TransitionState};
-use shorted_core::model::{ColorAdjust, Id, MediaKind, MediaRef, Project, TransitionKind};
+use shorted_core::evaluate::{evaluate, ClipLayer, FrameDescription, TransitionState};
+use shorted_core::model::{
+    CaptionAnimation, CaptionPreset, ColorAdjust, Id, MediaKind, MediaRef, Project, TransitionKind,
+};
 use shorted_media::apple::{AppleBackend, AppleDecoder, AppleFrame};
 use shorted_media::{DecodedFrame, MediaBackend, MediaInfo, VideoDecoder};
 use shorted_render::apple::texture_from_iosurface;
+use shorted_render::captions::{parse_color, CaptionLook, CaptionPainter, CaptionWord};
 use shorted_render::compositor::{load_image, Compositor, LayerEffect, LayerPlacement};
 use shorted_render::spike::RenderError;
 
@@ -110,6 +113,64 @@ pub struct FrameComposer {
     videos: HashMap<Id, VideoSource>,
     images: HashMap<Id, Picture>,
     offline: wgpu::Texture,
+    painter: Option<CaptionPainter>,
+    /// The last caption drawn, reused for as long as the words stay.
+    caption: Option<(String, wgpu::Texture)>,
+}
+
+const POP_US: i64 = 120_000;
+const FADE_US: i64 = 150_000;
+const POP_START: f32 = 0.85;
+
+fn caption_look(project: &Project) -> CaptionLook {
+    let settings = &project.captions;
+    CaptionLook {
+        font: settings.style.font.clone(),
+        size: settings.style.size,
+        color: parse_color(&settings.style.color),
+        highlight: parse_color(&settings.emphasis_color),
+        uppercase: settings.style.uppercase,
+        outline: matches!(
+            settings.preset,
+            CaptionPreset::Outline | CaptionPreset::Bold
+        ),
+        boxed: settings.preset == CaptionPreset::Box,
+        anchor: settings.vertical_anchor,
+    }
+}
+
+fn caption_words(frame: &FrameDescription, karaoke: bool) -> Vec<CaptionWord> {
+    frame
+        .captions
+        .iter()
+        .map(|run| CaptionWord {
+            text: run.text.clone(),
+            highlighted: if karaoke { run.active } else { run.emphasis },
+        })
+        .collect()
+}
+
+/// The caption's entrance. Pop grows around the block, so the block stays where it is.
+fn caption_effect(animation: CaptionAnimation, age_us: i64, anchor: f32) -> LayerEffect {
+    let base = LayerEffect {
+        keeps_alpha: true,
+        ..LayerEffect::default()
+    };
+    match animation {
+        CaptionAnimation::Pop if age_us < POP_US => {
+            let zoom = POP_START + (1.0 - POP_START) * (age_us as f32 / POP_US as f32);
+            LayerEffect {
+                frame_zoom: zoom,
+                shift: [0.0, (anchor - 0.5) * (1.0 / zoom - 1.0)],
+                ..base
+            }
+        }
+        CaptionAnimation::Fade if age_us < FADE_US => LayerEffect {
+            opacity: age_us as f32 / FADE_US as f32,
+            ..base
+        },
+        _ => base,
+    }
 }
 
 const BLACK: [f32; 3] = [0.0; 3];
@@ -202,6 +263,8 @@ impl FrameComposer {
             videos: HashMap::new(),
             images: HashMap::new(),
             offline,
+            painter: None,
+            caption: None,
         }
     }
 
@@ -277,6 +340,29 @@ impl FrameComposer {
         (&self.offline, crop)
     }
 
+    /// Draws the caption of this frame once, then keeps it for as long as the words stay.
+    fn prepare_caption(&mut self, project: &Project, frame: &FrameDescription) {
+        if frame.captions.is_empty() {
+            return;
+        }
+        let karaoke = project.captions.preset == CaptionPreset::Karaoke;
+        let words = caption_words(frame, karaoke);
+        let look = caption_look(project);
+        let key = format!("{words:?}{look:?}");
+        if self
+            .caption
+            .as_ref()
+            .is_some_and(|(drawn, _)| *drawn == key)
+        {
+            return;
+        }
+        let (width, height) = (self.compositor.width, self.compositor.height);
+        let painter = self.painter.get_or_insert_with(CaptionPainter::new);
+        let pixels = painter.paint(&words, &look, width, height);
+        let texture = self.compositor.texture_from_rgba(width, height, &pixels);
+        self.caption = Some((key, texture));
+    }
+
     /// Draws `project` at `time_us` into `target`, and waits for the GPU.
     pub fn draw(
         &mut self,
@@ -290,6 +376,7 @@ impl FrameComposer {
             for layer in &frame.clips {
                 self.prepare(project, folder, layer);
             }
+            self.prepare_caption(project, frame);
         }
         let mut layers = Vec::with_capacity(2);
         if let Some((project, frame)) = &frame {
@@ -297,6 +384,23 @@ impl FrameComposer {
                 let media = project.media.iter().find(|m| m.id == layer.media_id);
                 let effect = layer_effect(index, frame.transition, layer.color);
                 layers.push(self.placed(media, layer, effect));
+            }
+            if let Some((_, caption)) = self.caption.as_ref().filter(|_| !frame.captions.is_empty())
+            {
+                let anchor = project.captions.vertical_anchor;
+                let effect =
+                    caption_effect(project.captions.animation, frame.caption_age_us, anchor);
+                layers.push((
+                    caption,
+                    LayerPlacement {
+                        width: self.compositor.width,
+                        height: self.compositor.height,
+                        quarter_turns: 0,
+                        center: [0.5, 0.5],
+                        zoom: 1.0,
+                        effect,
+                    },
+                ));
             }
         }
         self.compositor.render(&layers, target)
@@ -333,6 +437,27 @@ mod transition_tests {
             assert_eq!(end.tint[3], 0.0, "{kind:?}");
             assert_eq!(end.frame_zoom, 1.0, "{kind:?}");
         }
+    }
+
+    #[test]
+    fn a_pop_ends_at_full_size_and_keeps_the_block_in_place() {
+        let start = caption_effect(CaptionAnimation::Pop, 0, 0.7);
+        assert_eq!(start.frame_zoom, POP_START);
+        let moved = (0.7 - 0.5) / start.frame_zoom + 0.5 - start.shift[1];
+        assert!((moved - 0.7).abs() < 1e-5);
+        let end = caption_effect(CaptionAnimation::Pop, POP_US, 0.7);
+        assert_eq!(end.frame_zoom, 1.0);
+        assert!(end.keeps_alpha);
+    }
+
+    #[test]
+    fn a_fade_ends_opaque() {
+        assert_eq!(caption_effect(CaptionAnimation::Fade, 0, 0.7).opacity, 0.0);
+        assert_eq!(
+            caption_effect(CaptionAnimation::Fade, FADE_US, 0.7).opacity,
+            1.0
+        );
+        assert_eq!(caption_effect(CaptionAnimation::None, 0, 0.7).opacity, 1.0);
     }
 
     #[test]

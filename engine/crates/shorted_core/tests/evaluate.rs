@@ -272,10 +272,57 @@ fn out_preset_finishes_at_the_end_of_the_item() {
     assert!(evaluate(&project, 1_000_000).overlays[0].opacity > 0.79);
 }
 
+fn spoken(texts: &[(&str, i64, i64)]) -> Transcript {
+    Transcript {
+        language: "en".into(),
+        segments: vec![Segment {
+            id: Uuid::from_u128(900),
+            hidden: false,
+            words: texts
+                .iter()
+                .map(|(text, start_us, end_us)| Word {
+                    text: (*text).into(),
+                    original_text: (*text).into(),
+                    start_us: *start_us,
+                    end_us: *end_us,
+                    confidence: 1.0,
+                    emphasis: EmphasisState::Auto(false),
+                    deleted: false,
+                })
+                .collect(),
+        }],
+    }
+}
+
+#[test]
+fn caption_groups_stay_up_for_their_words_and_mark_the_active_one() {
+    let mut project = two_clips();
+    project.timeline.transitions.clear();
+    project.timeline.clips[0].transcript = Some(spoken(&[
+        ("one", 0, 100_000),
+        ("two", 100_000, 200_000),
+        ("three", 200_000, 300_000),
+    ]));
+    project.captions.grouping = Grouping::UpTo(2);
+    let frame = evaluate(&project, 150_000);
+    let texts: Vec<_> = frame.captions.iter().map(|run| run.text.as_str()).collect();
+    assert_eq!(texts, ["one", "two"]);
+    assert!(!frame.captions[0].active && frame.captions[1].active);
+    assert_eq!(frame.caption_age_us, 150_000);
+
+    let next = evaluate(&project, 250_000);
+    assert_eq!(next.captions.len(), 1);
+    assert_eq!(next.caption_age_us, 50_000);
+
+    project.captions.grouping = Grouping::Sentence;
+    assert_eq!(evaluate(&project, 250_000).captions.len(), 3);
+}
+
 #[test]
 fn captions_follow_source_time_and_flags() {
     let mut project = two_clips();
     project.timeline.transitions.clear();
+    project.captions.grouping = Grouping::OneWord;
     let frame = evaluate(&project, 100_000);
     assert_eq!(frame.captions.len(), 1);
     assert!(frame.captions[0].emphasis);

@@ -13,6 +13,11 @@ struct Layer {
     saturation: f32,
     // Enlarges the whole picture around the middle of the frame.
     frame_zoom: f32,
+    // 1 uses the picture's own transparency: captions and overlays.
+    picture_alpha: f32,
+    padding_a: f32,
+    padding_b: f32,
+    padding_c: f32,
 };
 @group(0) @binding(0) var<uniform> layer: Layer;
 @group(0) @binding(1) var source: texture_2d<f32>;
@@ -44,10 +49,14 @@ fn fs(in: Out) -> @location(0) vec4<f32> {
         case 3u: { uv = vec2<f32>(1.0 - framed.y, framed.x); }
         default: {}
     }
-    var color = textureSample(source, source_sampler, uv).rgb;
+    let sampled = textureSample(source, source_sampler, uv);
+    var color = sampled.rgb;
     color = (color + layer.brightness - 0.5) * layer.contrast + 0.5;
     let luma = dot(color, vec3<f32>(0.2126, 0.7152, 0.0722));
     color = mix(vec3<f32>(luma), color, layer.saturation);
     color = mix(color, layer.tint.rgb, layer.tint.a);
-    return vec4<f32>(clamp(color, vec3<f32>(0.0), vec3<f32>(1.0)), layer.opacity);
+    return vec4<f32>(
+        clamp(color, vec3<f32>(0.0), vec3<f32>(1.0)),
+        layer.opacity * mix(1.0, sampled.a, layer.picture_alpha),
+    );
 }

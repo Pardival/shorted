@@ -5,7 +5,7 @@ use bytemuck::{Pod, Zeroable};
 
 use crate::spike::{RenderError, TARGET_FORMAT, target_descriptor};
 
-const MAX_LAYERS: u64 = 2;
+const MAX_LAYERS: u64 = 3;
 const LAYER_STRIDE: u64 = 256;
 const BYTES_PER_PIXEL: u32 = 4;
 
@@ -22,6 +22,8 @@ struct LayerUniform {
     contrast: f32,
     saturation: f32,
     frame_zoom: f32,
+    picture_alpha: f32,
+    padding: [f32; 3],
 }
 
 /// What a clip's colour and a transition do to a layer. The default changes nothing.
@@ -34,6 +36,8 @@ pub struct LayerEffect {
     pub contrast: f32,
     pub saturation: f32,
     pub frame_zoom: f32,
+    /// True for pictures with transparency.
+    pub keeps_alpha: bool,
 }
 
 impl Default for LayerEffect {
@@ -46,6 +50,7 @@ impl Default for LayerEffect {
             contrast: 1.0,
             saturation: 1.0,
             frame_zoom: 1.0,
+            keeps_alpha: false,
         }
     }
 }
@@ -97,6 +102,8 @@ impl LayerPlacement {
             contrast: self.effect.contrast,
             saturation: self.effect.saturation,
             frame_zoom: self.effect.frame_zoom.max(0.01),
+            picture_alpha: if self.effect.keeps_alpha { 1.0 } else { 0.0 },
+            padding: [0.0; 3],
         }
     }
 }
@@ -562,6 +569,26 @@ mod tests {
         };
         let luma = drawn([255, 0, 0], pale).unwrap();
         assert!(close(luma, [54, 54, 54]), "{luma:?}");
+    }
+
+    #[test]
+    fn a_transparent_layer_leaves_the_clip_visible() {
+        let Some(compositor) = compositor() else {
+            return;
+        };
+        let clip = solid(&compositor, [200, 0, 0]);
+        let clear = compositor.texture_from_rgba(1, 1, &[0, 255, 0, 0]);
+        let over = LayerPlacement {
+            effect: LayerEffect {
+                keeps_alpha: true,
+                ..LayerEffect::default()
+            },
+            ..placement()
+        };
+        let pixels = compositor
+            .render_to_pixels(&[(&clip, placement()), (&clear, over)])
+            .unwrap();
+        assert!(close(rgb_at(&pixels, 0.5, 0.5), [200, 0, 0]));
     }
 
     #[test]

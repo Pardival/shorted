@@ -36,6 +36,8 @@ pub struct OverlayLayer {
 pub struct CaptionRun {
     pub text: String,
     pub emphasis: bool,
+    /// The word being spoken now, for karaoke.
+    pub active: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Default)]
@@ -46,6 +48,8 @@ pub struct FrameDescription {
     /// Bottom to top.
     pub overlays: Vec<OverlayLayer>,
     pub captions: Vec<CaptionRun>,
+    /// How long the caption block has been on screen, for its entrance.
+    pub caption_age_us: i64,
 }
 
 /// Where each clip sits on the timeline. Entering a transition overlaps the next clip with the
@@ -338,56 +342,81 @@ fn overlay_layer(item: &OverlayItem, t: i64) -> OverlayLayer {
     }
 }
 
-fn add_words(transcript: &Transcript, source_time: i64, captions: &mut Vec<CaptionRun>) {
-    let words = transcript
-        .segments
-        .iter()
-        .filter(|segment| !segment.hidden)
-        .flat_map(|segment| &segment.words)
-        .filter(|word| !word.deleted && (word.start_us..word.end_us).contains(&source_time));
-    for word in words {
-        let (EmphasisState::Auto(emphasis) | EmphasisState::User(emphasis)) = word.emphasis;
-        captions.push(CaptionRun {
-            text: word.text.clone(),
-            emphasis,
-        });
+/// The block of words on screen at `source_time`, in the grouping of the settings, and how long
+/// it has been showing.
+fn word_block(
+    transcript: &Transcript,
+    source_time: i64,
+    grouping: Grouping,
+) -> Option<(Vec<CaptionRun>, i64)> {
+    for segment in transcript.segments.iter().filter(|s| !s.hidden) {
+        let words: Vec<&Word> = segment.words.iter().filter(|w| !w.deleted).collect();
+        let size = match grouping {
+            Grouping::OneWord => 1,
+            Grouping::UpTo(count) => usize::from(count).max(1),
+            Grouping::Sentence => words.len().max(1),
+        };
+        for group in words.chunks(size) {
+            let (Some(first), Some(last)) = (group.first(), group.last()) else {
+                continue;
+            };
+            if !(first.start_us..last.end_us).contains(&source_time) {
+                continue;
+            }
+            let runs = group
+                .iter()
+                .map(|word| {
+                    let (EmphasisState::Auto(emphasis) | EmphasisState::User(emphasis)) =
+                        word.emphasis;
+                    CaptionRun {
+                        text: word.text.clone(),
+                        emphasis,
+                        active: (word.start_us..word.end_us).contains(&source_time),
+                    }
+                })
+                .collect();
+            return Some((runs, source_time - first.start_us));
+        }
     }
+    None
 }
 
-/// Spoken words at `t`. Grouping and layout come with the caption engine (T-0603).
-fn caption_runs(project: &Project, layers: &[ClipLayer], t: i64) -> Vec<CaptionRun> {
+/// The caption block at `t`: the first source with words there wins.
+fn caption_block(project: &Project, layers: &[ClipLayer], t: i64) -> (Vec<CaptionRun>, i64) {
     let settings = &project.captions;
-    let mut captions = Vec::new();
     if !settings.enabled || project.timeline.track_flags.captions.hidden {
-        return captions;
+        return (Vec::new(), 0);
     }
     for source in &settings.sources {
-        match source {
+        let block = match source {
             CaptionSource::OriginalSound => {
                 // The incoming clip wins: it is the one being heard at the end of a transition.
                 let layer = layers.last();
                 let clip =
                     layer.and_then(|l| project.timeline.clips.iter().find(|c| c.id == l.clip_id));
-                if let (Some(layer), Some(clip)) = (layer, clip)
-                    && clip.original_audio.transcribe
-                    && let Some(transcript) = &clip.transcript
-                {
-                    add_words(transcript, layer.source_time_us, &mut captions);
+                match (layer, clip) {
+                    (Some(layer), Some(clip)) if clip.original_audio.transcribe => clip
+                        .transcript
+                        .as_ref()
+                        .and_then(|t| word_block(t, layer.source_time_us, settings.grouping)),
+                    _ => None,
                 }
             }
             CaptionSource::AudioItem(id) => {
                 let item = project.timeline.audio.iter().find(|a| a.id == *id);
-                if let Some(item) = item
-                    && (item.start_us..item.end_us()).contains(&t)
-                    && let Some(transcript) = &item.transcript
-                {
-                    let source_time = item.source_in_us + t - item.start_us;
-                    add_words(transcript, source_time, &mut captions);
-                }
+                item.filter(|item| (item.start_us..item.end_us()).contains(&t))
+                    .and_then(|item| {
+                        let source_time = item.source_in_us + t - item.start_us;
+                        let transcript = item.transcript.as_ref()?;
+                        word_block(transcript, source_time, settings.grouping)
+                    })
             }
+        };
+        if let Some(block) = block {
+            return block;
         }
     }
-    captions
+    (Vec::new(), 0)
 }
 
 /// Describes the frame at `time_us`, clamped to the project: scrubbing past the end shows the
@@ -428,12 +457,13 @@ pub fn evaluate(project: &Project, time_us: i64) -> FrameDescription {
             .map(|item| overlay_layer(item, t))
             .collect()
     };
-    let captions = caption_runs(project, &clips, t);
+    let (captions, caption_age_us) = caption_block(project, &clips, t);
     FrameDescription {
         time_us: t,
         clips,
         transition,
         overlays,
         captions,
+        caption_age_us,
     }
 }
