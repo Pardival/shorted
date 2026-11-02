@@ -15,7 +15,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 import 'projects.dart';
 
-// These functions are ignored because they are not marked as `pub`: `apply_transcription`, `captions_view`, `download`, `hear_with_openai`, `jobs`, `model_path`, `owner`, `run_jobs`, `run_transcription`, `settings_command`, `to_transcript`, `transcript_view`, `transcript_views`, `transcription_edit`
+// These functions are ignored because they are not marked as `pub`: `apply_transcription`, `captions_view`, `download`, `hear_with_openai`, `hit`, `jobs`, `model_path`, `owner`, `run_jobs`, `run_transcription`, `settings_command`, `to_transcript`, `transcript_view`, `transcript_views`, `transcription_edit`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Job`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `eq`, `eq`, `from`, `from`, `from`, `from`
 
@@ -117,6 +117,17 @@ Future<ProjectView> toggleEmphasis({
   word: word,
 );
 
+/// The caption word at `x`, `y` (fractions of the frame) at `time_us`, if there is one.
+Future<CaptionHitView?> captionWordAt({
+  required PlatformInt64 timeUs,
+  required double x,
+  required double y,
+}) => RustLib.instance.api.crateApiTranscribeCaptionWordAt(
+  timeUs: timeUs,
+  x: x,
+  y: y,
+);
+
 /// Writes the project's captions next to an export (FR-CAP-07).
 Future<void> writeSrt({required String path}) =>
     RustLib.instance.api.crateApiTranscribeWriteSrt(path: path);
@@ -126,6 +137,62 @@ Future<ProjectView> currentView() =>
     RustLib.instance.api.crateApiTranscribeCurrentView();
 
 enum CaptionAnimationView { none, pop, fade, typewriter }
+
+/// A caption word under the finger on the preview (T-1202).
+class CaptionHitView {
+  final String? clipId;
+  final String? audioId;
+  final String segment;
+  final int word;
+
+  /// The word as written in the transcript, before any upper case.
+  final String text;
+
+  /// The word's box on the frame, in fractions of its width and height.
+  final double left;
+  final double top;
+  final double width;
+  final double height;
+
+  const CaptionHitView({
+    this.clipId,
+    this.audioId,
+    required this.segment,
+    required this.word,
+    required this.text,
+    required this.left,
+    required this.top,
+    required this.width,
+    required this.height,
+  });
+
+  @override
+  int get hashCode =>
+      clipId.hashCode ^
+      audioId.hashCode ^
+      segment.hashCode ^
+      word.hashCode ^
+      text.hashCode ^
+      left.hashCode ^
+      top.hashCode ^
+      width.hashCode ^
+      height.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CaptionHitView &&
+          runtimeType == other.runtimeType &&
+          clipId == other.clipId &&
+          audioId == other.audioId &&
+          segment == other.segment &&
+          word == other.word &&
+          text == other.text &&
+          left == other.left &&
+          top == other.top &&
+          width == other.width &&
+          height == other.height;
+}
 
 enum CaptionPresetView {
   wordByWord,

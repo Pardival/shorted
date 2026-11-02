@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
@@ -8,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../bridge/api/overlays.dart';
 import '../../bridge/api/projects.dart';
+import '../../bridge/api/transcribe.dart';
 import '../../design_system/components.dart';
 import '../../design_system/tokens.g.dart';
 import '../../l10n/generated/app_localizations.dart';
@@ -233,11 +235,20 @@ class _OverlaySelectionState extends ConsumerState<OverlaySelection>
   final _words = TextEditingController();
   final _wordsFocus = FocusNode();
 
+  /// A caption word tapped once: its emphasis changes unless a second tap edits it (T-1202).
+  Timer? _captionTap;
+  CaptionHitView? _captionEditing;
+  final _captionWord = TextEditingController();
+  final _captionFocus = FocusNode();
+
   @override
   void initState() {
     super.initState();
     _wordsFocus.addListener(() {
       if (!_wordsFocus.hasFocus) _finishTyping();
+    });
+    _captionFocus.addListener(() {
+      if (!_captionFocus.hasFocus) _finishCaption();
     });
   }
 
@@ -246,6 +257,9 @@ class _OverlaySelectionState extends ConsumerState<OverlaySelection>
     _recorder?.dispose();
     _words.dispose();
     _wordsFocus.dispose();
+    _captionTap?.cancel();
+    _captionWord.dispose();
+    _captionFocus.dispose();
     super.dispose();
   }
 
@@ -349,12 +363,6 @@ class _OverlaySelectionState extends ConsumerState<OverlaySelection>
       }
       return;
     }
-    if (twice) {
-      _lastTap = null;
-      _doubleTapAt = details.localPosition;
-      _startTyping();
-      return;
-    }
     final point = details.localPosition / _scale;
     String? hit;
     for (final candidate in _boxes) {
@@ -363,7 +371,98 @@ class _OverlaySelectionState extends ConsumerState<OverlaySelection>
         break;
       }
     }
+    if (twice) {
+      _lastTap = null;
+      _doubleTapAt = details.localPosition;
+      if (hit != null) {
+        _startTyping();
+      } else {
+        _captionTap?.cancel();
+        unawaited(_editCaption(point));
+      }
+      return;
+    }
     ref.read(selectedOverlayProvider.notifier).set(hit);
+    _captionTap?.cancel();
+    if (hit == null) {
+      _captionTap = Timer(kDoubleTapTimeout, () => _emphasise(point));
+    }
+  }
+
+  Future<CaptionHitView?> _captionAt(Offset point) => ref
+      .read(projectGatewayProvider)
+      .captionWordAt(
+        widget.playheadUs.value,
+        point.dx / canvasWidth,
+        point.dy / canvasHeight,
+      );
+
+  TranscriptView _owner(CaptionHitView word) => TranscriptView(
+    clipId: word.clipId,
+    audioId: word.audioId,
+    language: '',
+    segments: const [],
+  );
+
+  /// One tap on a caption word turns its emphasis on or off (S30).
+  Future<void> _emphasise(Offset point) async {
+    final word = await _captionAt(point);
+    if (word == null || !mounted) return;
+    await _applyPath(
+      (gateway) =>
+          gateway.toggleEmphasis(_owner(word), word.segment, word.word),
+    );
+  }
+
+  /// Two taps on a caption word open it for correction, in place.
+  Future<void> _editCaption(Offset point) async {
+    final word = await _captionAt(point);
+    if (word == null || !mounted) return;
+    ref.read(previewTransportProvider).pause();
+    setState(() {
+      _captionEditing = word;
+      _captionWord.text = word.text;
+    });
+    _captionFocus.requestFocus();
+  }
+
+  Future<void> _finishCaption() async {
+    final word = _captionEditing;
+    if (word == null) return;
+    final text = _captionWord.text.trim();
+    setState(() => _captionEditing = null);
+    if (text.isEmpty || text == word.text) return;
+    await _applyPath(
+      (gateway) =>
+          gateway.editWord(_owner(word), word.segment, word.word, text),
+    );
+  }
+
+  Widget _captionEditor(CaptionHitView word, Size size) {
+    final width = math.max(word.width * size.width + 2 * ShortedSpace.l, 140.0);
+    final centre = (word.left + word.width / 2) * size.width;
+    return Positioned(
+      left: (centre - width / 2).clamp(0, math.max(0, size.width - width)),
+      top: word.top * size.height,
+      width: width,
+      child: Material(
+        color: ShortedColors.surface.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(ShortedRadius.s),
+        child: TextField(
+          key: const ValueKey('preview-caption-editor'),
+          controller: _captionWord,
+          focusNode: _captionFocus,
+          textAlign: TextAlign.center,
+          decoration: const InputDecoration(
+            isDense: true,
+            border: InputBorder.none,
+            contentPadding: EdgeInsets.all(ShortedSpace.s),
+          ),
+          onSubmitted: (_) => _captionFocus.unfocus(),
+          onTapOutside: (_) => _captionFocus.unfocus(),
+        ),
+      ),
+    );
   }
 
   /// Which handle of the selected box is under `point`, if any.
@@ -607,10 +706,15 @@ class _OverlaySelectionState extends ConsumerState<OverlaySelection>
                       points: _recorder == null ? pathPoints : const [],
                     ),
                   );
-                  if (typing == null) return selection;
+                  final caption = _captionEditing;
+                  if (typing == null && caption == null) return selection;
                   return Stack(
                     fit: StackFit.expand,
-                    children: [selection, _typing(typing)],
+                    children: [
+                      selection,
+                      if (typing != null) _typing(typing),
+                      if (caption != null) _captionEditor(caption, box.biggest),
+                    ],
                   );
                 },
               ),

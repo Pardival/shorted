@@ -144,6 +144,14 @@ class _CaptionsPanelState extends ConsumerState<CaptionsPanel> {
           Text(
             l10n.noTranscript,
             style: const TextStyle(color: ShortedColors.textMuted),
+          )
+        else
+          Padding(
+            padding: const EdgeInsets.only(bottom: ShortedSpace.s),
+            child: Text(
+              l10n.captionTapHint,
+              style: const TextStyle(color: ShortedColors.textMuted),
+            ),
           ),
         for (final transcript in transcripts)
           for (final segment in transcript.segments)

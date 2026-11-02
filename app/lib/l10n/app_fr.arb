@@ -325,5 +325,6 @@
   "transcribeWithOpenai": "Meilleurs mots avec OpenAI (ta clé)",
   "openaiKeyTitle": "Ta clé OpenAI",
   "openaiConsentTitle": "Envoyer le son à OpenAI ?",
-  "openaiConsentBody": "Seul le son de tes clips et voix part chez OpenAI, jamais l'image. La transcription est facturée sur ta clé. Elle remplace les transcriptions actuelles, tes corrections comprises."
+  "openaiConsentBody": "Seul le son de tes clips et voix part chez OpenAI, jamais l'image. La transcription est facturée sur ta clé. Elle remplace les transcriptions actuelles, tes corrections comprises.",
+  "captionTapHint": "Sur la vidéo : touche un mot pour le mettre en valeur, deux fois pour le corriger."
 }

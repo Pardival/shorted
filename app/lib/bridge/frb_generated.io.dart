@@ -93,6 +93,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool dco_decode_box_autoadd_bool(dynamic raw);
 
   @protected
+  CaptionHitView dco_decode_box_autoadd_caption_hit_view(dynamic raw);
+
+  @protected
   ErrorCode dco_decode_box_autoadd_error_code(dynamic raw);
 
   @protected
@@ -133,6 +136,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CaptionAnimationView dco_decode_caption_animation_view(dynamic raw);
+
+  @protected
+  CaptionHitView dco_decode_caption_hit_view(dynamic raw);
 
   @protected
   CaptionPresetView dco_decode_caption_preset_view(dynamic raw);
@@ -277,6 +283,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   bool? dco_decode_opt_box_autoadd_bool(dynamic raw);
+
+  @protected
+  CaptionHitView? dco_decode_opt_box_autoadd_caption_hit_view(dynamic raw);
 
   @protected
   ErrorCode? dco_decode_opt_box_autoadd_error_code(dynamic raw);
@@ -473,6 +482,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool sse_decode_box_autoadd_bool(SseDeserializer deserializer);
 
   @protected
+  CaptionHitView sse_decode_box_autoadd_caption_hit_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   ErrorCode sse_decode_box_autoadd_error_code(SseDeserializer deserializer);
 
   @protected
@@ -527,6 +541,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CaptionAnimationView sse_decode_caption_animation_view(
     SseDeserializer deserializer,
   );
+
+  @protected
+  CaptionHitView sse_decode_caption_hit_view(SseDeserializer deserializer);
 
   @protected
   CaptionPresetView sse_decode_caption_preset_view(
@@ -707,6 +724,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   bool? sse_decode_opt_box_autoadd_bool(SseDeserializer deserializer);
+
+  @protected
+  CaptionHitView? sse_decode_opt_box_autoadd_caption_hit_view(
+    SseDeserializer deserializer,
+  );
 
   @protected
   ErrorCode? sse_decode_opt_box_autoadd_error_code(
@@ -941,6 +963,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_box_autoadd_bool(bool self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_caption_hit_view(
+    CaptionHitView self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_error_code(
     ErrorCode self,
     SseSerializer serializer,
@@ -1015,6 +1043,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_caption_animation_view(
     CaptionAnimationView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_caption_hit_view(
+    CaptionHitView self,
     SseSerializer serializer,
   );
 
@@ -1239,6 +1273,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_opt_box_autoadd_bool(bool? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_caption_hit_view(
+    CaptionHitView? self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_opt_box_autoadd_error_code(

@@ -3,7 +3,7 @@
 
 use std::ops::Range;
 
-use crate::command::AnimSlot;
+use crate::command::{AnimSlot, TranscriptOwner};
 use crate::model::*;
 
 /// One video layer. During a transition there are two: outgoing first.
@@ -37,9 +37,19 @@ pub struct OverlayLayer {
     pub reveal: f32,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct WordPlace {
+    pub owner: TranscriptOwner,
+    pub segment: Id,
+    /// Index in the segment, deleted words counted.
+    pub word: usize,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct CaptionRun {
     pub text: String,
+    /// Where the word is in its transcript, so a tap on it can change it (T-1202).
+    pub place: Option<WordPlace>,
     pub emphasis: bool,
     /// The word being spoken now, for karaoke.
     pub active: bool,
@@ -529,6 +539,7 @@ fn overlay_layer(item: &OverlayItem, t: i64) -> OverlayLayer {
 /// The block of words on screen at `source_time`, in the grouping of the settings, and how long
 /// it has been showing.
 fn word_block(
+    owner: TranscriptOwner,
     transcript: &Transcript,
     source_time: i64,
     grouping: Grouping,
@@ -536,10 +547,11 @@ fn word_block(
 ) -> Option<(Vec<CaptionRun>, i64)> {
     for segment in transcript.segments.iter().filter(|s| !s.hidden) {
         // Words trimmed out of the edit do not take a place in a group.
-        let words: Vec<&Word> = segment
+        let words: Vec<(usize, &Word)> = segment
             .words
             .iter()
-            .filter(|w| !w.deleted && used.contains(&w.start_us))
+            .enumerate()
+            .filter(|(_, w)| !w.deleted && used.contains(&w.start_us))
             .collect();
         let size = match grouping {
             Grouping::OneWord => 1,
@@ -547,7 +559,7 @@ fn word_block(
             Grouping::Sentence => words.len().max(1),
         };
         for group in words.chunks(size) {
-            let (Some(first), Some(last)) = (group.first(), group.last()) else {
+            let (Some((_, first)), Some((_, last))) = (group.first(), group.last()) else {
                 continue;
             };
             if !(first.start_us..last.end_us).contains(&source_time) {
@@ -555,11 +567,16 @@ fn word_block(
             }
             let runs = group
                 .iter()
-                .map(|word| {
+                .map(|(index, word)| {
                     let (EmphasisState::Auto(emphasis) | EmphasisState::User(emphasis)) =
                         word.emphasis;
                     CaptionRun {
                         text: word.text.clone(),
+                        place: Some(WordPlace {
+                            owner,
+                            segment: segment.id,
+                            word: *index,
+                        }),
                         emphasis,
                         active: (word.start_us..word.end_us).contains(&source_time),
                     }
@@ -588,7 +605,13 @@ fn caption_block(project: &Project, layers: &[ClipLayer], t: i64) -> (Vec<Captio
                     (Some(layer), Some(clip)) if clip.original_audio.transcribe => {
                         clip.transcript.as_ref().and_then(|t| {
                             let used = clip.source_in_us..clip.source_out_us;
-                            word_block(t, layer.source_time_us, settings.grouping, used)
+                            word_block(
+                                TranscriptOwner::Clip(clip.id),
+                                t,
+                                layer.source_time_us,
+                                settings.grouping,
+                                used,
+                            )
                         })
                     }
                     _ => None,
@@ -601,7 +624,13 @@ fn caption_block(project: &Project, layers: &[ClipLayer], t: i64) -> (Vec<Captio
                         let source_time = item.source_in_us + t - item.start_us;
                         let transcript = item.transcript.as_ref()?;
                         let used = item.source_in_us..item.source_out_us;
-                        word_block(transcript, source_time, settings.grouping, used)
+                        word_block(
+                            TranscriptOwner::Audio(item.id),
+                            transcript,
+                            source_time,
+                            settings.grouping,
+                            used,
+                        )
                     })
             }
         };

@@ -153,6 +153,9 @@ abstract interface class ProjectGateway {
     String segment,
     int word,
   );
+
+  /// The caption word at `x`, `y` (fractions of the frame) at `timeUs` (T-1202).
+  Future<speech.CaptionHitView?> captionWordAt(int timeUs, double x, double y);
   Future<ProjectView> setCaptionPreset(speech.CaptionPresetView preset);
   Future<ProjectView> setCaptionsEnabled({required bool enabled});
   Future<ProjectView> setCaptionAnimation(
@@ -820,6 +823,13 @@ class EngineGateway implements ProjectGateway {
     segment: segment,
     word: word,
   );
+
+  @override
+  Future<speech.CaptionHitView?> captionWordAt(
+    int timeUs,
+    double x,
+    double y,
+  ) => speech.captionWordAt(timeUs: timeUs, x: x, y: y);
 
   @override
   Future<ProjectView> setCaptionPreset(speech.CaptionPresetView preset) =>

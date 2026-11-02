@@ -7,6 +7,7 @@ mod ai_arrange;
 pub mod api;
 #[cfg(target_vendor = "apple")]
 mod audio_output;
+mod caption_layout;
 mod derush;
 pub mod error;
 #[cfg(target_vendor = "apple")]

@@ -18,6 +18,8 @@ const SAFE_BOTTOM: f32 = 0.75;
 const OUTLINE_REACH: i32 = 5;
 const BOX_PADDING: f32 = 24.0;
 const BOX_COLOR: [u8; 4] = [0, 0, 0, 170];
+/// The brand lime, when the chosen highlight would vanish into the text.
+const FALLBACK_HIGHLIGHT: [u8; 4] = [198, 241, 53, 255];
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct CaptionWord {
@@ -103,15 +105,13 @@ impl CaptionPainter {
         }
     }
 
-    /// RGBA of a `width` by `height` frame, transparent around the text.
-    pub fn paint(
+    /// The words shaped in a box of the frame's text width, each span tagged with its index.
+    fn layout(
         &mut self,
         words: &[CaptionWord],
         look: &CaptionLook,
         width: u32,
-        height: u32,
-    ) -> Vec<u8> {
-        let mut pixels = vec![0; width as usize * height as usize * 4];
+    ) -> (Buffer, f32, f32) {
         let scale = width as f32 / REFERENCE_WIDTH;
         let size = (look.size * scale).max(1.0);
         let mut buffer = Buffer::new(&mut self.fonts, Metrics::new(size, size * LINE_HEIGHT));
@@ -126,6 +126,12 @@ impl CaptionPainter {
         };
         let attrs = Attrs::new().family(Family::Name(family));
         let color = |rgba: [u8; 4]| Color::rgba(rgba[0], rgba[1], rgba[2], rgba[3]);
+        // A highlight the same colour as the text would not show at all.
+        let highlight = if look.highlight == look.color {
+            FALLBACK_HIGHLIGHT
+        } else {
+            look.highlight
+        };
         let texts: Vec<String> = words
             .iter()
             .enumerate()
@@ -142,16 +148,76 @@ impl CaptionPainter {
                 }
             })
             .collect();
-        let spans = texts.iter().zip(words).map(|(text, word)| {
-            let tone = if word.highlighted {
-                look.highlight
-            } else {
-                look.color
-            };
-            (text.as_str(), attrs.clone().color(color(tone)))
-        });
+        let spans = texts
+            .iter()
+            .zip(words)
+            .enumerate()
+            .map(|(index, (text, word))| {
+                let tone = if word.highlighted {
+                    highlight
+                } else {
+                    look.color
+                };
+                (
+                    text.as_str(),
+                    attrs.clone().color(color(tone)).metadata(index),
+                )
+            });
         buffer.set_rich_text(spans, &attrs, Shaping::Advanced, Some(Align::Center));
         buffer.shape_until_scroll(&mut self.fonts, false);
+        (buffer, size, box_width)
+    }
+
+    /// Where each word is drawn, as left, top, width and height in fractions of the frame.
+    /// The order is the order of `words`; a word not drawn has no box.
+    pub fn word_boxes(
+        &mut self,
+        words: &[CaptionWord],
+        look: &CaptionLook,
+        width: u32,
+        height: u32,
+    ) -> Vec<Option<[f32; 4]>> {
+        let (buffer, size, box_width) = self.layout(words, look, width);
+        let lines = buffer.layout_runs().count() as f32;
+        let block_height = lines * size * LINE_HEIGHT;
+        let top = block_top(look.anchor, block_height, height as f32);
+        let left = (width as f32 - box_width) / 2.0;
+        let mut boxes: Vec<Option<[f32; 4]>> = vec![None; words.len()];
+        for run in buffer.layout_runs() {
+            for glyph in run.glyphs {
+                let Some(slot) = boxes.get_mut(glyph.metadata) else {
+                    continue;
+                };
+                let (x0, x1) = (left + glyph.x, left + glyph.x + glyph.w);
+                let (y0, y1) = (top + run.line_top, top + run.line_top + run.line_height);
+                *slot = Some(match *slot {
+                    Some([x, y, w, h]) => {
+                        let (nx, ny) = (x.min(x0), y.min(y0));
+                        [nx, ny, (x + w).max(x1) - nx, (y + h).max(y1) - ny]
+                    }
+                    None => [x0, y0, x1 - x0, y1 - y0],
+                });
+            }
+        }
+        let (fw, fh) = (width as f32, height as f32);
+        boxes
+            .into_iter()
+            .map(|found| found.map(|[x, y, w, h]| [x / fw, y / fh, w / fw, h / fh]))
+            .collect()
+    }
+
+    /// RGBA of a `width` by `height` frame, transparent around the text.
+    pub fn paint(
+        &mut self,
+        words: &[CaptionWord],
+        look: &CaptionLook,
+        width: u32,
+        height: u32,
+    ) -> Vec<u8> {
+        let mut pixels = vec![0; width as usize * height as usize * 4];
+        let scale = width as f32 / REFERENCE_WIDTH;
+        let (mut buffer, size, box_width) = self.layout(words, look, width);
+        let color = |rgba: [u8; 4]| Color::rgba(rgba[0], rgba[1], rgba[2], rgba[3]);
 
         let lines = buffer.layout_runs().count() as f32;
         let block_height = lines * size * LINE_HEIGHT;
@@ -272,6 +338,28 @@ mod tests {
             middle.abs_diff((0.7 * 640.0) as usize) < 40,
             "{first} {last}"
         );
+    }
+
+    #[test]
+    fn a_highlight_the_colour_of_the_text_still_shows() {
+        let mut painter = CaptionPainter::new();
+        let same = CaptionLook {
+            highlight: [255, 255, 255, 255],
+            ..look()
+        };
+        let pixels = painter.paint(&[word("Hi", true)], &same, 360, 640);
+        let solid = pixels.chunks(4).find(|p| p[3] == 255).unwrap();
+        assert_eq!(&solid[..3], &FALLBACK_HIGHLIGHT[..3]);
+    }
+
+    #[test]
+    fn each_word_gets_its_own_box_left_to_right() {
+        let mut painter = CaptionPainter::new();
+        let boxes =
+            painter.word_boxes(&[word("one", false), word("two", false)], &look(), 360, 640);
+        let [a, b] = [boxes[0].unwrap(), boxes[1].unwrap()];
+        assert!(a[0] + a[2] <= b[0] + 0.001, "{a:?} {b:?}");
+        assert!((a[1] - b[1]).abs() < 0.001);
     }
 
     #[test]

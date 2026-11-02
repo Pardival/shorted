@@ -913,6 +913,13 @@ class FakeGateway implements ProjectGateway {
     return view();
   }
 
+  /// What `captionWordAt` answers: a word anywhere on the frame, or none.
+  CaptionHitView? captionWord;
+
+  @override
+  Future<CaptionHitView?> captionWordAt(int timeUs, double x, double y) async =>
+      captionWord;
+
   @override
   Future<ProjectView> toggleEmphasis(
     TranscriptView transcript,

@@ -10,6 +10,9 @@ use shorted_ai::speech::{
     read_transcription, transcription_upload, wav, UploadHttp, MAX_CHUNK_SAMPLES,
 };
 use shorted_core::captions::{apply_auto_emphasis, apply_preset, srt};
+use shorted_core::evaluate::evaluate;
+use shorted_render::captions::CaptionPainter;
+
 use shorted_core::command::{Command, TranscriptOwner};
 use shorted_core::model::*;
 use shorted_transcribe::{group_words, SpokenWord, BASE_MODEL};
@@ -20,6 +23,7 @@ use crate::api::clips::{edit, parse};
 #[cfg(target_vendor = "apple")]
 use crate::api::media::resolve;
 use crate::api::projects::{on_command_thread, view_of, with_active, ProjectView};
+use crate::caption_layout::{caption_look, caption_words};
 use crate::error::{EngineError, EngineFailure};
 use crate::frb_generated::StreamSink;
 use crate::runtime::{self, Priority, TaskContext, TaskEvent};
@@ -674,6 +678,103 @@ pub async fn toggle_emphasis(
     })
 }
 
+/// A caption word under the finger on the preview (T-1202).
+pub struct CaptionHitView {
+    pub clip_id: Option<String>,
+    pub audio_id: Option<String>,
+    pub segment: String,
+    pub word: u32,
+    /// The word as written in the transcript, before any upper case.
+    pub text: String,
+    /// The word's box on the frame, in fractions of its width and height.
+    pub left: f64,
+    pub top: f64,
+    pub width: f64,
+    pub height: f64,
+}
+
+/// Room around a word that still counts as on it, in fractions of the frame width.
+const TAP_SLOP: f32 = 0.02;
+
+thread_local! {
+    /// Fonts load once per thread, not at every tap.
+    static PAINTER: std::cell::RefCell<Option<CaptionPainter>> = const { std::cell::RefCell::new(None) };
+}
+
+fn hit(project: &Project, time_us: i64, x: f32, y: f32) -> Option<CaptionHitView> {
+    let frame = evaluate(project, time_us);
+    if frame.captions.is_empty() {
+        return None;
+    }
+    let karaoke = project.captions.preset == CaptionPreset::Karaoke;
+    let words = caption_words(&frame, karaoke, CaptionAnimation::None);
+    let look = caption_look(project);
+    let boxes = PAINTER.with(|cell| {
+        let mut slot = cell.borrow_mut();
+        let painter = slot.get_or_insert_with(CaptionPainter::new);
+        painter.word_boxes(&words, &look, CANVAS_WIDTH, CANVAS_HEIGHT)
+    });
+    let slop_y = TAP_SLOP * CANVAS_WIDTH as f32 / CANVAS_HEIGHT as f32;
+    let (index, [left, top, width, height]) =
+        boxes.iter().enumerate().find_map(|(index, found)| {
+            let [l, t, w, h] = (*found)?;
+            let inside = x >= l - TAP_SLOP
+                && x <= l + w + TAP_SLOP
+                && y >= t - slop_y
+                && y <= t + h + slop_y;
+            inside.then_some((index, [l, t, w, h]))
+        })?;
+    let place = frame.captions.get(index)?.place?;
+    let transcript = match place.owner {
+        TranscriptOwner::Clip(id) => project
+            .timeline
+            .clips
+            .iter()
+            .find(|clip| clip.id == id)?
+            .transcript
+            .as_ref()?,
+        TranscriptOwner::Audio(id) => project
+            .timeline
+            .audio
+            .iter()
+            .find(|item| item.id == id)?
+            .transcript
+            .as_ref()?,
+    };
+    let word = transcript
+        .segments
+        .iter()
+        .find(|segment| segment.id == place.segment)?
+        .words
+        .get(place.word)?;
+    let (clip_id, audio_id) = match place.owner {
+        TranscriptOwner::Clip(id) => (Some(id.to_string()), None),
+        TranscriptOwner::Audio(id) => (None, Some(id.to_string())),
+    };
+    Some(CaptionHitView {
+        clip_id,
+        audio_id,
+        segment: place.segment.to_string(),
+        word: place.word as u32,
+        text: word.text.clone(),
+        left: f64::from(left),
+        top: f64::from(top),
+        width: f64::from(width),
+        height: f64::from(height),
+    })
+}
+
+/// The caption word at `x`, `y` (fractions of the frame) at `time_us`, if there is one.
+pub async fn caption_word_at(
+    time_us: i64,
+    x: f64,
+    y: f64,
+) -> Result<Option<CaptionHitView>, EngineFailure> {
+    on_command_thread(move || {
+        with_active(|session| Ok(hit(session.project(), time_us, x as f32, y as f32)))
+    })
+}
+
 /// Writes the project's captions next to an export (FR-CAP-07).
 pub async fn write_srt(path: String) -> Result<(), EngineFailure> {
     let project = transport().project.clone();
@@ -794,6 +895,39 @@ mod tests {
         assert_eq!(language, "fr");
         assert_eq!(words[0].start_us, 500_000);
         assert_eq!(words[1].start_us, 600_000_000 + 500_000);
+    }
+
+    #[test]
+    fn a_tap_on_a_caption_finds_its_word_and_a_tap_beside_it_does_not() {
+        let json = include_str!("../../../../fixtures/projects/v1_full.json");
+        let mut project = Project::from_json(json).unwrap();
+        project.captions.enabled = true;
+        project.captions.sources = vec![CaptionSource::OriginalSound];
+        let clip = project
+            .timeline
+            .clips
+            .iter()
+            .find(|clip| clip.transcript.is_some())
+            .unwrap()
+            .clone();
+        let first = &clip.transcript.as_ref().unwrap().segments[0].words[0];
+        let time = first.start_us - clip.source_in_us + 1;
+        let frame = evaluate(&project, time);
+        assert!(!frame.captions.is_empty(), "no caption at {time}");
+        let mut found = None;
+        'grid: for row in 0..100 {
+            for column in 0..50 {
+                let (x, y) = (column as f32 / 50.0, row as f32 / 100.0);
+                if let Some(word) = hit(&project, time, x, y) {
+                    found = Some(word);
+                    break 'grid;
+                }
+            }
+        }
+        let word = found.expect("no word under any point");
+        assert_eq!(word.clip_id, Some(clip.id.to_string()));
+        assert!(word.top > 0.1 && word.top < 0.9);
+        assert!(hit(&project, time, 0.01, 0.01).is_none());
     }
 
     #[test]
