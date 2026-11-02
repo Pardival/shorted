@@ -18,6 +18,7 @@ import '../settings/ai_settings_section.dart';
 import 'ai_consent.dart';
 import 'arrange_review.dart';
 import '../project/project_providers.dart';
+import '../timeline/filmstrips.dart';
 import '../timeline/timeline_layout.dart';
 
 const _mediaTypes = XTypeGroup(
@@ -63,9 +64,19 @@ class _ClipsPanelState extends ConsumerState<ClipsPanel> {
   BigInt? _arrangeTask;
   StreamSubscription<TaskEvent>? _arrangeEvents;
 
+  /// First frames for the list (T-1209); the engine caches the strips, so this is cheap.
+  late final Filmstrips _thumbnails;
+
+  @override
+  void initState() {
+    super.initState();
+    _thumbnails = Filmstrips(ref.read(projectGatewayProvider).filmstrip);
+  }
+
   @override
   void dispose() {
     unawaited(_arrangeEvents?.cancel());
+    _thumbnails.dispose();
     super.dispose();
   }
 
@@ -300,6 +311,7 @@ class _ClipsPanelState extends ConsumerState<ClipsPanel> {
                     for (final item in media)
                       _MediaRow(
                         item: item,
+                        thumbnails: _thumbnails,
                         order: _picked.contains(item.id)
                             ? _picked.indexOf(item.id) + 1
                             : null,
@@ -322,15 +334,20 @@ class _ClipsPanelState extends ConsumerState<ClipsPanel> {
   }
 }
 
+const _thumbnailWidth = 64.0;
+const _thumbnailHeight = 40.0;
+
 class _MediaRow extends StatelessWidget {
   const _MediaRow({
     required this.item,
+    required this.thumbnails,
     required this.order,
     required this.onTap,
     required this.onRelink,
   });
 
   final MediaItemView item;
+  final Filmstrips thumbnails;
   final int? order;
   final VoidCallback? onTap;
   final VoidCallback onRelink;
@@ -339,16 +356,52 @@ class _MediaRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final badge = order;
+    final pictured = !item.offline && item.kind != MediaKindView.audio;
+    if (pictured) thumbnails.request(item.id);
+    final icon = Icon(switch (item.kind) {
+      MediaKindView.video => Icons.movie_outlined,
+      MediaKindView.audio => Icons.music_note_outlined,
+      _ => Icons.image_outlined,
+    }, color: ShortedColors.textMuted);
     return ListTile(
-      dense: true,
       onTap: onTap,
-      leading: badge == null
-          ? Icon(
-              item.kind == MediaKindView.video
-                  ? Icons.movie_outlined
-                  : Icons.image_outlined,
-            )
-          : ShortedChip(label: '$badge', selected: true),
+      contentPadding: const EdgeInsets.symmetric(horizontal: ShortedSpace.s),
+      minLeadingWidth: _thumbnailWidth,
+      leading: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(ShortedRadius.s),
+            child: Container(
+              width: _thumbnailWidth,
+              height: _thumbnailHeight,
+              color: ShortedColors.surfaceRaised,
+              alignment: Alignment.center,
+              child: !pictured
+                  ? icon
+                  : ListenableBuilder(
+                      listenable: thumbnails,
+                      builder: (context, _) {
+                        final frame = thumbnails.at(item.id, 0);
+                        if (frame == null) return icon;
+                        return RawImage(
+                          image: frame.image,
+                          width: _thumbnailWidth,
+                          height: _thumbnailHeight,
+                          fit: BoxFit.cover,
+                        );
+                      },
+                    ),
+            ),
+          ),
+          if (badge != null)
+            Positioned(
+              right: -ShortedSpace.xs,
+              top: -ShortedSpace.xs,
+              child: ShortedChip(label: '$badge', selected: true),
+            ),
+        ],
+      ),
       title: Text(item.name, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: Text(
         item.offline

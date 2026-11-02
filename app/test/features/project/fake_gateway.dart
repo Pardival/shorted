@@ -388,7 +388,11 @@ class FakeGateway implements ProjectGateway {
   Stream<SaveStateView> saveEvents() => saves.stream;
 
   @override
-  Stream<ThumbnailView> filmstrip(String mediaId) => const Stream.empty();
+  Stream<ThumbnailView> filmstrip(String mediaId) =>
+      Stream.fromIterable(thumbnails);
+
+  /// What every filmstrip delivers.
+  List<ThumbnailView> thumbnails = const [];
 
   final cropMoves = <(String, double, double, double)>[];
   final cropCommits = <String>[];
