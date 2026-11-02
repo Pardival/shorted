@@ -49,7 +49,7 @@ fn display_name(location: &MediaLocation) -> String {
 }
 
 /// Where the file is now, if it can be reached.
-fn resolve(media: &MediaRef, folder: &Path) -> Option<PathBuf> {
+pub(crate) fn resolve(media: &MediaRef, folder: &Path) -> Option<PathBuf> {
     match &media.location {
         MediaLocation::ProjectCopy { rel_path } => {
             Some(folder.join(rel_path)).filter(|path| path.exists())

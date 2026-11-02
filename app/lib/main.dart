@@ -8,6 +8,7 @@ import 'app/shorted_app.dart';
 import 'bridge/api.dart' as engine;
 import 'bridge/error.dart';
 import 'bridge/frb_generated.dart';
+import 'features/preview/preview_controller.dart';
 import 'features/project/project_gateway.dart';
 import 'features/project/project_providers.dart';
 import 'features/spike/spike_screen.dart';
@@ -23,6 +24,7 @@ Future<void> main() async {
     ProviderScope(
       overrides: [
         projectGatewayProvider.overrideWithValue(EngineGateway(support.path)),
+        previewTransportProvider.overrideWithValue(EngineTransport()),
       ],
       child: ShortedApp(
         engineVersion: engine.engineVersion(),

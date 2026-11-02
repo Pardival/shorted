@@ -132,6 +132,7 @@ fn save_channel() -> Sender<SaveStatus> {
 }
 
 fn close_active() -> Result<(), EngineError> {
+    crate::transport::clear();
     if let Some(session) = lock(&ACTIVE).take() {
         session.close()?;
     }
@@ -318,6 +319,7 @@ fn track_view(session: &ProjectSession) -> Vec<TrackView> {
 
 pub(crate) fn view_of(session: &ProjectSession) -> ProjectView {
     let project = session.project();
+    crate::transport::publish(project, active_folder(project.id));
     ProjectView {
         id: project.id.to_string(),
         title: project.title.clone(),

@@ -163,6 +163,7 @@ private final class SpikeSession: NSObject, FlutterTexture {
 }
 
 public final class SpikeTexturePlugin: NSObject, FlutterPlugin {
+  private static var preview: PreviewChannel?
   private let textures: FlutterTextureRegistry
   private var active: (id: Int64, session: SpikeSession)?
 
@@ -178,6 +179,7 @@ public final class SpikeTexturePlugin: NSObject, FlutterPlugin {
       let messenger = registrar.messenger
       let textures = registrar.textures
     #endif
+    preview = PreviewChannel(messenger: messenger, textures: textures)
     let channel = FlutterMethodChannel(name: "shorted/spike", binaryMessenger: messenger)
     registrar.addMethodCallDelegate(SpikeTexturePlugin(textures: textures), channel: channel)
   }

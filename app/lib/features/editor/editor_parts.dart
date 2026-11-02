@@ -1,4 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../bridge/api/media.dart';
 import '../../bridge/api/projects.dart';
@@ -6,6 +10,8 @@ import '../../design_system/components.dart';
 import '../../design_system/tokens.g.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../clips/clips_panel.dart';
+import '../preview/preview_controller.dart';
+import '../project/project_providers.dart';
 import '../timeline/timeline_layout.dart';
 import '../timeline/timeline_view.dart';
 import 'editor_section.dart';
@@ -97,24 +103,47 @@ class _SavedDot extends StatelessWidget {
   }
 }
 
-/// Stands in for the engine texture until T-0404. Nothing here may render video content.
-class PreviewArea extends StatelessWidget {
+/// The engine's frames, in a texture. Nothing here may draw video content (ADR-0003).
+class PreviewArea extends ConsumerStatefulWidget {
   const PreviewArea({super.key});
 
   @override
+  ConsumerState<PreviewArea> createState() => _PreviewAreaState();
+}
+
+class _PreviewAreaState extends ConsumerState<PreviewArea> {
+  int? _textureId;
+  late final PreviewTransport _transport = ref.read(previewTransportProvider);
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(
+      _transport.startTexture().then((id) {
+        if (mounted) setState(() => _textureId = id);
+      }),
+    );
+  }
+
+  @override
+  void dispose() {
+    unawaited(_transport.stopTexture());
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final id = _textureId;
     return Padding(
       padding: const EdgeInsets.all(ShortedSpace.s),
       child: Center(
         child: AspectRatio(
           aspectRatio: 9 / 16,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: ShortedColors.mediaPlaceholder,
-              borderRadius: BorderRadius.circular(ShortedRadius.m),
-            ),
-            child: Center(
-              child: Text(AppLocalizations.of(context).previewPlaceholder),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(ShortedRadius.m),
+            child: ColoredBox(
+              color: ShortedColors.bg,
+              child: id == null ? null : Texture(textureId: id),
             ),
           ),
         ),
@@ -123,17 +152,68 @@ class PreviewArea extends StatelessWidget {
   }
 }
 
-class TransportBar extends StatelessWidget {
+class TransportBar extends ConsumerStatefulWidget {
   const TransportBar({
     super.key,
     required this.durationUs,
+    required this.playheadUs,
     required this.onUndo,
     required this.onRedo,
   });
 
   final int durationUs;
+  final ValueNotifier<int> playheadUs;
   final VoidCallback? onUndo;
   final VoidCallback? onRedo;
+
+  @override
+  ConsumerState<TransportBar> createState() => _TransportBarState();
+}
+
+class _TransportBarState extends ConsumerState<TransportBar>
+    with SingleTickerProviderStateMixin {
+  late final Ticker _ticker = createTicker(_follow);
+  late final PreviewTransport _transport = ref.read(previewTransportProvider);
+  bool _following = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.playheadUs.addListener(_onPlayhead);
+  }
+
+  @override
+  void dispose() {
+    widget.playheadUs.removeListener(_onPlayhead);
+    _ticker.dispose();
+    super.dispose();
+  }
+
+  /// A scrub moves the engine; a change coming from the engine must not go back to it.
+  void _onPlayhead() {
+    if (!_following) _transport.seek(widget.playheadUs.value);
+  }
+
+  void _follow(Duration _) {
+    _following = true;
+    widget.playheadUs.value = _transport.positionUs;
+    _following = false;
+    if (!_transport.isPlaying) {
+      _ticker.stop();
+      setState(() {});
+    }
+  }
+
+  void _toggle() {
+    if (_transport.isPlaying) {
+      _transport.pause();
+      _ticker.stop();
+    } else {
+      _transport.play();
+      _ticker.start();
+    }
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -143,26 +223,29 @@ class TransportBar extends StatelessWidget {
       child: Row(
         children: [
           ShortedIconButton(
-            icon: Icons.play_arrow,
+            icon: _transport.isPlaying ? Icons.pause : Icons.play_arrow,
             tooltip: l10n.playPause,
-            onPressed: null,
+            onPressed: widget.durationUs > 0 ? _toggle : null,
           ),
           const SizedBox(width: ShortedSpace.s),
           Expanded(
-            child: Text(
-              '0:00 / ${formatTimecode(durationUs)}',
-              overflow: TextOverflow.ellipsis,
+            child: ValueListenableBuilder(
+              valueListenable: widget.playheadUs,
+              builder: (context, position, child) => Text(
+                '${formatTimecode(position)} / ${formatTimecode(widget.durationUs)}',
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ),
           ShortedIconButton(
             icon: Icons.undo,
             tooltip: l10n.undo,
-            onPressed: onUndo,
+            onPressed: widget.onUndo,
           ),
           ShortedIconButton(
             icon: Icons.redo,
             tooltip: l10n.redo,
-            onPressed: onRedo,
+            onPressed: widget.onRedo,
           ),
         ],
       ),
@@ -171,24 +254,22 @@ class TransportBar extends StatelessWidget {
 }
 
 class TimelineArea extends StatefulWidget {
-  const TimelineArea({super.key, required this.height, required this.view});
+  const TimelineArea({
+    super.key,
+    required this.height,
+    required this.view,
+    required this.playheadUs,
+  });
 
   final double height;
   final ProjectView view;
+  final ValueNotifier<int> playheadUs;
 
   @override
   State<TimelineArea> createState() => _TimelineAreaState();
 }
 
 class _TimelineAreaState extends State<TimelineArea> {
-  final _playheadUs = ValueNotifier<int>(0);
-
-  @override
-  void dispose() {
-    _playheadUs.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -225,7 +306,7 @@ class _TimelineAreaState extends State<TimelineArea> {
       child: TimelineView(
         tracks: tracks,
         durationUs: widget.view.durationUs.toInt(),
-        playheadUs: _playheadUs,
+        playheadUs: widget.playheadUs,
       ),
     );
   }
