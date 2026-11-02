@@ -103,6 +103,14 @@ void main() {
         locked: false,
         hidden: false,
         hasAnimation: true,
+        transform: const TransformView(
+          x: 540,
+          y: 960,
+          scale: 1,
+          rotation: 0,
+          opacity: 1,
+          flip: false,
+        ),
       ),
     );
     await open(

@@ -187,5 +187,7 @@
   "shapes": "Formes",
   "shapeRectangle": "Rectangle",
   "shapeEllipse": "Cercle",
-  "shapeArrow": "Flèche"
+  "shapeArrow": "Flèche",
+  "opacity": "Opacité",
+  "flip": "Retourner"
 }

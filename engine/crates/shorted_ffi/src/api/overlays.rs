@@ -8,9 +8,9 @@ use shorted_render::overlays::{shape_size, CANVAS_HEIGHT, CANVAS_WIDTH};
 use uuid::Uuid;
 
 use crate::api::clips::{edit, parse};
-use crate::api::projects::ProjectView;
+use crate::api::projects::{on_command_thread, view_of, with_active, ProjectView};
 use crate::error::{EngineError, EngineFailure};
-use crate::transport::transport;
+use crate::transport::{publish_overlay, transport};
 
 /// A new element lasts this long from the playhead.
 const DEFAULT_LENGTH_US: i64 = 3_000_000;
@@ -19,6 +19,8 @@ const DUPLICATE_OFFSET: f32 = 40.0;
 /// The shortest an element can be.
 const MIN_LENGTH_US: i64 = 100_000;
 const DEFAULT_FILL: &str = "#9A8CFFFF";
+const MIN_SCALE: f32 = 0.05;
+const MAX_SCALE: f32 = 20.0;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum OverlayKindView {
@@ -55,6 +57,46 @@ pub struct OverlayView {
     pub locked: bool,
     pub hidden: bool,
     pub has_animation: bool,
+    pub transform: TransformView,
+}
+
+/// An element's own placement, before animation: centre in canvas units, degrees clockwise.
+#[derive(Clone, Copy)]
+pub struct TransformView {
+    pub x: f32,
+    pub y: f32,
+    pub scale: f32,
+    pub rotation: f32,
+    pub opacity: f32,
+    pub flip: bool,
+}
+
+impl From<Transform> for TransformView {
+    fn from(base: Transform) -> Self {
+        Self {
+            x: base.position.x,
+            y: base.position.y,
+            scale: base.scale,
+            rotation: base.rotation,
+            opacity: base.opacity,
+            flip: base.flip,
+        }
+    }
+}
+
+impl From<TransformView> for Transform {
+    fn from(view: TransformView) -> Self {
+        Self {
+            position: Vec2 {
+                x: view.x,
+                y: view.y,
+            },
+            scale: view.scale.clamp(MIN_SCALE, MAX_SCALE),
+            rotation: view.rotation.rem_euclid(360.0),
+            opacity: view.opacity.clamp(0.0, 1.0),
+            flip: view.flip,
+        }
+    }
 }
 
 /// Where an element is drawn at one instant, in canvas units (1080 × 1920, origin top left).
@@ -100,6 +142,7 @@ pub(crate) fn overlay_views(project: &Project) -> Vec<OverlayView> {
                 || item.anim_loop.is_some()
                 || !item.keyframes.is_empty()
                 || item.path.is_some(),
+            transform: item.base.into(),
         })
         .collect()
 }
@@ -238,6 +281,32 @@ pub async fn set_overlay_flags(
     })
 }
 
+/// Shows `transform` while a finger moves the element; nothing is recorded yet.
+#[flutter_rust_bridge::frb(sync)]
+pub fn preview_overlay_transform(id: String, transform: TransformView) {
+    if let Ok(id) = parse(&id) {
+        publish_overlay(id, transform.into());
+    }
+}
+
+/// Records where a gesture left the element, as one undo step.
+pub async fn set_overlay_transform(
+    id: String,
+    transform: TransformView,
+) -> Result<ProjectView, EngineFailure> {
+    on_command_thread(move || {
+        let id = parse(&id)?;
+        let base: Transform = transform.into();
+        with_active(|session| {
+            let saved = find(session.project(), id).ok().map(|item| item.base);
+            if saved.is_some_and(|saved| saved != base) {
+                session.execute(&Command::UpdateOverlayTransform { id, base })?;
+            }
+            Ok(view_of(session))
+        })
+    })
+}
+
 /// A copy just above the original, a little down and to the right.
 pub async fn duplicate_overlay(id: String) -> Result<ProjectView, EngineFailure> {
     edit(move |project| {
@@ -328,5 +397,22 @@ mod tests {
         );
         assert_eq!(item.end_us - item.start_us, DEFAULT_LENGTH_US);
         assert_eq!(item.base.position.x, 540.0);
+    }
+
+    #[test]
+    fn a_transform_from_a_gesture_stays_valid() {
+        let base: Transform = TransformView {
+            x: 10.0,
+            y: 20.0,
+            scale: 0.0,
+            rotation: -90.0,
+            opacity: 1.5,
+            flip: true,
+        }
+        .into();
+        assert_eq!(base.scale, MIN_SCALE);
+        assert_eq!(base.rotation, 270.0);
+        assert_eq!(base.opacity, 1.0);
+        assert_eq!(TransformView::from(base).x, 10.0);
     }
 }

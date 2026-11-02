@@ -187,5 +187,7 @@
   "shapes": "Formas",
   "shapeRectangle": "Rectángulo",
   "shapeEllipse": "Círculo",
-  "shapeArrow": "Flecha"
+  "shapeArrow": "Flecha",
+  "opacity": "Opacidad",
+  "flip": "Voltear"
 }

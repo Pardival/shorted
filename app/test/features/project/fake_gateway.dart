@@ -260,6 +260,14 @@ class FakeGateway implements ProjectGateway {
         locked: false,
         hidden: false,
         hasAnimation: false,
+        transform: const TransformView(
+          x: 540,
+          y: 960,
+          scale: 1,
+          rotation: 0,
+          opacity: 1,
+          flip: false,
+        ),
       ),
     );
     return _overlay('shape ${shape.name} $atUs');
@@ -291,6 +299,20 @@ class FakeGateway implements ProjectGateway {
 
   @override
   List<OverlayBoxView> overlayBoxes(int timeUs) => boxes;
+
+  final previewed = <TransformView>[];
+
+  @override
+  void previewOverlayTransform(String id, TransformView transform) =>
+      previewed.add(transform);
+
+  @override
+  Future<ProjectView> setOverlayTransform(String id, TransformView t) =>
+      _overlay(
+        'transform $id ${t.x.round()} ${t.y.round()} '
+        '${t.scale.toStringAsFixed(2)} ${t.rotation.round()} '
+        '${t.opacity} ${t.flip}',
+      );
 
   Future<ProjectView> _audio(String call) async {
     audioCalls.add(call);

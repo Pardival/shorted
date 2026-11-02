@@ -52,6 +52,12 @@ class EnhancePanel extends ConsumerWidget {
     for (final look in view.look.clips) {
       if (look.clipId == selected) clip = look;
     }
+    final selectedId = ref.watch(selectedOverlayProvider);
+    OverlayView? selectedOverlay;
+    for (final overlay in view.overlays) {
+      if (overlay.id == selectedId) selectedOverlay = overlay;
+    }
+
     Future<void> addShape(ShapeKindView shape) async {
       final atUs = ref.read(previewTransportProvider).positionUs;
       await run((gateway) => gateway.addShape(shape, atUs));
@@ -78,6 +84,14 @@ class EnhancePanel extends ConsumerWidget {
               ShortedChip(label: label, onTap: () => addShape(shape)),
           ],
         ),
+        if (selectedOverlay != null) ...[
+          const SizedBox(height: ShortedSpace.m),
+          _OverlayLook(
+            key: ValueKey(selectedOverlay.id),
+            overlay: selectedOverlay,
+            run: run,
+          ),
+        ],
         const SizedBox(height: ShortedSpace.m),
         if (clip == null)
           Text(
@@ -104,6 +118,74 @@ class EnhancePanel extends ConsumerWidget {
                     run((gateway) => gateway.setTransitionForAll(kind)),
               ),
           ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Opacity and flip of the selected element. The slider is recorded once, when it is let go.
+class _OverlayLook extends StatefulWidget {
+  const _OverlayLook({super.key, required this.overlay, required this.run});
+
+  final OverlayView overlay;
+  final Future<void> Function(
+    Future<ProjectView> Function(ProjectGateway gateway) action,
+  )
+  run;
+
+  @override
+  State<_OverlayLook> createState() => _OverlayLookState();
+}
+
+class _OverlayLookState extends State<_OverlayLook> {
+  double? _opacity;
+
+  void _set({double? opacity, bool? flip}) {
+    final base = widget.overlay.transform;
+    final next = TransformView(
+      x: base.x,
+      y: base.y,
+      scale: base.scale,
+      rotation: base.rotation,
+      opacity: opacity ?? base.opacity,
+      flip: flip ?? base.flip,
+    );
+    widget.run(
+      (gateway) => gateway.setOverlayTransform(widget.overlay.id, next),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final base = widget.overlay.transform;
+    return Row(
+      children: [
+        SizedBox(
+          width: 96,
+          child: Text(
+            l10n.opacity,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: ShortedColors.textMuted),
+          ),
+        ),
+        Expanded(
+          child: Slider(
+            value: _opacity ?? base.opacity,
+            label: l10n.opacity,
+            onChanged: widget.overlay.locked
+                ? null
+                : (value) => setState(() => _opacity = value),
+            onChangeEnd: (value) => _set(opacity: value),
+          ),
+        ),
+        ShortedIconButton(
+          icon: Icons.flip,
+          tooltip: l10n.flip,
+          onPressed: widget.overlay.locked
+              ? null
+              : () => _set(flip: !base.flip),
         ),
       ],
     );

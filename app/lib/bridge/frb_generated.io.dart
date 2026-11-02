@@ -83,6 +83,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ThumbnailView dco_decode_box_autoadd_thumbnail_view(dynamic raw);
 
   @protected
+  TransformView dco_decode_box_autoadd_transform_view(dynamic raw);
+
+  @protected
   TransitionKindView dco_decode_box_autoadd_transition_kind_view(dynamic raw);
 
   @protected
@@ -253,6 +256,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   TranscriptView dco_decode_transcript_view(dynamic raw);
 
   @protected
+  TransformView dco_decode_transform_view(dynamic raw);
+
+  @protected
   TransitionKindView dco_decode_transition_kind_view(dynamic raw);
 
   @protected
@@ -324,6 +330,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ThumbnailView sse_decode_box_autoadd_thumbnail_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  TransformView sse_decode_box_autoadd_transform_view(
     SseDeserializer deserializer,
   );
 
@@ -528,6 +539,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   TranscriptView sse_decode_transcript_view(SseDeserializer deserializer);
 
   @protected
+  TransformView sse_decode_transform_view(SseDeserializer deserializer);
+
+  @protected
   TransitionKindView sse_decode_transition_kind_view(
     SseDeserializer deserializer,
   );
@@ -616,6 +630,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_thumbnail_view(
     ThumbnailView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_transform_view(
+    TransformView self,
     SseSerializer serializer,
   );
 
@@ -861,6 +881,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     TranscriptView self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_transform_view(TransformView self, SseSerializer serializer);
 
   @protected
   void sse_encode_transition_kind_view(

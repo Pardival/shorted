@@ -155,6 +155,13 @@ abstract interface class ProjectGateway {
 
   /// Where the elements on screen are drawn at `timeUs`, top first.
   List<overlays.OverlayBoxView> overlayBoxes(int timeUs);
+
+  /// Shown during a gesture, not recorded.
+  void previewOverlayTransform(String id, overlays.TransformView transform);
+  Future<ProjectView> setOverlayTransform(
+    String id,
+    overlays.TransformView transform,
+  );
 }
 
 class EngineGateway implements ProjectGateway {
@@ -420,6 +427,16 @@ class EngineGateway implements ProjectGateway {
   @override
   List<overlays.OverlayBoxView> overlayBoxes(int timeUs) =>
       overlays.overlayBoxes(timeUs: timeUs);
+
+  @override
+  void previewOverlayTransform(String id, overlays.TransformView transform) =>
+      overlays.previewOverlayTransform(id: id, transform: transform);
+
+  @override
+  Future<ProjectView> setOverlayTransform(
+    String id,
+    overlays.TransformView transform,
+  ) => overlays.setOverlayTransform(id: id, transform: transform);
 
   @override
   Future<ProjectView> deleteRange(int startUs, int endUs) =>

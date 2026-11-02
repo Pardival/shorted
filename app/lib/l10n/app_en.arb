@@ -292,5 +292,7 @@
   "shapes": "Shapes",
   "shapeRectangle": "Rectangle",
   "shapeEllipse": "Circle",
-  "shapeArrow": "Arrow"
+  "shapeArrow": "Arrow",
+  "opacity": "Opacity",
+  "flip": "Flip"
 }

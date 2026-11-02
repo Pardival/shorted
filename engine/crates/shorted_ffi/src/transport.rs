@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::Instant;
 
 use shorted_audio::mixer::SAMPLE_RATE;
-use shorted_core::model::{Crop, Id, Project};
+use shorted_core::model::{Crop, Id, Project, Transform};
 
 pub(crate) struct Transport {
     pub project: Option<Arc<Project>>,
@@ -112,6 +112,19 @@ pub(crate) fn publish_crop(id: Id, crop: Crop) {
     let project = Arc::make_mut(project);
     if let Some(clip) = project.timeline.clips.iter_mut().find(|clip| clip.id == id) {
         clip.crop = crop;
+        state.revision += 1;
+    }
+}
+
+/// Shows an overlay's transform during a gesture, without an edit: the commit makes the edit.
+pub(crate) fn publish_overlay(id: Id, base: Transform) {
+    let mut state = transport();
+    let Some(project) = state.project.as_mut() else {
+        return;
+    };
+    let project = Arc::make_mut(project);
+    if let Some(item) = project.timeline.overlays.iter_mut().find(|o| o.id == id) {
+        item.base = base;
         state.revision += 1;
     }
 }

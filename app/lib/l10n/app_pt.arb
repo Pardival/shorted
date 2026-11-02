@@ -187,5 +187,7 @@
   "shapes": "Formas",
   "shapeRectangle": "Retângulo",
   "shapeEllipse": "Círculo",
-  "shapeArrow": "Seta"
+  "shapeArrow": "Seta",
+  "opacity": "Opacidade",
+  "flip": "Espelhar"
 }

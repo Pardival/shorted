@@ -15,7 +15,7 @@ import 'projects.dart';
 import 'transcribe.dart';
 
 // These functions are ignored because they are not marked as `pub`: `boxes`, `find`, `natural_size`, `new_overlay`, `overlay_views`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `eq`, `eq`, `from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `eq`, `eq`, `from`, `from`, `from`
 
 /// The elements on screen at `time_us`, as the renderer places them, top first.
 List<OverlayBoxView> overlayBoxes({required PlatformInt64 timeUs}) =>
@@ -54,6 +54,24 @@ Future<ProjectView> setOverlayFlags({
   id: id,
   locked: locked,
   hidden: hidden,
+);
+
+/// Shows `transform` while a finger moves the element; nothing is recorded yet.
+void previewOverlayTransform({
+  required String id,
+  required TransformView transform,
+}) => RustLib.instance.api.crateApiOverlaysPreviewOverlayTransform(
+  id: id,
+  transform: transform,
+);
+
+/// Records where a gesture left the element, as one undo step.
+Future<ProjectView> setOverlayTransform({
+  required String id,
+  required TransformView transform,
+}) => RustLib.instance.api.crateApiOverlaysSetOverlayTransform(
+  id: id,
+  transform: transform,
 );
 
 /// A copy just above the original, a little down and to the right.
@@ -116,6 +134,7 @@ class OverlayView {
   final bool locked;
   final bool hidden;
   final bool hasAnimation;
+  final TransformView transform;
 
   const OverlayView({
     required this.id,
@@ -125,6 +144,7 @@ class OverlayView {
     required this.locked,
     required this.hidden,
     required this.hasAnimation,
+    required this.transform,
   });
 
   @override
@@ -135,7 +155,8 @@ class OverlayView {
       endUs.hashCode ^
       locked.hashCode ^
       hidden.hashCode ^
-      hasAnimation.hashCode;
+      hasAnimation.hashCode ^
+      transform.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -148,7 +169,48 @@ class OverlayView {
           endUs == other.endUs &&
           locked == other.locked &&
           hidden == other.hidden &&
-          hasAnimation == other.hasAnimation;
+          hasAnimation == other.hasAnimation &&
+          transform == other.transform;
 }
 
 enum ShapeKindView { rectangle, ellipse, arrow }
+
+/// An element's own placement, before animation: centre in canvas units, degrees clockwise.
+class TransformView {
+  final double x;
+  final double y;
+  final double scale;
+  final double rotation;
+  final double opacity;
+  final bool flip;
+
+  const TransformView({
+    required this.x,
+    required this.y,
+    required this.scale,
+    required this.rotation,
+    required this.opacity,
+    required this.flip,
+  });
+
+  @override
+  int get hashCode =>
+      x.hashCode ^
+      y.hashCode ^
+      scale.hashCode ^
+      rotation.hashCode ^
+      opacity.hashCode ^
+      flip.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TransformView &&
+          runtimeType == other.runtimeType &&
+          x == other.x &&
+          y == other.y &&
+          scale == other.scale &&
+          rotation == other.rotation &&
+          opacity == other.opacity &&
+          flip == other.flip;
+}
