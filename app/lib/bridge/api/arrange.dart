@@ -6,9 +6,137 @@
 import '../error.dart';
 import '../frb_generated.dart';
 import '../runtime.dart';
+import 'audio.dart';
+import 'look.dart';
+import 'media.dart';
+import 'overlays.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
+
+import 'projects.dart';
+import 'transcribe.dart';
+
+// These functions are ignored because they are not marked as `pub`: `before`, `restore_command`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `eq`
 
 /// Analyses the open project in the background; the plan then waits for review (T-0803).
 Stream<TaskEvent> analyseForArrange() =>
     RustLib.instance.api.crateApiArrangeAnalyseForArrange();
+
+/// Whether a plan is ready for review.
+bool hasPendingArrangement() =>
+    RustLib.instance.api.crateApiArrangeHasPendingArrangement();
+
+/// Applies the waiting plan as one edit and describes it for the review screen.
+Future<ArrangeReviewView> applyArrangement() =>
+    RustLib.instance.api.crateApiArrangeApplyArrangement();
+
+/// "Undo all": back to the project from before the arrangement, even after later edits. It is
+/// itself one edit, which Undo takes back.
+Future<ProjectView> undoArrangement() =>
+    RustLib.instance.api.crateApiArrangeUndoArrangement();
+
+class ArrangeReviewView {
+  final PlatformInt64 beforeUs;
+  final PlatformInt64 afterUs;
+  final String summary;
+  final List<DecisionView> decisions;
+  final List<UncertainView> uncertain;
+  final ProjectView project;
+
+  const ArrangeReviewView({
+    required this.beforeUs,
+    required this.afterUs,
+    required this.summary,
+    required this.decisions,
+    required this.uncertain,
+    required this.project,
+  });
+
+  @override
+  int get hashCode =>
+      beforeUs.hashCode ^
+      afterUs.hashCode ^
+      summary.hashCode ^
+      decisions.hashCode ^
+      uncertain.hashCode ^
+      project.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ArrangeReviewView &&
+          runtimeType == other.runtimeType &&
+          beforeUs == other.beforeUs &&
+          afterUs == other.afterUs &&
+          summary == other.summary &&
+          decisions == other.decisions &&
+          uncertain == other.uncertain &&
+          project == other.project;
+}
+
+enum DecisionKindView { trimmed, cut, dropped, split, moved }
+
+/// One line of the review (S12).
+class DecisionView {
+  final String clipId;
+
+  /// The clip's place before arranging, from 1, as the user knew it.
+  final int clipNumber;
+  final DecisionKindView kind;
+
+  /// A code from the local analysis (`silence`, `blur`…) or the AI's own words.
+  final String? reason;
+  final PlatformInt64 removedUs;
+
+  const DecisionView({
+    required this.clipId,
+    required this.clipNumber,
+    required this.kind,
+    this.reason,
+    required this.removedUs,
+  });
+
+  @override
+  int get hashCode =>
+      clipId.hashCode ^
+      clipNumber.hashCode ^
+      kind.hashCode ^
+      reason.hashCode ^
+      removedUs.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DecisionView &&
+          runtimeType == other.runtimeType &&
+          clipId == other.clipId &&
+          clipNumber == other.clipNumber &&
+          kind == other.kind &&
+          reason == other.reason &&
+          removedUs == other.removedUs;
+}
+
+class UncertainView {
+  final String clipId;
+  final int clipNumber;
+  final String reason;
+
+  const UncertainView({
+    required this.clipId,
+    required this.clipNumber,
+    required this.reason,
+  });
+
+  @override
+  int get hashCode => clipId.hashCode ^ clipNumber.hashCode ^ reason.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is UncertainView &&
+          runtimeType == other.runtimeType &&
+          clipId == other.clipId &&
+          clipNumber == other.clipNumber &&
+          reason == other.reason;
+}

@@ -64,6 +64,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AnimSlotView dco_decode_anim_slot_view(dynamic raw);
 
   @protected
+  ArrangeReviewView dco_decode_arrange_review_view(dynamic raw);
+
+  @protected
   AudioItemView dco_decode_audio_item_view(dynamic raw);
 
   @protected
@@ -136,6 +139,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ClipSoundView dco_decode_clip_sound_view(dynamic raw);
 
   @protected
+  DecisionKindView dco_decode_decision_kind_view(dynamic raw);
+
+  @protected
+  DecisionView dco_decode_decision_view(dynamic raw);
+
+  @protected
   EasingView dco_decode_easing_view(dynamic raw);
 
   @protected
@@ -187,6 +196,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<ClipSoundView> dco_decode_list_clip_sound_view(dynamic raw);
 
   @protected
+  List<DecisionView> dco_decode_list_decision_view(dynamic raw);
+
+  @protected
   List<ImportOutcome> dco_decode_list_import_outcome(dynamic raw);
 
   @protected
@@ -224,6 +236,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<TranscriptView> dco_decode_list_transcript_view(dynamic raw);
+
+  @protected
+  List<UncertainView> dco_decode_list_uncertain_view(dynamic raw);
 
   @protected
   List<VersionView> dco_decode_list_version_view(dynamic raw);
@@ -366,6 +381,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   int dco_decode_u_8(dynamic raw);
 
   @protected
+  UncertainView dco_decode_uncertain_view(dynamic raw);
+
+  @protected
   void dco_decode_unit(dynamic raw);
 
   @protected
@@ -405,6 +423,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   AnimSlotView sse_decode_anim_slot_view(SseDeserializer deserializer);
+
+  @protected
+  ArrangeReviewView sse_decode_arrange_review_view(
+    SseDeserializer deserializer,
+  );
 
   @protected
   AudioItemView sse_decode_audio_item_view(SseDeserializer deserializer);
@@ -495,6 +518,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ClipSoundView sse_decode_clip_sound_view(SseDeserializer deserializer);
 
   @protected
+  DecisionKindView sse_decode_decision_kind_view(SseDeserializer deserializer);
+
+  @protected
+  DecisionView sse_decode_decision_view(SseDeserializer deserializer);
+
+  @protected
   EasingView sse_decode_easing_view(SseDeserializer deserializer);
 
   @protected
@@ -556,6 +585,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<DecisionView> sse_decode_list_decision_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<ImportOutcome> sse_decode_list_import_outcome(
     SseDeserializer deserializer,
   );
@@ -609,6 +643,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<TranscriptView> sse_decode_list_transcript_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<UncertainView> sse_decode_list_uncertain_view(
     SseDeserializer deserializer,
   );
 
@@ -771,6 +810,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   int sse_decode_u_8(SseDeserializer deserializer);
 
   @protected
+  UncertainView sse_decode_uncertain_view(SseDeserializer deserializer);
+
+  @protected
   void sse_decode_unit(SseDeserializer deserializer);
 
   @protected
@@ -819,6 +861,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_anim_slot_view(AnimSlotView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_arrange_review_view(
+    ArrangeReviewView self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_audio_item_view(AudioItemView self, SseSerializer serializer);
@@ -935,6 +983,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_clip_sound_view(ClipSoundView self, SseSerializer serializer);
 
   @protected
+  void sse_encode_decision_kind_view(
+    DecisionKindView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_decision_view(DecisionView self, SseSerializer serializer);
+
+  @protected
   void sse_encode_easing_view(EasingView self, SseSerializer serializer);
 
   @protected
@@ -1003,6 +1060,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_clip_sound_view(
     List<ClipSoundView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_decision_view(
+    List<DecisionView> self,
     SseSerializer serializer,
   );
 
@@ -1081,6 +1144,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_transcript_view(
     List<TranscriptView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_uncertain_view(
+    List<UncertainView> self,
     SseSerializer serializer,
   );
 
@@ -1278,6 +1347,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_u_8(int self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_uncertain_view(UncertainView self, SseSerializer serializer);
 
   @protected
   void sse_encode_unit(void self, SseSerializer serializer);

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
+import 'package:shorted/bridge/api/arrange.dart';
 import 'package:shorted/bridge/api/audio.dart';
 import 'package:shorted/bridge/api/brand_kit.dart';
 import 'package:shorted/bridge/api/library.dart';
@@ -213,6 +214,39 @@ class FakeGateway implements ProjectGateway {
         transition: TransitionKindView.cut,
       ),
     );
+  }
+
+  /// What the next smart arrange finds; the analysis reports these events.
+  List<DecisionView> decisions = [];
+  List<UncertainView> uncertain = [];
+  final arrangeCalls = <String>[];
+  StreamController<TaskEvent>? arranging;
+
+  @override
+  Stream<TaskEvent> analyseForArrange() {
+    arrangeCalls.add('analyse');
+    final events = StreamController<TaskEvent>();
+    arranging = events;
+    return events.stream;
+  }
+
+  @override
+  Future<ArrangeReviewView> applyArrangement() async {
+    arrangeCalls.add('apply');
+    return ArrangeReviewView(
+      beforeUs: big(166000000),
+      afterUs: big(64000000),
+      summary: '',
+      decisions: decisions,
+      uncertain: uncertain,
+      project: await view(),
+    );
+  }
+
+  @override
+  Future<ProjectView> undoArrangement() {
+    arrangeCalls.add('undo');
+    return view();
   }
 
   final versions = <VersionView>[];

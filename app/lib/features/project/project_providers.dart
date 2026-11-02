@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../bridge/api/arrange.dart';
 import '../../bridge/api/projects.dart';
 import '../preview/preview_controller.dart';
 import 'project_gateway.dart';
@@ -194,6 +195,13 @@ class EditorController extends AsyncNotifier<EditorState> {
   void _show(ProjectView view) {
     final current = state.value;
     if (current != null) state = AsyncData(current.copyWith(view: view));
+  }
+
+  /// Applies the plan smart arrange made, as one edit, and returns what it did for review.
+  Future<ArrangeReviewView> arrange() async {
+    final review = await _gateway.applyArrangement();
+    _show(review.project);
+    return review;
   }
 
   /// A background task changed the project: shows the result.

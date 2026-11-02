@@ -376,5 +376,91 @@
   "versionBeforeRestore": "Before a restore",
   "restoreVersion": "Restore this version",
   "restoreVersionBody": "The project goes back to this version. The present one is kept in the history, and Undo brings it back.",
-  "versionRestored": "Version restored."
+  "versionRestored": "Version restored.",
+  "smartArrange": "Smart arrange",
+  "arrangeReviewTitle": "What changed",
+  "reasonSilence": "silence",
+  "reasonBlur": "blurry",
+  "reasonShake": "shaky",
+  "reasonDark": "too dark",
+  "reasonBright": "overexposed",
+  "decisionSplit": "Clip {clip} split",
+  "decisionMoved": "Clip {clip} moved",
+  "decisionDropped": "Clip {clip} removed",
+  "decisionUncertain": "Clip {clip}: worth a look",
+  "check": "Check",
+  "arrangeNothing": "Nothing needed removing.",
+  "undoAll": "Undo all",
+  "adjust": "Adjust",
+  "keep": "Keep",
+  "adjustHint": "Each change is a normal trim on the timeline: drag its edges to adjust it.",
+  "decisionTrimmed": "Clip {clip}: {seconds} s trimmed",
+  "@decisionTrimmed": {
+    "placeholders": {
+      "clip": {
+        "type": "int"
+      },
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "decisionCut": "Clip {clip}: {seconds} s cut from the middle",
+  "@decisionCut": {
+    "placeholders": {
+      "clip": {
+        "type": "int"
+      },
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "arrangeBeforeAfter": "{before} of footage → {after}",
+  "@arrangeBeforeAfter": {
+    "placeholders": {
+      "before": {
+        "type": "String"
+      },
+      "after": {
+        "type": "String"
+      }
+    }
+  },
+  "arranging": "Analysing clips… {percent} %",
+  "@arranging": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "@decisionUncertain": {
+    "placeholders": {
+      "clip": {
+        "type": "int"
+      }
+    }
+  },
+  "@decisionSplit": {
+    "placeholders": {
+      "clip": {
+        "type": "int"
+      }
+    }
+  },
+  "@decisionDropped": {
+    "placeholders": {
+      "clip": {
+        "type": "int"
+      }
+    }
+  },
+  "@decisionMoved": {
+    "placeholders": {
+      "clip": {
+        "type": "int"
+      }
+    }
+  }
 }

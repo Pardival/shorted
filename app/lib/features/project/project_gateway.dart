@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../bridge/api.dart' as tasks;
+import '../../bridge/api/arrange.dart' as arrange;
 import '../../bridge/api/audio.dart' as audio;
 import '../../bridge/api/brand_kit.dart' as brand;
 import '../../bridge/api/clips.dart' as clips;
@@ -28,6 +29,11 @@ abstract interface class ProjectGateway {
   Future<void> rename(String id, String title);
   Future<ProjectView> view();
   Future<ProjectView> undo();
+
+  /// Smart arrange: analysis in the background, then one edit to review.
+  Stream<TaskEvent> analyseForArrange();
+  Future<arrange.ArrangeReviewView> applyArrangement();
+  Future<ProjectView> undoArrangement();
   Future<List<VersionView>> versionHistory();
   Future<ProjectView> restoreVersion(String name);
   Future<ProjectView> redo();
@@ -271,6 +277,16 @@ class EngineGateway implements ProjectGateway {
 
   @override
   Future<ProjectView> view() => engine.projectView();
+
+  @override
+  Stream<TaskEvent> analyseForArrange() => arrange.analyseForArrange();
+
+  @override
+  Future<arrange.ArrangeReviewView> applyArrangement() =>
+      arrange.applyArrangement();
+
+  @override
+  Future<ProjectView> undoArrangement() => arrange.undoArrangement();
 
   @override
   Future<List<VersionView>> versionHistory() => engine.versionHistory();

@@ -153,6 +153,8 @@ pub struct PlanChange {
     pub clip: Id,
     pub kind: ChangeKind,
     pub reason: Option<String>,
+    /// Source time the change removes.
+    pub removed_us: i64,
 }
 
 /// A plan checked against the project: ready to execute as one command.
@@ -257,6 +259,7 @@ pub fn validate(
                         clip: item.id,
                         kind: ChangeKind::Trimmed,
                         reason: reason.clone(),
+                        removed_us: ((item.source_out_us - item.source_in_us) - (to - from)).max(0),
                     });
                 }
             }
@@ -271,6 +274,7 @@ pub fn validate(
                         clip: item.id,
                         kind: ChangeKind::Dropped,
                         reason: reason.clone(),
+                        removed_us: item.source_out_us - item.source_in_us,
                     });
                 }
             }
@@ -306,6 +310,7 @@ pub fn validate(
                             clip: item.id,
                             kind: ChangeKind::Split,
                             reason: None,
+                            removed_us: 0,
                         });
                     }
                 }
@@ -345,6 +350,7 @@ pub fn validate(
                         clip: item.id,
                         kind: ChangeKind::Cut,
                         reason: reason.clone(),
+                        removed_us: to - from,
                     });
                 }
             }
@@ -441,6 +447,7 @@ pub fn validate(
                     clip: *id,
                     kind: ChangeKind::Moved,
                     reason: None,
+                    removed_us: 0,
                 });
             }
         }
