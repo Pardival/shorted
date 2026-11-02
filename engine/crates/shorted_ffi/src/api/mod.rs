@@ -7,6 +7,7 @@ pub mod look;
 pub mod media;
 pub mod preview;
 pub mod projects;
+pub mod transcribe;
 
 use std::path::Path;
 use std::thread;

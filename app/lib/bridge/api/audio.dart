@@ -11,6 +11,7 @@ import 'media.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 import 'projects.dart';
+import 'transcribe.dart';
 
 // These functions are ignored because they are not marked as `pub`: `audio_item`, `decode_peaks`, `item_views`, `new_track`, `no_folder`, `peaks`, `sound_view`, `trim_commands`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `eq`, `from`, `from`

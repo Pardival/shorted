@@ -1,0 +1,490 @@
+//! The speech model and transcription, and the transcript as the Captions section shows it.
+
+// Helpers only serve the Apple build until other platforms have a decoder.
+#![cfg_attr(not(target_vendor = "apple"), allow(dead_code))]
+
+use std::path::{Path, PathBuf};
+
+use shorted_core::command::{Command, TranscriptOwner};
+use shorted_core::model::*;
+use shorted_transcribe::{group_words, SpokenWord, BASE_MODEL};
+use uuid::Uuid;
+
+use crate::api::clips::{edit, parse};
+use crate::api::media::resolve;
+use crate::api::projects::{on_command_thread, view_of, with_active, ProjectView};
+use crate::error::{EngineError, EngineFailure};
+use crate::frb_generated::StreamSink;
+use crate::runtime::{self, Priority, TaskContext, TaskEvent};
+use crate::transport::transport;
+
+fn model_path(root: &Path) -> PathBuf {
+    root.join("models").join(BASE_MODEL.file)
+}
+
+pub struct ModelView {
+    pub ready: bool,
+    pub bytes: u64,
+}
+
+/// Whether the model is on disk, and its size whether it is or not.
+#[flutter_rust_bridge::frb(sync)]
+pub fn speech_model(root: String) -> ModelView {
+    ModelView {
+        ready: model_path(Path::new(&root)).exists(),
+        bytes: BASE_MODEL.bytes,
+    }
+}
+
+pub async fn delete_speech_model(root: String) -> Result<(), EngineFailure> {
+    let path = model_path(Path::new(&root));
+    if path.exists() {
+        std::fs::remove_file(path)
+            .map_err(shorted_store::session::StoreError::from)
+            .map_err(EngineError::from)?;
+    }
+    Ok(())
+}
+
+#[cfg(target_vendor = "apple")]
+fn download(target: &Path, task: &TaskContext<'_>) -> Result<(), EngineError> {
+    use std::fs::OpenOptions;
+    use std::io::{Read, Write};
+
+    use shorted_transcribe::whisper::verify;
+    use ureq::tls::{TlsConfig, TlsProvider};
+
+    fn failed<E>(_: E) -> EngineError {
+        EngineError::Internal("model not downloaded".into())
+    }
+    let folder = target.parent().ok_or_else(|| failed(()))?;
+    std::fs::create_dir_all(folder).map_err(|_| failed(()))?;
+    let part = target.with_extension("part");
+    // A partial file resumes where it stopped.
+    let done = std::fs::metadata(&part).map_or(0, |m| m.len());
+    let tls = TlsConfig::builder()
+        .provider(TlsProvider::NativeTls)
+        .build();
+    let agent: ureq::Agent = ureq::Agent::config_builder().tls_config(tls).build().into();
+    let mut response = agent
+        .get(BASE_MODEL.url)
+        .header("Range", format!("bytes={done}-"))
+        .call()
+        .map_err(|_| failed(()))?;
+    let resumed = response.status().as_u16() == 206;
+    let mut file = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .append(resumed)
+        .truncate(!resumed)
+        .open(&part)
+        .map_err(|_| failed(()))?;
+    let mut written = if resumed { done } else { 0 };
+    let mut body = response.body_mut().as_reader();
+    let mut buffer = vec![0; 256 * 1024];
+    loop {
+        task.check_cancelled()?;
+        let read = body.read(&mut buffer).map_err(|_| failed(()))?;
+        if read == 0 {
+            break;
+        }
+        file.write_all(&buffer[..read]).map_err(|_| failed(()))?;
+        written += read as u64;
+        task.progress(written as f64 / BASE_MODEL.bytes as f64);
+    }
+    file.flush().map_err(|_| failed(()))?;
+    drop(file);
+    if !verify(&part, &BASE_MODEL).map_err(|_| failed(()))? {
+        // A wrong file must never be loaded, and must not poison the next try.
+        let _ = std::fs::remove_file(&part);
+        return Err(failed(()));
+    }
+    std::fs::rename(&part, target).map_err(|_| failed(()))
+}
+
+#[cfg(not(target_vendor = "apple"))]
+fn download(_target: &Path, _task: &TaskContext<'_>) -> Result<(), EngineError> {
+    Err(EngineError::Internal("no transcription here yet".into()))
+}
+
+/// Downloads and checks the model. The first event carries the id for `cancel_task`.
+pub fn download_speech_model(root: String, events: StreamSink<TaskEvent>) {
+    runtime::global()
+        .background
+        .spawn(Priority::Normal, events, move |task| {
+            download(&model_path(Path::new(&root)), task)
+        });
+}
+
+fn to_transcript(words: Vec<SpokenWord>, offset_us: i64, language: String) -> Transcript {
+    let segments = group_words(words)
+        .into_iter()
+        .map(|phrase| Segment {
+            id: Uuid::now_v7(),
+            hidden: false,
+            words: phrase
+                .into_iter()
+                .map(|word| Word {
+                    original_text: word.text.clone(),
+                    text: word.text,
+                    start_us: word.start_us + offset_us,
+                    end_us: word.end_us + offset_us,
+                    confidence: word.confidence,
+                    emphasis: EmphasisState::Auto(false),
+                    deleted: false,
+                })
+                .collect(),
+        })
+        .collect();
+    Transcript { language, segments }
+}
+
+/// A sound to transcribe: who owns the words, and the part of the file that is used.
+struct Job {
+    owner: TranscriptOwner,
+    media: MediaRef,
+    from_us: i64,
+    to_us: i64,
+}
+
+fn jobs(project: &Project) -> Vec<Job> {
+    let find = |id: Id| {
+        project
+            .media
+            .iter()
+            .find(|m| m.id == id && m.probe.has_audio)
+    };
+    let clips = project
+        .timeline
+        .clips
+        .iter()
+        .filter(|clip| clip.transcript.is_none() && clip.original_audio.transcribe)
+        .filter_map(|clip| {
+            Some(Job {
+                owner: TranscriptOwner::Clip(clip.id),
+                media: find(clip.media_id)?.clone(),
+                from_us: clip.source_in_us,
+                to_us: clip.source_out_us,
+            })
+        });
+    // FR-AUD-05: voices are transcribed, music is not.
+    let voices = project
+        .timeline
+        .audio
+        .iter()
+        .filter(|item| matches!(item.role, AudioRole::VoiceOver | AudioRole::ImportedVoice))
+        .filter(|item| item.transcript.is_none())
+        .filter_map(|item| {
+            Some(Job {
+                owner: TranscriptOwner::Audio(item.id),
+                media: find(item.media_id)?.clone(),
+                from_us: item.source_in_us,
+                to_us: item.source_out_us,
+            })
+        });
+    clips.chain(voices).collect()
+}
+
+#[cfg(target_vendor = "apple")]
+fn run_transcription(
+    project: &Project,
+    folder: &Path,
+    model: &Path,
+    task: &TaskContext<'_>,
+) -> Result<Vec<Command>, EngineError> {
+    use std::sync::atomic::AtomicBool;
+    use std::sync::Arc;
+
+    use shorted_audio::mixer::{us_to_frames, CHANNELS};
+    use shorted_media::apple::decode_audio;
+    use shorted_transcribe::to_whisper_input;
+    use shorted_transcribe::whisper::Transcriber;
+
+    fn failed<E>(_: E) -> EngineError {
+        EngineError::Internal("transcription failed".into())
+    }
+    let transcriber = Transcriber::load(model).map_err(failed)?;
+    let jobs = jobs(project);
+    let mut commands = Vec::new();
+    for (index, job) in jobs.iter().enumerate() {
+        task.check_cancelled()?;
+        task.progress(index as f64 / jobs.len() as f64);
+        let Some(path) = resolve(&job.media, folder) else {
+            continue;
+        };
+        let samples = decode_audio(&path).map_err(|_| failed(()))?;
+        let from = us_to_frames(job.from_us) as usize * CHANNELS;
+        let to = (us_to_frames(job.to_us) as usize * CHANNELS).min(samples.len());
+        let speech = to_whisper_input(samples.get(from..to).unwrap_or_default());
+        let cancelled = Arc::new(AtomicBool::new(false));
+        let (words, language) = transcriber
+            .transcribe(&speech, None, cancelled)
+            .map_err(failed)?;
+        commands.push(Command::SetTranscript {
+            owner: job.owner,
+            transcript: Some(to_transcript(words, job.from_us, language)),
+        });
+    }
+    Ok(commands)
+}
+
+#[cfg(not(target_vendor = "apple"))]
+fn run_transcription(
+    _project: &Project,
+    _folder: &Path,
+    _model: &Path,
+    _task: &TaskContext<'_>,
+) -> Result<Vec<Command>, EngineError> {
+    Err(EngineError::Internal("no transcription here yet".into()))
+}
+
+/// Transcribes what has no transcript yet, on the device, as one undo step.
+pub fn transcribe_project(root: String, events: StreamSink<TaskEvent>) {
+    let (project, folder) = {
+        let state = transport();
+        (state.project.clone(), state.folder.clone())
+    };
+    runtime::global()
+        .background
+        .spawn(Priority::Normal, events, move |task| {
+            let project = project.ok_or(EngineError::ExportFailed)?;
+            let model = model_path(Path::new(&root));
+            let commands = run_transcription(&project, &folder, &model, task)?;
+            if commands.is_empty() {
+                return Ok(());
+            }
+            on_command_thread(move || {
+                with_active(|session| {
+                    session.execute(&Command::Group {
+                        label: "transcribe".into(),
+                        commands,
+                    })?;
+                    Ok(())
+                })
+            })
+            .map_err(|failure| EngineError::Internal(format!("{:?}", failure.code)))
+        });
+}
+
+pub struct WordView {
+    pub index: u32,
+    pub text: String,
+    pub start_us: i64,
+    pub deleted: bool,
+}
+
+pub struct SegmentView {
+    pub id: String,
+    pub hidden: bool,
+    pub words: Vec<WordView>,
+}
+
+pub struct TranscriptView {
+    pub clip_id: Option<String>,
+    pub audio_id: Option<String>,
+    pub language: String,
+    pub segments: Vec<SegmentView>,
+}
+
+fn transcript_view(
+    clip_id: Option<String>,
+    audio_id: Option<String>,
+    transcript: &Transcript,
+) -> TranscriptView {
+    TranscriptView {
+        clip_id,
+        audio_id,
+        language: transcript.language.clone(),
+        segments: transcript
+            .segments
+            .iter()
+            .map(|segment| SegmentView {
+                id: segment.id.to_string(),
+                hidden: segment.hidden,
+                words: segment
+                    .words
+                    .iter()
+                    .enumerate()
+                    .map(|(index, word)| WordView {
+                        index: index as u32,
+                        text: word.text.clone(),
+                        start_us: word.start_us,
+                        deleted: word.deleted,
+                    })
+                    .collect(),
+            })
+            .collect(),
+    }
+}
+
+pub(crate) fn transcript_views(project: &Project) -> Vec<TranscriptView> {
+    let timeline = &project.timeline;
+    let clips = timeline.clips.iter().filter_map(|clip| {
+        let transcript = clip.transcript.as_ref()?;
+        Some(transcript_view(Some(clip.id.to_string()), None, transcript))
+    });
+    let voices = timeline.audio.iter().filter_map(|item| {
+        let transcript = item.transcript.as_ref()?;
+        Some(transcript_view(None, Some(item.id.to_string()), transcript))
+    });
+    clips.chain(voices).collect()
+}
+
+fn owner(
+    clip_id: Option<String>,
+    audio_id: Option<String>,
+) -> Result<TranscriptOwner, EngineError> {
+    match (clip_id, audio_id) {
+        (Some(id), _) => Ok(TranscriptOwner::Clip(parse(&id)?)),
+        (_, Some(id)) => Ok(TranscriptOwner::Audio(parse(&id)?)),
+        _ => Err(EngineError::Internal("no transcript owner".into())),
+    }
+}
+
+/// Fixes a word. The media is untouched.
+pub async fn edit_word(
+    clip_id: Option<String>,
+    audio_id: Option<String>,
+    segment: String,
+    word: u32,
+    text: String,
+) -> Result<ProjectView, EngineFailure> {
+    edit(move |_| {
+        Ok(Command::EditWord {
+            owner: owner(clip_id, audio_id)?,
+            segment: parse(&segment)?,
+            word: word as usize,
+            text,
+        })
+    })
+}
+
+/// Shows or hides a phrase in captions (FR-TRN-04).
+pub async fn hide_segment(
+    clip_id: Option<String>,
+    audio_id: Option<String>,
+    segment: String,
+    hidden: bool,
+) -> Result<ProjectView, EngineFailure> {
+    edit(move |_| {
+        Ok(Command::HideSegment {
+            owner: owner(clip_id, audio_id)?,
+            segment: parse(&segment)?,
+            hidden,
+        })
+    })
+}
+
+/// The view after a background task changed the project.
+pub async fn current_view() -> Result<ProjectView, EngineFailure> {
+    on_command_thread(|| with_active(|session| Ok(view_of(session))))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn word(text: &str, start_us: i64) -> SpokenWord {
+        SpokenWord {
+            text: text.into(),
+            start_us,
+            end_us: start_us + 100,
+            confidence: 0.9,
+        }
+    }
+
+    /// Fetches the real file: about 60 MB.
+    #[cfg(target_vendor = "apple")]
+    #[test]
+    #[ignore = "uses the network"]
+    fn the_pinned_model_downloads_and_passes_its_check() {
+        let root = std::env::temp_dir().join(format!("shorted-model-{}", Uuid::now_v7()));
+        let target = model_path(&root);
+        crate::runtime::with_test_context(|task| download(&target, task)).unwrap();
+        assert_eq!(std::fs::metadata(&target).unwrap().len(), BASE_MODEL.bytes);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    /// Real speech through the whole path. Needs SHORTED_WHISPER_MODEL.
+    #[cfg(target_vendor = "apple")]
+    #[test]
+    #[ignore = "needs the speech model"]
+    fn a_project_clip_gets_its_transcript() {
+        let wav = std::env::temp_dir().join(format!("shorted-voice-{}.wav", Uuid::now_v7()));
+        let spoken = std::process::Command::new("say")
+            .arg("-o")
+            .arg(&wav)
+            .args(["--data-format=LEF32@48000", "--channels=2"])
+            .arg("Welcome to this short video.")
+            .status()
+            .unwrap();
+        assert!(spoken.success());
+        let json = include_str!("../../../../fixtures/projects/v1_full.json");
+        let mut project = Project::from_json(json).unwrap();
+        project.timeline.audio.clear();
+        project.timeline.clips.truncate(1);
+        let clip = &mut project.timeline.clips[0];
+        clip.transcript = None;
+        clip.original_audio.transcribe = true;
+        clip.source_in_us = 0;
+        clip.source_out_us = 60_000_000;
+        let id = clip.media_id;
+        let media = project.media.iter_mut().find(|m| m.id == id).unwrap();
+        media.probe.has_audio = true;
+        media.location = MediaLocation::External {
+            abs_path: wav.to_string_lossy().into_owned(),
+            bookmark: None,
+        };
+        let model = PathBuf::from(std::env::var("SHORTED_WHISPER_MODEL").unwrap());
+        let commands = crate::runtime::with_test_context(|task| {
+            run_transcription(&project, Path::new("/"), &model, task)
+        })
+        .unwrap();
+        std::fs::remove_file(&wav).unwrap();
+        let [Command::SetTranscript {
+            transcript: Some(transcript),
+            ..
+        }] = commands.as_slice()
+        else {
+            panic!("no transcript");
+        };
+        let words: Vec<_> = transcript
+            .segments
+            .iter()
+            .flat_map(|segment| &segment.words)
+            .map(|word| word.text.to_lowercase())
+            .collect();
+        println!("{words:?}");
+        assert!(words.iter().any(|word| word.contains("video")));
+    }
+
+    #[test]
+    fn words_keep_their_place_in_the_source() {
+        let transcript = to_transcript(vec![word("Hi", 10)], 5_000, "en".into());
+        let first = &transcript.segments[0].words[0];
+        assert_eq!((first.start_us, first.end_us), (5_010, 5_110));
+        assert_eq!(first.original_text, "Hi");
+        assert_eq!(transcript.language, "en");
+    }
+
+    #[test]
+    fn voices_are_transcribed_and_music_is_not() {
+        let json = include_str!("../../../../fixtures/projects/v1_full.json");
+        let mut project = Project::from_json(json).unwrap();
+        for clip in &mut project.timeline.clips {
+            clip.transcript = None;
+            clip.original_audio.transcribe = false;
+        }
+        for media in &mut project.media {
+            media.probe.has_audio = true;
+        }
+        let mut item = project.timeline.audio[0].clone();
+        item.transcript = None;
+        item.role = AudioRole::Music;
+        project.timeline.audio = vec![item.clone()];
+        assert!(jobs(&project).is_empty());
+        item.role = AudioRole::ImportedVoice;
+        project.timeline.audio = vec![item];
+        assert_eq!(jobs(&project).len(), 1);
+    }
+}

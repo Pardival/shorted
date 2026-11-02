@@ -10,6 +10,7 @@ import '../../design_system/motion.dart';
 import '../../design_system/tokens.g.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../audio/audio_panel.dart';
+import '../captions/captions_panel.dart';
 import '../clips/clips_panel.dart';
 import '../enhance/enhance_panel.dart';
 import '../export/export_panel.dart';
@@ -751,7 +752,6 @@ class SectionPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
     // Only the panel animates: the preview and timeline sit outside it and never move.
     return AnimatedSwitcher(
       duration: motionDuration(context, ShortedMotion.section),
@@ -766,6 +766,10 @@ class SectionPanel extends StatelessWidget {
           key: const ValueKey(EditorSection.audio),
           view: view,
         ),
+        EditorSection.captions => CaptionsPanel(
+          key: const ValueKey(EditorSection.captions),
+          view: view,
+        ),
         EditorSection.enhance => EnhancePanel(
           key: const ValueKey(EditorSection.enhance),
           view: view,
@@ -773,17 +777,6 @@ class SectionPanel extends StatelessWidget {
         EditorSection.export => ExportPanel(
           key: const ValueKey(EditorSection.export),
           durationUs: view.durationUs.toInt(),
-        ),
-        _ => Center(
-          key: ValueKey(section),
-          child: Padding(
-            padding: const EdgeInsets.all(ShortedSpace.l),
-            child: Text(
-              l10n.toolsPlaceholder(section.label(l10n)),
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: ShortedColors.textMuted),
-            ),
-          ),
         ),
       },
     );

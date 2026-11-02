@@ -21,6 +21,10 @@ final _cacheBytesProvider = FutureProvider.autoDispose<int>(
   (ref) => ref.read(projectGatewayProvider).cacheBytes(),
 );
 
+final _speechModelProvider = Provider.autoDispose(
+  (ref) => ref.read(projectGatewayProvider).speechModel(),
+);
+
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key, required this.engineVersion});
 
@@ -42,6 +46,8 @@ class SettingsScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final locale = ref.watch(localeProvider);
     final cache = ref.watch(_cacheBytesProvider).value;
+    final gateway = ref.read(projectGatewayProvider);
+    final model = ref.watch(_speechModelProvider);
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.settingsTitle),
@@ -69,6 +75,18 @@ class SettingsScreen extends ConsumerWidget {
                 ),
             ],
           ),
+          _Heading(l10n.speechModelTitle),
+          if (model.ready) ...[
+            ShortedListRow(title: l10n.speechModelReady),
+            SecondaryButton(
+              label: l10n.deleteSpeechModel,
+              onPressed: () async {
+                await gateway.deleteSpeechModel();
+                ref.invalidate(_speechModelProvider);
+              },
+            ),
+          ] else
+            ShortedListRow(title: l10n.speechStaysLocal),
           _Heading(l10n.settingsStorage),
           if (cache != null)
             ShortedListRow(

@@ -401,10 +401,7 @@ void main() {
 
   testWidgets('deep link opens the right section', (tester) async {
     await open(tester, '/editor/p1/captions');
-    expect(
-      find.text('Captions tools arrive with their tickets.'),
-      findsOneWidget,
-    );
+    expect(find.text('No transcript yet.'), findsOneWidget);
   });
 
   testWidgets('an unknown section falls back to Clips', (tester) async {

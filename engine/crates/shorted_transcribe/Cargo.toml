@@ -11,3 +11,11 @@ workspace = true
 
 [dependencies]
 shorted_audio = { path = "../shorted_audio" }
+
+[target.'cfg(target_vendor = "apple")'.dependencies]
+whisper-rs = { version = "0.16.0", features = ["metal"] }
+sha2 = "0.10.9"
+thiserror = "2.0.21"
+
+[target.'cfg(target_vendor = "apple")'.dev-dependencies]
+shorted_media = { path = "../shorted_media" }

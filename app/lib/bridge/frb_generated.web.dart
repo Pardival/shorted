@@ -14,6 +14,7 @@ import 'api/look.dart';
 import 'api/media.dart';
 import 'api/preview.dart';
 import 'api/projects.dart';
+import 'api/transcribe.dart';
 
 import 'dart:async';
 import 'dart:convert';
@@ -143,10 +144,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<ProjectSummary> dco_decode_list_project_summary(dynamic raw);
 
   @protected
+  List<SegmentView> dco_decode_list_segment_view(dynamic raw);
+
+  @protected
   List<TrackItemView> dco_decode_list_track_item_view(dynamic raw);
 
   @protected
   List<TrackView> dco_decode_list_track_view(dynamic raw);
+
+  @protected
+  List<TranscriptView> dco_decode_list_transcript_view(dynamic raw);
+
+  @protected
+  List<WordView> dco_decode_list_word_view(dynamic raw);
 
   @protected
   LookView dco_decode_look_view(dynamic raw);
@@ -156,6 +166,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   MediaKindView dco_decode_media_kind_view(dynamic raw);
+
+  @protected
+  ModelView dco_decode_model_view(dynamic raw);
 
   @protected
   String? dco_decode_opt_String(dynamic raw);
@@ -184,6 +197,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   SaveStateView dco_decode_save_state_view(dynamic raw);
 
   @protected
+  SegmentView dco_decode_segment_view(dynamic raw);
+
+  @protected
   SoundView dco_decode_sound_view(dynamic raw);
 
   @protected
@@ -202,6 +218,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   TrackView dco_decode_track_view(dynamic raw);
 
   @protected
+  TranscriptView dco_decode_transcript_view(dynamic raw);
+
+  @protected
   TransitionKindView dco_decode_transition_kind_view(dynamic raw);
 
   @protected
@@ -215,6 +234,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void dco_decode_unit(dynamic raw);
+
+  @protected
+  WordView dco_decode_word_view(dynamic raw);
 
   @protected
   AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
@@ -350,12 +372,23 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<SegmentView> sse_decode_list_segment_view(SseDeserializer deserializer);
+
+  @protected
   List<TrackItemView> sse_decode_list_track_item_view(
     SseDeserializer deserializer,
   );
 
   @protected
   List<TrackView> sse_decode_list_track_view(SseDeserializer deserializer);
+
+  @protected
+  List<TranscriptView> sse_decode_list_transcript_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<WordView> sse_decode_list_word_view(SseDeserializer deserializer);
 
   @protected
   LookView sse_decode_look_view(SseDeserializer deserializer);
@@ -365,6 +398,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   MediaKindView sse_decode_media_kind_view(SseDeserializer deserializer);
+
+  @protected
+  ModelView sse_decode_model_view(SseDeserializer deserializer);
 
   @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
@@ -397,6 +433,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   SaveStateView sse_decode_save_state_view(SseDeserializer deserializer);
 
   @protected
+  SegmentView sse_decode_segment_view(SseDeserializer deserializer);
+
+  @protected
   SoundView sse_decode_sound_view(SseDeserializer deserializer);
 
   @protected
@@ -415,6 +454,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   TrackView sse_decode_track_view(SseDeserializer deserializer);
 
   @protected
+  TranscriptView sse_decode_transcript_view(SseDeserializer deserializer);
+
+  @protected
   TransitionKindView sse_decode_transition_kind_view(
     SseDeserializer deserializer,
   );
@@ -430,6 +472,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_decode_unit(SseDeserializer deserializer);
+
+  @protected
+  WordView sse_decode_word_view(SseDeserializer deserializer);
 
   @protected
   void sse_encode_AnyhowException(
@@ -594,6 +639,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_segment_view(
+    List<SegmentView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_track_item_view(
     List<TrackItemView> self,
     SseSerializer serializer,
@@ -606,6 +657,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_transcript_view(
+    List<TranscriptView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_word_view(List<WordView> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_look_view(LookView self, SseSerializer serializer);
 
   @protected
@@ -613,6 +673,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_media_kind_view(MediaKindView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_model_view(ModelView self, SseSerializer serializer);
 
   @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer);
@@ -651,6 +714,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_save_state_view(SaveStateView self, SseSerializer serializer);
 
   @protected
+  void sse_encode_segment_view(SegmentView self, SseSerializer serializer);
+
+  @protected
   void sse_encode_sound_view(SoundView self, SseSerializer serializer);
 
   @protected
@@ -669,6 +735,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_track_view(TrackView self, SseSerializer serializer);
 
   @protected
+  void sse_encode_transcript_view(
+    TranscriptView self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_transition_kind_view(
     TransitionKindView self,
     SseSerializer serializer,
@@ -685,6 +757,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_unit(void self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_word_view(WordView self, SseSerializer serializer);
 }
 
 // Section: wire_class

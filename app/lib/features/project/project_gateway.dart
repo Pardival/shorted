@@ -7,6 +7,7 @@ import '../../bridge/api/export.dart' as exporter;
 import '../../bridge/api/look.dart' as look;
 import '../../bridge/api/media.dart' as media;
 import '../../bridge/api/projects.dart' as engine;
+import '../../bridge/api/transcribe.dart' as speech;
 import '../../bridge/api/projects.dart';
 import '../../bridge/runtime.dart';
 
@@ -91,6 +92,21 @@ abstract interface class ProjectGateway {
   Future<ProjectView> muteRange(int startUs, int endUs);
   Future<ProjectView> splitAllAt(int timeUs);
   Future<ProjectView> collectMedia();
+  speech.ModelView speechModel();
+  Stream<TaskEvent> downloadSpeechModel();
+  Future<void> deleteSpeechModel();
+  Stream<TaskEvent> transcribe();
+  Future<ProjectView> editWord(
+    speech.TranscriptView transcript,
+    String segment,
+    int word,
+    String text,
+  );
+  Future<ProjectView> hideSegment(
+    speech.TranscriptView transcript,
+    String segment, {
+    required bool hidden,
+  });
   Future<media.ThumbnailView?> cover(String projectId);
   int exportSizeEstimate(int width, int fps, int durationUs);
   Future<int> cacheBytes();
@@ -349,6 +365,45 @@ class EngineGateway implements ProjectGateway {
 
   @override
   Future<ProjectView> collectMedia() => media.collectMedia();
+
+  @override
+  speech.ModelView speechModel() => speech.speechModel(root: root);
+
+  @override
+  Stream<TaskEvent> downloadSpeechModel() =>
+      speech.downloadSpeechModel(root: root);
+
+  @override
+  Future<void> deleteSpeechModel() => speech.deleteSpeechModel(root: root);
+
+  @override
+  Stream<TaskEvent> transcribe() => speech.transcribeProject(root: root);
+
+  @override
+  Future<ProjectView> editWord(
+    speech.TranscriptView transcript,
+    String segment,
+    int word,
+    String text,
+  ) => speech.editWord(
+    clipId: transcript.clipId,
+    audioId: transcript.audioId,
+    segment: segment,
+    word: word,
+    text: text,
+  );
+
+  @override
+  Future<ProjectView> hideSegment(
+    speech.TranscriptView transcript,
+    String segment, {
+    required bool hidden,
+  }) => speech.hideSegment(
+    clipId: transcript.clipId,
+    audioId: transcript.audioId,
+    segment: segment,
+    hidden: hidden,
+  );
 
   @override
   Future<media.ThumbnailView?> cover(String projectId) =>

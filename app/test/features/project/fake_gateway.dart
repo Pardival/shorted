@@ -5,6 +5,7 @@ import 'package:shorted/bridge/api/audio.dart';
 import 'package:shorted/bridge/api/look.dart';
 import 'package:shorted/bridge/api/media.dart';
 import 'package:shorted/bridge/api/projects.dart';
+import 'package:shorted/bridge/api/transcribe.dart';
 import 'package:shorted/bridge/error.dart';
 import 'package:shorted/bridge/runtime.dart';
 import 'package:shorted/features/project/project_gateway.dart';
@@ -20,6 +21,7 @@ class FakeProject {
   final clips = <String>[];
   final stills = <String>{};
   final audioTracks = <AudioTrackView>[];
+  final transcripts = <TranscriptView>[];
 
   /// Items per user audio track, as timeline items.
   final sounds = <String, List<String>>{};
@@ -160,6 +162,7 @@ class FakeGateway implements ProjectGateway {
         ],
         tracks: project.audioTracks,
       ),
+      transcripts: project.transcripts,
       look: LookView(
         clips: [
           for (final clip in project.clips)
@@ -314,6 +317,53 @@ class FakeGateway implements ProjectGateway {
 
   @override
   int exportSizeEstimate(int width, int fps, int durationUs) => 5 * 1000 * 1000;
+
+  var modelReady = false;
+  final speechEvents = StreamController<TaskEvent>.broadcast();
+  final speechCalls = <String>[];
+
+  @override
+  ModelView speechModel() =>
+      ModelView(ready: modelReady, bytes: BigInt.from(60000000));
+
+  @override
+  Stream<TaskEvent> downloadSpeechModel() {
+    speechCalls.add('download');
+    return speechEvents.stream;
+  }
+
+  @override
+  Future<void> deleteSpeechModel() async {
+    speechCalls.add('delete');
+    modelReady = false;
+  }
+
+  @override
+  Stream<TaskEvent> transcribe() {
+    speechCalls.add('transcribe');
+    return speechEvents.stream;
+  }
+
+  @override
+  Future<ProjectView> editWord(
+    TranscriptView transcript,
+    String segment,
+    int word,
+    String text,
+  ) async {
+    speechCalls.add('edit $segment $word $text');
+    return view();
+  }
+
+  @override
+  Future<ProjectView> hideSegment(
+    TranscriptView transcript,
+    String segment, {
+    required bool hidden,
+  }) async {
+    speechCalls.add('hide $segment $hidden');
+    return view();
+  }
 
   var collected = 0;
 

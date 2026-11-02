@@ -213,6 +213,39 @@
   "stopRecording": "Stop recording",
   "recordingLevel": "Input level",
   "micUnavailable": "The microphone is not available. Check that Shorted may use it.",
+  "speechModelTitle": "Speech model",
+  "downloadSpeechModel": "Download the speech model ({size} MB)",
+  "deleteSpeechModel": "Delete the speech model",
+  "speechModelReady": "The speech model is ready.",
+  "speechStaysLocal": "Speech is transcribed on this device. Nothing is sent anywhere.",
+  "transcribeNow": "Transcribe",
+  "transcribing": "Transcribing {percent} %",
+  "downloadingModel": "Downloading {percent} %",
+  "noTranscript": "No transcript yet.",
+  "hideFromCaptions": "Hide from captions",
+  "showInCaptions": "Show in captions",
+  "editWord": "Fix this word",
+  "@downloadSpeechModel": {
+    "placeholders": {
+      "size": {
+        "type": "int"
+      }
+    }
+  },
+  "@transcribing": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "@downloadingModel": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
   "split": "Split",
   "exportTitle": "Export your short",
   "exportResolution": "Resolution",

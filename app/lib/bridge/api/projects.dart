@@ -11,6 +11,8 @@ import 'media.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
+import 'transcribe.dart';
+
 // These functions are ignored because they are not marked as `pub`: `active_folder`, `close_active`, `lock`, `now`, `on_command_thread`, `parse_id`, `save_channel`, `summary`, `track_view`, `view_of`, `with_active`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `clone`, `eq`
 
@@ -109,6 +111,7 @@ class ProjectView {
   final List<MediaItemView> media;
   final SoundView sound;
   final LookView look;
+  final List<TranscriptView> transcripts;
 
   const ProjectView({
     required this.id,
@@ -120,6 +123,7 @@ class ProjectView {
     required this.media,
     required this.sound,
     required this.look,
+    required this.transcripts,
   });
 
   @override
@@ -132,7 +136,8 @@ class ProjectView {
       tracks.hashCode ^
       media.hashCode ^
       sound.hashCode ^
-      look.hashCode;
+      look.hashCode ^
+      transcripts.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -147,7 +152,8 @@ class ProjectView {
           tracks == other.tracks &&
           media == other.media &&
           sound == other.sound &&
-          look == other.look;
+          look == other.look &&
+          transcripts == other.transcripts;
 }
 
 enum SaveStateView { saving, saved, failed }

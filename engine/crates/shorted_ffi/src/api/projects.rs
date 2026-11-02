@@ -19,6 +19,7 @@ use uuid::Uuid;
 use crate::api::audio::{sound_view, SoundView};
 use crate::api::look::{look_view, LookView};
 use crate::api::media::{media_views, MediaItemView};
+use crate::api::transcribe::{transcript_views, TranscriptView};
 use crate::error::{EngineError, EngineFailure};
 use crate::frb_generated::StreamSink;
 use crate::runtime;
@@ -73,6 +74,7 @@ pub struct ProjectView {
     pub media: Vec<MediaItemView>,
     pub sound: SoundView,
     pub look: LookView,
+    pub transcripts: Vec<TranscriptView>,
 }
 
 #[derive(Clone, Copy)]
@@ -383,6 +385,7 @@ pub(crate) fn view_of(session: &ProjectSession) -> ProjectView {
         tracks: track_view(session),
         sound: sound_view(project),
         look: look_view(project),
+        transcripts: transcript_views(project),
         media: media_views(session),
     }
 }

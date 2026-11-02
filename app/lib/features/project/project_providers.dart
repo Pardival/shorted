@@ -136,6 +136,9 @@ class EditorController extends AsyncNotifier<EditorState> {
     if (current != null) state = AsyncData(current.copyWith(view: view));
   }
 
+  /// A background task changed the project: shows the result.
+  Future<void> reload() async => _show(await _gateway.view());
+
   /// Any edit that answers with a new view.
   Future<void> apply(
     Future<ProjectView> Function(ProjectGateway gateway) action,
