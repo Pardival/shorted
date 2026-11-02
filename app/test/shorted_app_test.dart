@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shorted/features/captions/captions_panel.dart';
 import 'package:shorted/app/shorted_app.dart';
 import 'package:shorted/bridge/api/audio.dart';
 import 'package:shorted/bridge/api/projects.dart';
@@ -401,7 +402,7 @@ void main() {
 
   testWidgets('deep link opens the right section', (tester) async {
     await open(tester, '/editor/p1/captions');
-    expect(find.text('No transcript yet.'), findsOneWidget);
+    expect(find.byType(CaptionsPanel), findsOneWidget);
   });
 
   testWidgets('an unknown section falls back to Clips', (tester) async {

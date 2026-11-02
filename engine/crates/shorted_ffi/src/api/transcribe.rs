@@ -5,12 +5,17 @@
 
 use std::path::{Path, PathBuf};
 
+use shorted_ai::providers::{ProviderKind, Secret};
+use shorted_ai::speech::{
+    read_transcription, transcription_upload, wav, UploadHttp, MAX_CHUNK_SAMPLES,
+};
 use shorted_core::captions::{apply_auto_emphasis, apply_preset, srt};
 use shorted_core::command::{Command, TranscriptOwner};
 use shorted_core::model::*;
 use shorted_transcribe::{group_words, SpokenWord, BASE_MODEL};
 use uuid::Uuid;
 
+use crate::ai_access::{DeviceHttp, KeyStore, SystemKeychain};
 use crate::api::clips::{edit, parse};
 #[cfg(target_vendor = "apple")]
 use crate::api::media::resolve;
@@ -151,7 +156,8 @@ struct Job {
     to_us: i64,
 }
 
-fn jobs(project: &Project) -> Vec<Job> {
+/// What has no transcript yet; with `again`, everything that can be heard.
+fn jobs(project: &Project, again: bool) -> Vec<Job> {
     let find = |id: Id| {
         project
             .media
@@ -162,7 +168,7 @@ fn jobs(project: &Project) -> Vec<Job> {
         .timeline
         .clips
         .iter()
-        .filter(|clip| clip.transcript.is_none() && clip.original_audio.transcribe)
+        .filter(|clip| (again || clip.transcript.is_none()) && clip.original_audio.transcribe)
         .filter_map(|clip| {
             Some(Job {
                 owner: TranscriptOwner::Clip(clip.id),
@@ -177,7 +183,7 @@ fn jobs(project: &Project) -> Vec<Job> {
         .audio
         .iter()
         .filter(|item| matches!(item.role, AudioRole::VoiceOver | AudioRole::ImportedVoice))
-        .filter(|item| item.transcript.is_none())
+        .filter(|item| again || item.transcript.is_none())
         .filter_map(|item| {
             Some(Job {
                 owner: TranscriptOwner::Audio(item.id),
@@ -187,6 +193,54 @@ fn jobs(project: &Project) -> Vec<Job> {
             })
         });
     clips.chain(voices).collect()
+}
+
+/// Turns 16 kHz mono speech into words and their language.
+type Hear<'a> = dyn FnMut(&[f32]) -> Result<(Vec<SpokenWord>, String), EngineError> + 'a;
+
+#[cfg(target_vendor = "apple")]
+fn run_jobs(
+    project: &Project,
+    folder: &Path,
+    again: bool,
+    hear: &mut Hear<'_>,
+    task: &TaskContext<'_>,
+) -> Result<Vec<Command>, EngineError> {
+    use shorted_audio::mixer::{us_to_frames, CHANNELS};
+    use shorted_media::apple::decode_audio;
+    use shorted_transcribe::to_whisper_input;
+
+    let jobs = jobs(project, again);
+    let mut commands = Vec::new();
+    for (index, job) in jobs.iter().enumerate() {
+        task.check_cancelled()?;
+        task.progress(index as f64 / jobs.len() as f64);
+        let Some(path) = resolve(&job.media, folder) else {
+            continue;
+        };
+        let samples = decode_audio(&path)
+            .map_err(|_| EngineError::Internal("transcription failed".into()))?;
+        let from = us_to_frames(job.from_us) as usize * CHANNELS;
+        let to = (us_to_frames(job.to_us) as usize * CHANNELS).min(samples.len());
+        let speech = to_whisper_input(samples.get(from..to).unwrap_or_default());
+        let (words, language) = hear(&speech)?;
+        commands.push(Command::SetTranscript {
+            owner: job.owner,
+            transcript: Some(to_transcript(words, job.from_us, language)),
+        });
+    }
+    Ok(commands)
+}
+
+#[cfg(not(target_vendor = "apple"))]
+fn run_jobs(
+    _project: &Project,
+    _folder: &Path,
+    _again: bool,
+    _hear: &mut Hear<'_>,
+    _task: &TaskContext<'_>,
+) -> Result<Vec<Command>, EngineError> {
+    Err(EngineError::Internal("no transcription here yet".into()))
 }
 
 #[cfg(target_vendor = "apple")]
@@ -199,37 +253,18 @@ fn run_transcription(
     use std::sync::atomic::AtomicBool;
     use std::sync::Arc;
 
-    use shorted_audio::mixer::{us_to_frames, CHANNELS};
-    use shorted_media::apple::decode_audio;
-    use shorted_transcribe::to_whisper_input;
     use shorted_transcribe::whisper::Transcriber;
 
     fn failed<E>(_: E) -> EngineError {
         EngineError::Internal("transcription failed".into())
     }
     let transcriber = Transcriber::load(model).map_err(failed)?;
-    let jobs = jobs(project);
-    let mut commands = Vec::new();
-    for (index, job) in jobs.iter().enumerate() {
-        task.check_cancelled()?;
-        task.progress(index as f64 / jobs.len() as f64);
-        let Some(path) = resolve(&job.media, folder) else {
-            continue;
-        };
-        let samples = decode_audio(&path).map_err(|_| failed(()))?;
-        let from = us_to_frames(job.from_us) as usize * CHANNELS;
-        let to = (us_to_frames(job.to_us) as usize * CHANNELS).min(samples.len());
-        let speech = to_whisper_input(samples.get(from..to).unwrap_or_default());
-        let cancelled = Arc::new(AtomicBool::new(false));
-        let (words, language) = transcriber
-            .transcribe(&speech, None, cancelled)
-            .map_err(failed)?;
-        commands.push(Command::SetTranscript {
-            owner: job.owner,
-            transcript: Some(to_transcript(words, job.from_us, language)),
-        });
-    }
-    Ok(commands)
+    let mut hear = |speech: &[f32]| {
+        transcriber
+            .transcribe(speech, None, Arc::new(AtomicBool::new(false)))
+            .map_err(failed)
+    };
+    run_jobs(project, folder, false, &mut hear, task)
 }
 
 #[cfg(not(target_vendor = "apple"))]
@@ -240,6 +275,111 @@ fn run_transcription(
     _task: &TaskContext<'_>,
 ) -> Result<Vec<Command>, EngineError> {
     Err(EngineError::Internal("no transcription here yet".into()))
+}
+
+/// Sends each sound to OpenAI, ten minutes at a time, and reads the words back (T-1201).
+fn hear_with_openai(
+    http: &dyn UploadHttp,
+    key: &Secret,
+    speech: &[f32],
+) -> Result<(Vec<SpokenWord>, String), EngineError> {
+    let mut words = Vec::new();
+    let mut language = String::new();
+    for (index, chunk) in speech.chunks(MAX_CHUNK_SAMPLES).enumerate() {
+        let offset_us = (index * MAX_CHUNK_SAMPLES) as i64 * 1_000_000
+            / i64::from(shorted_transcribe::WHISPER_SAMPLE_RATE);
+        let upload = transcription_upload(
+            key,
+            None,
+            &wav(chunk, shorted_transcribe::WHISPER_SAMPLE_RATE),
+        );
+        let response = http.upload(&upload).map_err(EngineError::Ai)?;
+        let (heard, spoken) = read_transcription(&response).map_err(EngineError::Ai)?;
+        if language.is_empty() {
+            language = spoken;
+        }
+        words.extend(heard.into_iter().map(|word| SpokenWord {
+            text: word.text,
+            start_us: word.start_us + offset_us,
+            end_us: word.end_us + offset_us,
+            confidence: 1.0,
+        }));
+    }
+    Ok((words, language))
+}
+
+/// The edit for the transcripts heard, with voices added to the caption sources.
+fn transcription_edit(project: &Project, commands: Vec<Command>) -> Command {
+    let mut settings = project.captions.clone();
+    for command in &commands {
+        if let Command::SetTranscript {
+            owner: TranscriptOwner::Audio(id),
+            ..
+        } = command
+        {
+            let source = CaptionSource::AudioItem(*id);
+            if !settings.sources.contains(&source) {
+                settings.sources.push(source);
+            }
+        }
+    }
+    let mut commands = commands;
+    commands.push(Command::SetCaptionSettings {
+        settings: Box::new(settings),
+    });
+    Command::Group {
+        label: "transcribe".into(),
+        commands,
+    }
+}
+
+fn apply_transcription(project: &Project, commands: Vec<Command>) -> Result<(), EngineError> {
+    if commands.is_empty() {
+        return Ok(());
+    }
+    let edit = transcription_edit(project, commands);
+    on_command_thread(move || {
+        with_active(|session| {
+            session.execute(&edit)?;
+            Ok(())
+        })
+    })
+    .map_err(|failure| EngineError::Internal(format!("{:?}", failure.code)))
+}
+
+/// Whether an OpenAI key is in the keychain, for transcription in the cloud.
+#[flutter_rust_bridge::frb(sync)]
+pub fn openai_transcription_ready() -> bool {
+    SystemKeychain.get(ProviderKind::OpenAi.id()).is_some()
+}
+
+/// Keeps the user's OpenAI key in the keychain; the same entry the AI settings use.
+pub async fn save_openai_key(key: String) -> Result<(), EngineFailure> {
+    let key = key.trim().to_string();
+    if key.is_empty() {
+        return Err(EngineError::AiNotConfigured.into());
+    }
+    SystemKeychain.set(ProviderKind::OpenAi.id(), &Secret::new(key))?;
+    Ok(())
+}
+
+/// Transcribes every sound again with OpenAI, after the user agreed to send it (T-1201).
+pub fn transcribe_with_openai(events: StreamSink<TaskEvent>) {
+    let (project, folder) = {
+        let state = transport();
+        (state.project.clone(), state.folder.clone())
+    };
+    runtime::global()
+        .background
+        .spawn(Priority::Normal, events, move |task| {
+            let project = project.ok_or(EngineError::ExportFailed)?;
+            let key = SystemKeychain
+                .get(ProviderKind::OpenAi.id())
+                .ok_or(EngineError::AiNotConfigured)?;
+            let mut hear = |speech: &[f32]| hear_with_openai(&DeviceHttp, &key, speech);
+            let commands = run_jobs(&project, &folder, true, &mut hear, task)?;
+            apply_transcription(&project, commands)
+        });
 }
 
 /// Transcribes what has no transcript yet, on the device, as one undo step.
@@ -254,36 +394,7 @@ pub fn transcribe_project(root: String, events: StreamSink<TaskEvent>) {
             let project = project.ok_or(EngineError::ExportFailed)?;
             let model = model_path(Path::new(&root));
             let commands = run_transcription(&project, &folder, &model, task)?;
-            if commands.is_empty() {
-                return Ok(());
-            }
-            let mut settings = project.captions.clone();
-            for command in &commands {
-                if let Command::SetTranscript {
-                    owner: TranscriptOwner::Audio(id),
-                    ..
-                } = command
-                {
-                    let source = CaptionSource::AudioItem(*id);
-                    if !settings.sources.contains(&source) {
-                        settings.sources.push(source);
-                    }
-                }
-            }
-            let mut commands = commands;
-            commands.push(Command::SetCaptionSettings {
-                settings: Box::new(settings),
-            });
-            on_command_thread(move || {
-                with_active(|session| {
-                    session.execute(&Command::Group {
-                        label: "transcribe".into(),
-                        commands,
-                    })?;
-                    Ok(())
-                })
-            })
-            .map_err(|failure| EngineError::Internal(format!("{:?}", failure.code)))
+            apply_transcription(&project, commands)
         });
 }
 
@@ -656,6 +767,35 @@ mod tests {
         assert!(words.iter().any(|word| word.contains("video")));
     }
 
+    /// Answers every upload with one word at 0.5 s, and counts the uploads.
+    struct OneWord(std::cell::Cell<usize>);
+
+    impl UploadHttp for OneWord {
+        fn upload(
+            &self,
+            upload: &shorted_ai::speech::Upload,
+        ) -> Result<shorted_ai::providers::HttpResponse, shorted_ai::providers::AiError> {
+            assert!(upload.body.len() < 25 * 1024 * 1024, "over OpenAI's limit");
+            self.0.set(self.0.get() + 1);
+            Ok(shorted_ai::providers::HttpResponse {
+                status: 200,
+                body: r#"{"language":"french","words":[{"word":"oui","start":0.5,"end":0.75}]}"#
+                    .into(),
+            })
+        }
+    }
+
+    #[test]
+    fn long_sound_goes_in_parts_and_words_keep_their_time() {
+        let http = OneWord(std::cell::Cell::new(0));
+        let speech = vec![0.0; MAX_CHUNK_SAMPLES + 16_000];
+        let (words, language) = hear_with_openai(&http, &Secret::new("k".into()), &speech).unwrap();
+        assert_eq!(http.0.get(), 2);
+        assert_eq!(language, "fr");
+        assert_eq!(words[0].start_us, 500_000);
+        assert_eq!(words[1].start_us, 600_000_000 + 500_000);
+    }
+
     #[test]
     fn words_keep_their_place_in_the_source() {
         let transcript = to_transcript(vec![word("Hi", 10)], 5_000, "en".into());
@@ -680,9 +820,9 @@ mod tests {
         item.transcript = None;
         item.role = AudioRole::Music;
         project.timeline.audio = vec![item.clone()];
-        assert!(jobs(&project).is_empty());
+        assert!(jobs(&project, false).is_empty());
         item.role = AudioRole::ImportedVoice;
         project.timeline.audio = vec![item];
-        assert_eq!(jobs(&project).len(), 1);
+        assert_eq!(jobs(&project, false).len(), 1);
     }
 }

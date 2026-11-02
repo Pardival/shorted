@@ -508,5 +508,9 @@
   "bundleExported": "Project exported, with all its media.",
   "bundleImported": "Project imported.",
   "errorBadBundle": "This file is damaged, or not a Shorted project. Nothing was imported.",
-  "errorMissingMedia": "A media file of this project cannot be found. Relink it, then try again."
+  "errorMissingMedia": "A media file of this project cannot be found. Relink it, then try again.",
+  "transcribeWithOpenai": "Better words with OpenAI (your key)",
+  "openaiKeyTitle": "Your OpenAI key",
+  "openaiConsentTitle": "Send the sound to OpenAI?",
+  "openaiConsentBody": "Only the sound of your clips and voices goes to OpenAI, never the picture. Their transcription is billed to your key. It replaces the current transcripts, your corrections included."
 }

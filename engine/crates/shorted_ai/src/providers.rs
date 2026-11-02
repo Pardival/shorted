@@ -142,7 +142,7 @@ pub struct Provider {
     key: Secret,
 }
 
-fn status_error(response: &HttpResponse) -> Option<AiError> {
+pub(crate) fn status_error(response: &HttpResponse) -> Option<AiError> {
     match response.status {
         200..=299 => None,
         401 | 403 => Some(AiError::KeyRejected),

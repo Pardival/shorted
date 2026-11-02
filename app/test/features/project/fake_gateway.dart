@@ -885,6 +885,23 @@ class FakeGateway implements ProjectGateway {
     return speechEvents.stream;
   }
 
+  var openaiKeySaved = false;
+
+  @override
+  bool openaiTranscriptionReady() => openaiKeySaved;
+
+  @override
+  Future<void> saveOpenaiKey(String key) async {
+    speechCalls.add('key');
+    openaiKeySaved = true;
+  }
+
+  @override
+  Stream<TaskEvent> transcribeWithOpenai() {
+    speechCalls.add('openai');
+    return speechEvents.stream;
+  }
+
   @override
   Future<ProjectView> editWord(
     TranscriptView transcript,

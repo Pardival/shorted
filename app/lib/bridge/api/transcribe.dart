@@ -15,7 +15,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 import 'projects.dart';
 
-// These functions are ignored because they are not marked as `pub`: `captions_view`, `download`, `jobs`, `model_path`, `owner`, `run_transcription`, `settings_command`, `to_transcript`, `transcript_view`, `transcript_views`
+// These functions are ignored because they are not marked as `pub`: `apply_transcription`, `captions_view`, `download`, `hear_with_openai`, `jobs`, `model_path`, `owner`, `run_jobs`, `run_transcription`, `settings_command`, `to_transcript`, `transcript_view`, `transcript_views`, `transcription_edit`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Job`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `eq`, `eq`, `from`, `from`, `from`, `from`
 
@@ -29,6 +29,18 @@ Future<void> deleteSpeechModel({required String root}) =>
 /// Downloads and checks the model. The first event carries the id for `cancel_task`.
 Stream<TaskEvent> downloadSpeechModel({required String root}) =>
     RustLib.instance.api.crateApiTranscribeDownloadSpeechModel(root: root);
+
+/// Whether an OpenAI key is in the keychain, for transcription in the cloud.
+bool openaiTranscriptionReady() =>
+    RustLib.instance.api.crateApiTranscribeOpenaiTranscriptionReady();
+
+/// Keeps the user's OpenAI key in the keychain; the same entry the AI settings use.
+Future<void> saveOpenaiKey({required String key}) =>
+    RustLib.instance.api.crateApiTranscribeSaveOpenaiKey(key: key);
+
+/// Transcribes every sound again with OpenAI, after the user agreed to send it (T-1201).
+Stream<TaskEvent> transcribeWithOpenai() =>
+    RustLib.instance.api.crateApiTranscribeTranscribeWithOpenai();
 
 /// Transcribes what has no transcript yet, on the device, as one undo step.
 Stream<TaskEvent> transcribeProject({required String root}) =>

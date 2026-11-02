@@ -77,6 +77,31 @@ void main() {
     gateway.modelReady = true;
   });
 
+  testWidgets('OpenAI asks for a key, then for consent, then sends', (
+    tester,
+  ) async {
+    final project = FakeProject('p1', 'Mine');
+    final gateway = FakeGateway()
+      ..projects.add(project)
+      ..modelReady = true;
+    await open(
+      tester,
+      '/editor/p1/captions',
+      size: const Size(1280, 1400),
+      gateway: gateway,
+    );
+    await tester.tap(find.text('Better words with OpenAI (your key)'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, ' sk-test ');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(find.text('Send the sound to OpenAI?'), findsOneWidget);
+    expect(gateway.speechCalls, ['key']);
+    await tester.tap(find.text('Send'));
+    await tester.pump();
+    expect(gateway.speechCalls, ['key', 'openai']);
+  });
+
   testWidgets('transcript words can be fixed and phrases hidden', (
     tester,
   ) async {

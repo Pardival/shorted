@@ -8,6 +8,8 @@ use shorted_ai::providers::{
     AiError, Http, HttpRequest, HttpResponse, Provider, ProviderConfig, ProviderKind, Secret,
 };
 
+use shorted_ai::speech::{Upload, UploadHttp};
+
 use crate::error::EngineError;
 
 /// The keychain entry's service; the account is the provider's id.
@@ -156,6 +158,45 @@ impl Http for DeviceHttp {
             .read_to_string()
             .map_err(|_| AiError::Network)?;
         Ok(HttpResponse { status, body })
+    }
+}
+
+/// Sound for transcription: larger and slower than a plan, so up to five minutes.
+#[cfg(target_vendor = "apple")]
+impl UploadHttp for DeviceHttp {
+    fn upload(&self, upload: &Upload) -> Result<HttpResponse, AiError> {
+        use std::time::Duration;
+
+        use ureq::tls::{TlsConfig, TlsProvider};
+
+        let tls = TlsConfig::builder()
+            .provider(TlsProvider::NativeTls)
+            .build();
+        let agent: ureq::Agent = ureq::Agent::config_builder()
+            .tls_config(tls)
+            .http_status_as_error(false)
+            .timeout_global(Some(Duration::from_secs(300)))
+            .build()
+            .into();
+        let mut call = agent.post(&upload.url);
+        for (name, value) in &upload.headers {
+            call = call.header(name, value);
+        }
+        // The error may quote the request: only its kind is kept.
+        let mut response = call.send(&upload.body[..]).map_err(|_| AiError::Network)?;
+        let status = response.status().as_u16();
+        let body = response
+            .body_mut()
+            .read_to_string()
+            .map_err(|_| AiError::Network)?;
+        Ok(HttpResponse { status, body })
+    }
+}
+
+#[cfg(not(target_vendor = "apple"))]
+impl UploadHttp for DeviceHttp {
+    fn upload(&self, _upload: &Upload) -> Result<HttpResponse, AiError> {
+        Err(AiError::Network)
     }
 }
 

@@ -13,6 +13,8 @@ import '../../design_system/swatches.dart';
 import '../../design_system/tokens.g.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../project/project_dialogs.dart';
+import '../settings/ai_settings_section.dart';
+import 'openai_transcription.dart';
 import '../project/project_gateway.dart';
 import '../project/project_providers.dart';
 
@@ -64,9 +66,20 @@ class _CaptionsPanelState extends ConsumerState<CaptionsPanel> {
           setState(() => _progress = null);
         case TaskEvent_Failed(:final code):
           setState(() => _progress = null);
-          showToast(context, errorMessage(l10n, EngineFailure(code: code)));
+          showToast(context, connectionError(l10n, EngineFailure(code: code)));
       }
     });
+  }
+
+  Future<void> _transcribeWithOpenai() async {
+    final l10n = AppLocalizations.of(context);
+    try {
+      if (!await prepareOpenaiTranscription(context, _gateway)) return;
+    } on Object catch (error) {
+      if (mounted) showToast(context, connectionError(l10n, error));
+      return;
+    }
+    if (mounted) _follow(_gateway.transcribeWithOpenai(), downloading: false);
   }
 
   Future<void> _run(
@@ -121,7 +134,11 @@ class _CaptionsPanelState extends ConsumerState<CaptionsPanel> {
             onPressed: () =>
                 _follow(_gateway.downloadSpeechModel(), downloading: true),
           ),
-        const SizedBox(height: ShortedSpace.m),
+        const SizedBox(height: ShortedSpace.s),
+        SecondaryButton(
+          label: l10n.transcribeWithOpenai,
+          onPressed: _transcribeWithOpenai,
+        ),
         const SizedBox(height: ShortedSpace.m),
         if (transcripts.isEmpty)
           Text(

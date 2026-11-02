@@ -321,5 +321,9 @@
   "bundleExported": "Projeto exportado, com todas as mídias.",
   "bundleImported": "Projeto importado.",
   "errorBadBundle": "Este arquivo está danificado ou não é um projeto do Shorted. Nada foi importado.",
-  "errorMissingMedia": "Um arquivo deste projeto não foi encontrado. Vincule-o de novo e tente outra vez."
+  "errorMissingMedia": "Um arquivo deste projeto não foi encontrado. Vincule-o de novo e tente outra vez.",
+  "transcribeWithOpenai": "Melhores palavras com a OpenAI (a tua chave)",
+  "openaiKeyTitle": "A tua chave OpenAI",
+  "openaiConsentTitle": "Enviar o som para a OpenAI?",
+  "openaiConsentBody": "Só o som dos teus clips e vozes vai para a OpenAI, nunca a imagem. A transcrição é cobrada na tua chave. Substitui as transcrições atuais, incluindo as tuas correções."
 }

@@ -132,6 +132,11 @@ abstract interface class ProjectGateway {
   Stream<TaskEvent> downloadSpeechModel();
   Future<void> deleteSpeechModel();
   Stream<TaskEvent> transcribe();
+
+  /// Whether an OpenAI key is stored for transcription in the cloud (T-1201).
+  bool openaiTranscriptionReady();
+  Future<void> saveOpenaiKey(String key);
+  Stream<TaskEvent> transcribeWithOpenai();
   Future<ProjectView> editWord(
     speech.TranscriptView transcript,
     String segment,
@@ -780,6 +785,15 @@ class EngineGateway implements ProjectGateway {
 
   @override
   Stream<TaskEvent> transcribe() => speech.transcribeProject(root: root);
+
+  @override
+  bool openaiTranscriptionReady() => speech.openaiTranscriptionReady();
+
+  @override
+  Future<void> saveOpenaiKey(String key) => speech.saveOpenaiKey(key: key);
+
+  @override
+  Stream<TaskEvent> transcribeWithOpenai() => speech.transcribeWithOpenai();
 
   @override
   Future<ProjectView> editWord(
