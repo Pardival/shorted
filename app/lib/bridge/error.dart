@@ -71,4 +71,10 @@ enum ErrorCode {
 
   /// The provider answered something unusable.
   aiBadResponse,
+
+  /// A `.shorted` file that is damaged, unsafe, or not a project.
+  badBundle,
+
+  /// A media file of the project cannot be found.
+  missingMedia,
 }

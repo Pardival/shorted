@@ -26,6 +26,10 @@ abstract interface class ProjectGateway {
   Future<void> close();
   Future<String> duplicate(String id, String title);
   Future<void> moveToTrash(String id);
+  Future<void> exportBundle(String id, String path);
+
+  /// Returns the new project's id.
+  Future<String> importBundle(String path);
   Future<void> restore(String id);
   Future<void> rename(String id, String title);
   Future<ProjectView> view();
@@ -283,6 +287,14 @@ class EngineGateway implements ProjectGateway {
   @override
   Future<String> duplicate(String id, String title) =>
       engine.duplicateProject(root: root, id: id, title: title);
+
+  @override
+  Future<void> exportBundle(String id, String path) =>
+      engine.exportProjectBundle(root: root, id: id, path: path);
+
+  @override
+  Future<String> importBundle(String path) =>
+      engine.importProjectBundle(root: root, path: path);
 
   @override
   Future<void> moveToTrash(String id) =>

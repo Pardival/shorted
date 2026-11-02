@@ -50,6 +50,26 @@ Future<String> duplicateProject({
   title: title,
 );
 
+/// Writes a project, closed first if open, as one `.shorted` file at `path` (FR-PRJ-06).
+Future<void> exportProjectBundle({
+  required String root,
+  required String id,
+  required String path,
+}) => RustLib.instance.api.crateApiProjectsExportProjectBundle(
+  root: root,
+  id: id,
+  path: path,
+);
+
+/// Adds the project of a `.shorted` file as a new project, and returns its id.
+Future<String> importProjectBundle({
+  required String root,
+  required String path,
+}) => RustLib.instance.api.crateApiProjectsImportProjectBundle(
+  root: root,
+  path: path,
+);
+
 Future<void> trashProject({required String root, required String id}) =>
     RustLib.instance.api.crateApiProjectsTrashProject(root: root, id: id);
 

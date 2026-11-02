@@ -2,6 +2,7 @@
 //! hold paths or user content.
 
 use shorted_ai::providers::AiError;
+use shorted_store::bundle::BundleError;
 use shorted_store::session::StoreError;
 use thiserror::Error;
 
@@ -29,6 +30,8 @@ pub enum EngineError {
     KeyStorage,
     #[error("the AI provider failed")]
     Ai(shorted_ai::providers::AiError),
+    #[error("the bundle could not be used")]
+    Bundle(#[from] shorted_store::bundle::BundleError),
     #[error("project storage failed")]
     Store(#[from] shorted_store::session::StoreError),
 }
@@ -67,6 +70,10 @@ pub enum ErrorCode {
     AiUnreachable,
     /// The provider answered something unusable.
     AiBadResponse,
+    /// A `.shorted` file that is damaged, unsafe, or not a project.
+    BadBundle,
+    /// A media file of the project cannot be found.
+    MissingMedia,
 }
 
 impl EngineError {
@@ -80,6 +87,14 @@ impl EngineError {
             Self::ExportFailed => ErrorCode::ExportFailed,
             Self::TooLarge => ErrorCode::TooLarge,
             Self::AiNotConfigured => ErrorCode::AiNotConfigured,
+            Self::Bundle(error) => match error {
+                BundleError::Io(_) => ErrorCode::Storage,
+                BundleError::TooLarge => ErrorCode::TooLarge,
+                BundleError::MissingMedia => ErrorCode::MissingMedia,
+                BundleError::Unsafe(_) | BundleError::Mismatch | BundleError::Malformed => {
+                    ErrorCode::BadBundle
+                }
+            },
             Self::KeyStorage => ErrorCode::KeyStorage,
             Self::Ai(error) => match error {
                 AiError::KeyRejected => ErrorCode::AiKeyRejected,

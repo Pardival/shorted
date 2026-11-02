@@ -143,6 +143,15 @@ class ProjectList extends AsyncNotifier<List<ProjectSummary>> {
     await _refresh();
   }
 
+  Future<void> exportBundle(String id, String path) =>
+      _gateway.exportBundle(id, path);
+
+  Future<String> importBundle(String path) async {
+    final id = await _gateway.importBundle(path);
+    await _refresh();
+    return id;
+  }
+
   Future<void> moveToTrash(String id) async {
     await _gateway.moveToTrash(id);
     await _refresh();

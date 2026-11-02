@@ -315,5 +315,11 @@
   "askShorted": "Demander à Shorted",
   "askShortedHint": "Mets le plan du café en premier",
   "askShortedGo": "Demander",
-  "aiMenu": "IA"
+  "aiMenu": "IA",
+  "exportBundle": "Exporter en .shorted",
+  "importBundle": "Importer un projet .shorted",
+  "bundleExported": "Projet exporté, avec tous ses médias.",
+  "bundleImported": "Projet importé.",
+  "errorBadBundle": "Ce fichier est abîmé ou n'est pas un projet Shorted. Rien n'a été importé.",
+  "errorMissingMedia": "Un média de ce projet est introuvable. Reliez-le, puis réessayez."
 }

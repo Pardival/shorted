@@ -12,7 +12,7 @@ import '../../l10n/generated/app_localizations.dart';
 import '../project/project_providers.dart';
 import '../timeline/timeline_layout.dart';
 
-enum ProjectAction { rename, duplicate, delete }
+enum ProjectAction { rename, duplicate, export, delete }
 
 final _coverProvider = FutureProvider.autoDispose.family<ui.Image?, String>((
   ref,
@@ -113,6 +113,10 @@ class ProjectCard extends ConsumerWidget {
                   PopupMenuItem(
                     value: ProjectAction.duplicate,
                     child: Text(l10n.duplicate),
+                  ),
+                  PopupMenuItem(
+                    value: ProjectAction.export,
+                    child: Text(l10n.exportBundle),
                   ),
                   PopupMenuItem(
                     value: ProjectAction.delete,

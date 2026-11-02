@@ -14,6 +14,8 @@ String errorMessage(AppLocalizations l10n, Object error) {
     ErrorCode.differentMedia => l10n.errorDifferentMedia,
     ErrorCode.exportFailed => l10n.errorExportFailed,
     ErrorCode.tooLarge => l10n.errorTooLarge,
+    ErrorCode.badBundle => l10n.errorBadBundle,
+    ErrorCode.missingMedia => l10n.errorMissingMedia,
     _ => l10n.errorGeneric,
   };
 }

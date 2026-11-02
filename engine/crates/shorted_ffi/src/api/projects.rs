@@ -239,6 +239,42 @@ pub async fn duplicate_project(
     })
 }
 
+/// Writes a project, closed first if open, as one `.shorted` file at `path` (FR-PRJ-06).
+pub async fn export_project_bundle(
+    root: String,
+    id: String,
+    path: String,
+) -> Result<(), EngineFailure> {
+    on_command_thread(move || {
+        let id = parse_id(&id)?;
+        close_active()?;
+        let root = Path::new(&root);
+        let project = library::load_project(root, id).map_err(EngineError::from)?;
+        let folder = project_folder(root, id);
+        shorted_store::bundle::export_bundle(
+            &project,
+            |media| crate::api::media::resolve(media, &folder),
+            Path::new(&path),
+            env!("CARGO_PKG_VERSION"),
+            &now(),
+        )
+        .map_err(EngineError::from)
+    })
+}
+
+/// Adds the project of a `.shorted` file as a new project, and returns its id.
+pub async fn import_project_bundle(root: String, path: String) -> Result<String, EngineFailure> {
+    on_command_thread(move || {
+        let project = shorted_store::bundle::import_bundle(
+            Path::new(&root),
+            Path::new(&path),
+            Uuid::now_v7(),
+        )
+        .map_err(EngineError::from)?;
+        Ok(project.id.to_string())
+    })
+}
+
 pub async fn trash_project(root: String, id: String) -> Result<(), EngineFailure> {
     on_command_thread(move || {
         let id = parse_id(&id)?;

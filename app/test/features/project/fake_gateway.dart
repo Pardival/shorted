@@ -86,6 +86,20 @@ class FakeGateway implements ProjectGateway {
     return project.id;
   }
 
+  final bundles = <String>[];
+
+  @override
+  Future<void> exportBundle(String id, String path) async =>
+      bundles.add('export $id $path');
+
+  @override
+  Future<String> importBundle(String path) async {
+    bundles.add('import $path');
+    final project = FakeProject('p${_next++}', 'Imported');
+    projects.add(project);
+    return project.id;
+  }
+
   @override
   Future<void> moveToTrash(String id) async {
     final project = _find(id);

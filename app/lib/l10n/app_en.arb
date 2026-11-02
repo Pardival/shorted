@@ -502,5 +502,11 @@
   "askShorted": "Ask Shorted",
   "askShortedHint": "Put the coffee shot first",
   "askShortedGo": "Ask",
-  "aiMenu": "AI"
+  "aiMenu": "AI",
+  "exportBundle": "Export as .shorted",
+  "importBundle": "Import a .shorted project",
+  "bundleExported": "Project exported, with all its media.",
+  "bundleImported": "Project imported.",
+  "errorBadBundle": "This file is damaged, or not a Shorted project. Nothing was imported.",
+  "errorMissingMedia": "A media file of this project cannot be found. Relink it, then try again."
 }
