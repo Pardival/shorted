@@ -2,5 +2,23 @@
   "@@locale": "en",
   "appTitle": "Shorted",
   "placeholderTagline": "Your clips, a polished short.",
-  "@placeholderTagline": { "description": "Tagline on the temporary placeholder screen." }
+  "@placeholderTagline": {
+    "description": "Tagline on the temporary placeholder screen."
+  },
+  "engineVersion": "Engine {version}",
+  "engineCounter": "Counter from the engine: {value}",
+  "@engineVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "@engineCounter": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  }
 }
