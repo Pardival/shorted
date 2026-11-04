@@ -358,6 +358,6 @@
   "onboardingStart": "Commencer",
   "replayOnboarding": "Revoir la présentation",
   "removeMedia": "Retirer du projet",
-  "removeMediaTitle": "Retirer « {name} » ?",
-  "removeMediaBody": "Ses clips, sons et éléments quittent aussi la timeline. Le fichier sur ton appareil est conservé, et Annuler remet tout en place."
+  "renameMedia": "Renommer le clip",
+  "reorderMediaHint": "Maintiens un clip appuyé pour le déplacer."
 }

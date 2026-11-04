@@ -358,6 +358,6 @@
   "onboardingStart": "Começar",
   "replayOnboarding": "Ver a apresentação de novo",
   "removeMedia": "Remover do projeto",
-  "removeMediaTitle": "Remover “{name}”?",
-  "removeMediaBody": "Seus clipes, sons e elementos também saem da linha do tempo. O arquivo no seu dispositivo é mantido, e Desfazer traz tudo de volta."
+  "renameMedia": "Renomear o clipe",
+  "reorderMediaHint": "Mantenha um clipe pressionado para movê-lo."
 }

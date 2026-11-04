@@ -48,6 +48,7 @@ fn project_with_picture(folder: &Path) -> Project {
             color: ColorRange::Sdr,
         },
         captured_at: None,
+        name: None,
     });
     project.validate().unwrap();
     project

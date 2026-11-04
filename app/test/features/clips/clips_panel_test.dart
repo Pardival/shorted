@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -113,25 +114,58 @@ void main() {
     expect(find.textContaining('Place in this order'), findsNothing);
   });
 
-  testWidgets('a media can be removed from the project, after a confirmation', (
-    tester,
-  ) async {
+  testWidgets('a media is removed from the project at once', (tester) async {
     final gateway = await pump(tester, const ['/a.mov', '/b.mov']);
     final id = gateway.opened!.media.first.id;
     await tester.tap(find.byKey(ValueKey('remove-media-$id')));
     await tester.pumpAndSettle();
-    expect(find.textContaining('leave the timeline too'), findsOneWidget);
-
-    await tester.tap(find.text('Cancel'));
-    await tester.pumpAndSettle();
-    expect(gateway.removedMedia, isEmpty);
-
-    await tester.tap(find.byKey(ValueKey('remove-media-$id')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Remove from project').last);
-    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsNothing);
     expect(gateway.removedMedia, [id]);
     expect(find.byKey(ValueKey('remove-media-$id')), findsNothing);
     expect(gateway.opened!.media, hasLength(1));
+  });
+
+  testWidgets('a clip can be renamed; Cancel keeps its name', (tester) async {
+    final gateway = await pump(tester, const ['/a.mov']);
+    final id = gateway.opened!.media.single.id;
+    await tester.tap(find.byKey(ValueKey('rename-media-$id')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('media-name')), 'Nope');
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(find.text('Nope'), findsNothing);
+
+    await tester.tap(find.byKey(ValueKey('rename-media-$id')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('media-name')),
+      'Plage au matin',
+    );
+    await tester.tap(find.text('Rename'));
+    await tester.pumpAndSettle();
+    expect(find.text('Plage au matin'), findsOneWidget);
+  });
+
+  testWidgets('press and hold a clip, then drag it down to move it', (
+    tester,
+  ) async {
+    final gateway = await pump(tester, const ['/a.mov', '/b.mov', '/c.mov']);
+    final ids = [for (final m in gateway.opened!.media) m.id];
+    final first = find.byKey(ValueKey('media-row-${ids.first}'));
+    final gesture = await tester.startGesture(tester.getCenter(first));
+    await tester.pump(kLongPressTimeout + const Duration(milliseconds: 100));
+    final rowHeight = tester.getSize(first).height;
+    for (var step = 0; step < 10; step++) {
+      await gesture.moveBy(Offset(0, rowHeight * 2.2 / 10));
+      await tester.pump();
+    }
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(gateway.mediaOrders.single, [ids[1], ids[2], ids[0]]);
+    final tops = [
+      for (final id in ids)
+        tester.getTopLeft(find.byKey(ValueKey('media-row-$id'))).dy,
+    ];
+    expect(tops[0], greaterThan(tops[2]));
   });
 }

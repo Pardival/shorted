@@ -104,6 +104,7 @@ pub async fn add_library_item(
                             color: ColorRange::Sdr,
                         },
                         captured_at: None,
+                        name: None,
                     }],
                 });
                 id
@@ -162,6 +163,7 @@ mod tests {
                 color: ColorRange::Sdr,
             },
             captured_at: None,
+            name: None,
         };
         assert!(is_library_item(&media("library/shapes-star.svg")));
         assert!(!is_library_item(&media("media/1.png")));

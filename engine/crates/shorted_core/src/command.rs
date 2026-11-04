@@ -51,6 +51,11 @@ pub enum Command {
     RemoveMedia {
         id: Id,
     },
+    /// `None` goes back to the file name.
+    RenameMedia {
+        id: Id,
+        name: Option<String>,
+    },
     RelinkMedia {
         id: Id,
         location: MediaLocation,
@@ -488,6 +493,18 @@ fn mutate(command: &Command, project: &mut Project) -> Result<Command, ModelErro
             if project.media.len() == before {
                 return Err(ModelError::UnknownId(id));
             }
+            inverse
+        }
+        RenameMedia { id, name } => {
+            let inverse = RestoreMedia {
+                media: project.media.clone(),
+            };
+            let media = project
+                .media
+                .iter_mut()
+                .find(|m| m.id == id)
+                .ok_or(ModelError::UnknownId(id))?;
+            media.name = name;
             inverse
         }
         RelinkMedia { id, location } => {

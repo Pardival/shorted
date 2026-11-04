@@ -258,6 +258,7 @@ fn media_for(path: &Path, kind: BrandKindView, folder: &Path) -> Result<MediaRef
         content_hash: content_hash(path)?,
         probe,
         captured_at: None,
+        name: None,
     })
 }
 
