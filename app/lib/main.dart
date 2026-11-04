@@ -22,12 +22,13 @@ Future<void> main() async {
   await _startLogging();
   final support = await getApplicationSupportDirectory();
   final settings = File('${support.path}/settings.json');
-  final locale = await loadLocale(settings);
+  final saved = await loadSettings(settings);
   runApp(
     ProviderScope(
       overrides: [
         settingsFileProvider.overrideWithValue(settings),
-        savedLocaleProvider.overrideWithValue(locale),
+        savedLocaleProvider.overrideWithValue(savedLocale(saved)),
+        savedOnboardedProvider.overrideWithValue(savedOnboarded(saved)),
         projectGatewayProvider.overrideWithValue(EngineGateway(support.path)),
         previewTransportProvider.overrideWithValue(EngineTransport()),
       ],

@@ -346,5 +346,15 @@
   "exportCover": "Enregistrer aussi une image de couverture",
   "exportCoverHint": "Une image de la vidéo, enregistrée en JPEG à côté d'elle.",
   "exportCoverAt": "Image à {time}. Déplace le curseur pour en choisir une autre.",
-  "exportPaused": "Export en pause : il reprend à ton retour"
+  "exportPaused": "Export en pause : il reprend à ton retour",
+  "onboardingClipsTitle": "Dépose tes clips",
+  "onboardingClipsBody": "Ajoute tes vidéos et photos. Shorted les met en ordre sur une timeline verticale 9:16.",
+  "onboardingCaptionsTitle": "Parle, on sous-titre",
+  "onboardingCaptionsBody": "Tes paroles deviennent des sous-titres, mot à mot, prêts à styliser et corriger.",
+  "onboardingMotionTitle": "Donne du mouvement",
+  "onboardingMotionBody": "Ajoute du son, du texte, des stickers et des transitions, puis exporte en un geste.",
+  "onboardingPrivacy": "Tes vidéos restent sur ton appareil.",
+  "onboardingNext": "Suivant",
+  "onboardingStart": "Commencer",
+  "replayOnboarding": "Revoir la présentation"
 }

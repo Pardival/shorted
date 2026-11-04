@@ -6,9 +6,9 @@ import '../design_system/tokens.g.dart';
 import '../features/editor/editor_section.dart';
 import '../features/editor/editor_shell.dart';
 import '../features/home/home_screen.dart';
+import '../features/home/onboarding_screen.dart';
 import '../features/home/splash_screen.dart';
 import '../features/settings/settings_screen.dart';
-import '../l10n/generated/app_localizations.dart';
 
 GoRouter createRouter({
   required String engineVersion,
@@ -20,7 +20,7 @@ GoRouter createRouter({
       GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
       GoRoute(
         path: '/onboarding',
-        builder: (context, state) => const _OnboardingPlaceholder(),
+        builder: (context, state) => const OnboardingScreen(),
       ),
       GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
       GoRoute(
@@ -48,22 +48,4 @@ GoRouter createRouter({
       ),
     ],
   );
-}
-
-/// Replaced by T-1003.
-class _OnboardingPlaceholder extends StatelessWidget {
-  const _OnboardingPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Scaffold(
-      body: Center(
-        child: TextButton(
-          onPressed: () => GoRouter.of(context).go('/home'),
-          child: Text('${l10n.onboardingTitle} · ${l10n.skip}'),
-        ),
-      ),
-    );
-  }
 }

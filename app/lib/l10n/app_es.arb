@@ -346,5 +346,15 @@
   "exportCover": "Guardar también una imagen de portada",
   "exportCoverHint": "Un fotograma del vídeo, guardado como JPEG junto a él.",
   "exportCoverAt": "Fotograma en {time}. Mueve el control para elegir otro.",
-  "exportPaused": "Exportación en pausa: continúa cuando vuelvas"
+  "exportPaused": "Exportación en pausa: continúa cuando vuelvas",
+  "onboardingClipsTitle": "Suelta tus clips",
+  "onboardingClipsBody": "Añade vídeos y fotos. Shorted los ordena en una línea de tiempo vertical 9:16.",
+  "onboardingCaptionsTitle": "Habla, nosotros subtitulamos",
+  "onboardingCaptionsBody": "Tus palabras se vuelven subtítulos, palabra por palabra, listos para estilizar y corregir.",
+  "onboardingMotionTitle": "Dale movimiento",
+  "onboardingMotionBody": "Añade sonido, texto, stickers y transiciones, y exporta con un toque.",
+  "onboardingPrivacy": "Tus vídeos se quedan en tu dispositivo.",
+  "onboardingNext": "Siguiente",
+  "onboardingStart": "Empezar",
+  "replayOnboarding": "Ver la presentación otra vez"
 }
