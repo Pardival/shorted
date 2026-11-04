@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
@@ -12,6 +13,7 @@ import '../../design_system/tokens.g.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../project/project_dialogs.dart';
 import '../project/project_providers.dart';
+import '../timeline/timeline_layout.dart';
 
 const _widths = {720: '720p', 1080: '1080p'};
 const _uhdWidth = 2160;
@@ -32,19 +34,44 @@ class ExportPanel extends ConsumerStatefulWidget {
   ConsumerState<ExportPanel> createState() => _ExportPanelState();
 }
 
-class _ExportPanelState extends ConsumerState<ExportPanel> {
+class _ExportPanelState extends ConsumerState<ExportPanel>
+    with WidgetsBindingObserver {
   var _width = 1080;
   var _fps = 30;
   var _srt = false;
+
+  /// Where the cover picture is taken, or none (FR-EXP-05).
+  int? _coverUs;
+  var _paused = false;
   double? _progress;
   String? _savedPath;
   BigInt? _taskId;
   StreamSubscription<TaskEvent>? _events;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     unawaited(_events?.cancel());
     super.dispose();
+  }
+
+  /// Phones may not use the GPU in the background: the export waits there and goes on when the
+  /// app comes back (FR-EXP-06). Desktops keep exporting.
+  static bool get _pausesInBackground => Platform.isIOS || Platform.isAndroid;
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (_progress == null || !_pausesInBackground) return;
+    final paused = state != AppLifecycleState.resumed;
+    if (paused == _paused) return;
+    ref.read(projectGatewayProvider).setExportPaused(paused);
+    setState(() => _paused = paused);
   }
 
   Future<String?> _choose() async {
@@ -65,6 +92,7 @@ class _ExportPanelState extends ConsumerState<ExportPanel> {
         setState(() => _progress = null);
         showToast(context, l10n.exportDone);
         unawaited(_saveCaptions(l10n));
+        unawaited(_saveCover(l10n));
       case TaskEvent_Cancelled():
         setState(() => _progress = null);
       case TaskEvent_Failed(:final code):
@@ -73,12 +101,18 @@ class _ExportPanelState extends ConsumerState<ExportPanel> {
     }
   }
 
+  /// The video's path without its extension: side files share its name.
+  String? get _base {
+    final path = _savedPath;
+    if (path == null) return null;
+    final dot = path.lastIndexOf('.');
+    return dot < 0 ? path : path.substring(0, dot);
+  }
+
   /// The `.srt` sits next to the video, with the same name.
   Future<void> _saveCaptions(AppLocalizations l10n) async {
-    final path = _savedPath;
-    if (!_srt || path == null) return;
-    final dot = path.lastIndexOf('.');
-    final base = dot < 0 ? path : path.substring(0, dot);
+    final base = _base;
+    if (!_srt || base == null) return;
     try {
       await ref.read(projectGatewayProvider).writeSrt('$base.srt');
     } on Object catch (error) {
@@ -86,11 +120,44 @@ class _ExportPanelState extends ConsumerState<ExportPanel> {
     }
   }
 
+  /// The cover sits next to the video: `<name>-cover.jpg`.
+  Future<void> _saveCover(AppLocalizations l10n) async {
+    final base = _base;
+    final coverUs = _coverUs;
+    if (coverUs == null || base == null) return;
+    try {
+      await ref
+          .read(projectGatewayProvider)
+          .writeCover('$base-cover.jpg', coverUs);
+    } on Object catch (error) {
+      if (mounted) showToast(context, errorMessage(l10n, error));
+    }
+  }
+
+  /// Turns the cover on at the frame the preview shows.
+  void _toggleCover(bool on) {
+    final transport = ref.read(previewTransportProvider);
+    final at = transport.positionUs.clamp(0, _lastFrameUs);
+    setState(() => _coverUs = on ? at : null);
+  }
+
+  int get _lastFrameUs => widget.durationUs <= 0 ? 0 : widget.durationUs - 1;
+
+  /// Moving the cover shows that frame in the preview.
+  void _moveCover(double value) {
+    final at = value.round();
+    ref.read(previewTransportProvider).seek(at);
+    setState(() => _coverUs = at);
+  }
+
   Future<void> _start() async {
     final l10n = AppLocalizations.of(context);
     final path = await _choose();
     if (path == null || !mounted) return;
-    setState(() => _progress = 0);
+    setState(() {
+      _progress = 0;
+      _paused = false;
+    });
     final gateway = ref.read(projectGatewayProvider);
     _savedPath = path;
     _events = gateway
@@ -133,6 +200,7 @@ class _ExportPanelState extends ConsumerState<ExportPanel> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final progress = _progress;
+    final coverUs = _coverUs;
     final blocked = switch (widget.durationUs) {
       0 => l10n.exportEmpty,
       > _maxDurationUs => l10n.exportTooLong,
@@ -140,7 +208,9 @@ class _ExportPanelState extends ConsumerState<ExportPanel> {
     };
     if (progress != null) {
       return TaskProgress(
-        label: l10n.exportProgress((progress * 100).round()),
+        label: _paused
+            ? l10n.exportPaused
+            : l10n.exportProgress((progress * 100).round()),
         fraction: progress,
         cancelLabel: l10n.exportCancel,
         onCancel: _cancel,
@@ -178,6 +248,26 @@ class _ExportPanelState extends ConsumerState<ExportPanel> {
             value: _srt,
             onChanged: (value) => setState(() => _srt = value),
           ),
+          SwitchListTile(
+            key: const ValueKey('export-cover'),
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.exportCover),
+            subtitle: Text(
+              coverUs == null
+                  ? l10n.exportCoverHint
+                  : l10n.exportCoverAt(formatTimecode(coverUs)),
+            ),
+            value: coverUs != null,
+            onChanged: blocked == null ? _toggleCover : null,
+          ),
+          if (coverUs != null)
+            Slider(
+              key: const ValueKey('export-cover-time'),
+              value: coverUs.toDouble(),
+              max: _lastFrameUs.toDouble(),
+              label: formatTimecode(coverUs),
+              onChanged: _lastFrameUs > 0 ? _moveCover : null,
+            ),
           if (blocked == null)
             Text(
               l10n.estimatedSize(

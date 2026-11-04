@@ -5,12 +5,14 @@
 
 use std::ops::Range;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::time::Duration;
 
 use shorted_audio::mixer::us_to_frames;
 use shorted_core::model::{Project, MAX_PROJECT_DURATION_MS};
 
-use crate::error::{EngineError, ErrorCode};
+use crate::error::{EngineError, EngineFailure, ErrorCode};
 use crate::frb_generated::StreamSink;
 use crate::runtime::{self, Priority, TaskContext, TaskEvent};
 use crate::transport::transport;
@@ -20,6 +22,26 @@ const REFERENCE_BITS_PER_SECOND: f64 = 12_000_000.0;
 const REFERENCE_PIXEL_RATE: f64 = 1080.0 * 1920.0 * 30.0;
 const AUDIO_CHUNK_FRAMES: i64 = 1_024;
 const AUDIO_BITS_PER_SECOND: f64 = 192_000.0;
+/// How often a paused export looks whether it may go on.
+const PAUSE_POLL: Duration = Duration::from_millis(50);
+
+/// Set while a phone app is in the background, where the GPU may not be used (FR-EXP-06).
+static PAUSED: AtomicBool = AtomicBool::new(false);
+
+/// Pauses or resumes the running export. Phones call it when the app leaves or comes back.
+#[flutter_rust_bridge::frb(sync)]
+pub fn set_export_paused(paused: bool) {
+    PAUSED.store(paused, Ordering::SeqCst);
+}
+
+/// Waits while the export is paused. Cancelling still works meanwhile.
+fn wait_while_paused(task: &TaskContext<'_>) -> Result<(), EngineError> {
+    while PAUSED.load(Ordering::SeqCst) {
+        task.check_cancelled().map_err(|_| EngineError::Cancelled)?;
+        std::thread::sleep(PAUSE_POLL);
+    }
+    Ok(())
+}
 
 #[derive(Clone, Copy)]
 pub struct ExportSettings {
@@ -113,7 +135,7 @@ fn run_export(
         Ok(next_audio)
     };
     for index in 0..frames {
-        if task.check_cancelled().is_err() {
+        if task.check_cancelled().is_err() || wait_while_paused(task).is_err() {
             encoder.cancel();
             let _ = std::fs::remove_file(output);
             return Err(EngineError::Cancelled);
@@ -166,6 +188,7 @@ pub fn start_export(path: String, settings: ExportSettings, events: StreamSink<T
         let state = transport();
         (state.project.clone(), state.folder.clone())
     };
+    set_export_paused(false);
     runtime::global()
         .background
         .spawn(Priority::Normal, events, move |task| {
@@ -174,8 +197,69 @@ pub fn start_export(path: String, settings: ExportSettings, events: StreamSink<T
             {
                 return Err(EngineError::ExportFailed);
             }
-            run_export(&project, &folder, Path::new(&path), settings, task)
+            let partial = partial_path();
+            let result = run_export(&project, &folder, &partial, settings, task)
+                .and_then(|()| move_into_place(&partial, Path::new(&path)));
+            let _ = std::fs::remove_file(&partial);
+            result
         });
+}
+
+/// Where an export is written until it is complete. The chosen file is only ever replaced by a
+/// finished video, so leaving the app, a crash or a cancel never leaves a broken one (FR-EXP-06).
+fn partial_path() -> PathBuf {
+    use std::sync::atomic::AtomicU64;
+    static NEXT: AtomicU64 = AtomicU64::new(0);
+    let n = NEXT.fetch_add(1, Ordering::Relaxed);
+    std::env::temp_dir().join(format!("shorted-export-{}-{n}.mp4", std::process::id()))
+}
+
+/// Renames when both are on one disk; otherwise copies, then the caller removes the original.
+fn move_into_place(partial: &Path, output: &Path) -> Result<(), EngineError> {
+    if std::fs::rename(partial, output).is_ok() {
+        return Ok(());
+    }
+    std::fs::copy(partial, output)
+        .map(drop)
+        .map_err(|_| EngineError::ExportFailed)
+}
+
+/// Size of a cover picture: the 1080p frame.
+const COVER_WIDTH: u32 = 1080;
+
+/// Saves the frame at `time_us` as a JPEG cover picture (FR-EXP-05).
+pub async fn write_cover(path: String, time_us: i64) -> Result<(), EngineFailure> {
+    let (project, folder): (Option<Arc<Project>>, PathBuf) = {
+        let state = transport();
+        (state.project.clone(), state.folder.clone())
+    };
+    let project = project.ok_or(EngineError::ExportFailed)?;
+    let time_us = time_us.clamp(0, (project.duration_us() - 1).max(0));
+    let jpeg = cover_jpeg(&project, &folder, time_us)?;
+    std::fs::write(path, jpeg)
+        .map_err(shorted_store::session::StoreError::from)
+        .map_err(EngineError::from)?;
+    Ok(())
+}
+
+fn cover_jpeg(project: &Project, folder: &Path, time_us: i64) -> Result<Vec<u8>, EngineError> {
+    use shorted_render::compositor::Compositor;
+    use shorted_render::pictures::jpeg_from_bgra;
+
+    use crate::frame_composer::FrameComposer;
+
+    let (width, height) = output_size(COVER_WIDTH);
+    let compositor = Compositor::new(width, height).map_err(|_| EngineError::ExportFailed)?;
+    let mut composer = FrameComposer::new(compositor);
+    let target = composer.compositor.offscreen_target();
+    composer
+        .draw(Some(project), folder, time_us, &target)
+        .map_err(|_| EngineError::ExportFailed)?;
+    let pixels = composer
+        .compositor
+        .read_pixels(&target)
+        .map_err(|_| EngineError::ExportFailed)?;
+    jpeg_from_bgra(&pixels, width, height).ok_or(EngineError::ExportFailed)
 }
 
 /// About how many bytes an export will take, sound included.
@@ -394,5 +478,47 @@ mod tests {
         assert!(export_blocked(0).is_some());
         assert!(export_blocked(120_000_001).is_some());
         assert!(export_blocked(120_000_000).is_none());
+    }
+
+    #[test]
+    fn a_finished_export_replaces_the_chosen_file_and_leaves_nothing_behind() {
+        let dir = tempfile::tempdir().unwrap();
+        let output = dir.path().join("short.mp4");
+        std::fs::write(&output, b"old").unwrap();
+        let partial = partial_path();
+        assert_ne!(partial, partial_path());
+        std::fs::write(&partial, b"new video").unwrap();
+        move_into_place(&partial, &output).unwrap();
+        let _ = std::fs::remove_file(&partial);
+        assert_eq!(std::fs::read(&output).unwrap(), b"new video");
+        assert!(!partial.exists());
+    }
+
+    #[test]
+    fn a_paused_export_waits_and_a_cancel_still_ends_it() {
+        set_export_paused(true);
+        let ended = crate::runtime::with_test_context(|task| {
+            task.cancel_for_test();
+            wait_while_paused(task)
+        });
+        set_export_paused(false);
+        assert!(matches!(ended, Err(EngineError::Cancelled)));
+        let ran = crate::runtime::with_test_context(wait_while_paused);
+        assert!(ran.is_ok());
+    }
+
+    /// The cover is the frame the user chose, as a 1080 × 1920 JPEG.
+    #[test]
+    fn a_cover_is_a_full_size_jpeg() {
+        let json = include_str!("../../../../fixtures/projects/v1_full.json");
+        let mut project = Project::from_json(json).unwrap();
+        project.timeline.overlays.clear();
+        project.captions.sources.clear();
+        let Ok(jpeg) = cover_jpeg(&project, Path::new("/"), 0) else {
+            // No GPU on this machine.
+            return;
+        };
+        let picture = image::load_from_memory(&jpeg).unwrap();
+        assert_eq!((picture.width(), picture.height()), (1080, 1920));
     }
 }

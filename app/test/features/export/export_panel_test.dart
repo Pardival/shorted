@@ -9,13 +9,19 @@ import 'package:shorted/features/export/export_panel.dart';
 import 'package:shorted/features/project/project_providers.dart';
 import 'package:shorted/l10n/generated/app_localizations.dart';
 
+import '../preview/fake_transport.dart';
 import '../project/fake_gateway.dart';
+
+final transport = FakeTransport();
 
 Future<FakeGateway> pump(WidgetTester tester, int durationUs) async {
   final gateway = FakeGateway();
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [projectGatewayProvider.overrideWithValue(gateway)],
+      overrides: [
+        projectGatewayProvider.overrideWithValue(gateway),
+        previewTransportProvider.overrideWithValue(transport),
+      ],
       child: MaterialApp(
         theme: shortedTheme(),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -93,5 +99,42 @@ void main() {
     await tester.pump();
     await tester.pump();
     expect(find.textContaining('could not be written'), findsOneWidget);
+  });
+
+  testWidgets(
+    'the cover is the frame on screen, movable, saved next to the video',
+    (tester) async {
+      transport.positionUs = 1500000;
+      final gateway = await pump(tester, 4000000);
+      await tester.tap(find.text('Also save a cover picture'));
+      await tester.pump();
+      expect(find.textContaining('Frame at 0:01'), findsOneWidget);
+
+      await tester.drag(
+        find.byKey(const ValueKey('export-cover-time')),
+        const Offset(400, 0),
+      );
+      await tester.pump();
+      expect(transport.seeks, isNotEmpty);
+      final chosen = transport.seeks.last;
+      expect(chosen, greaterThan(1500000));
+
+      await tester.tap(find.text('Export video'));
+      await tester.pump();
+      gateway.exportEvents.add(const TaskEvent.finished());
+      await tester.pump();
+      await tester.pump();
+      expect(gateway.covers.single, '/out/short-cover.jpg $chosen');
+    },
+  );
+
+  testWidgets('without the switch, no cover is written', (tester) async {
+    final gateway = await pump(tester, 4000000);
+    await tester.tap(find.text('Export video'));
+    await tester.pump();
+    gateway.exportEvents.add(const TaskEvent.finished());
+    await tester.pump();
+    await tester.pump();
+    expect(gateway.covers, isEmpty);
   });
 }

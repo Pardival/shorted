@@ -173,6 +173,12 @@ abstract interface class ProjectGateway {
     required double anchor,
   });
   Future<void> writeSrt(String path);
+
+  /// Saves the frame at `timeUs` as a JPEG next to an export.
+  Future<void> writeCover(String path, int timeUs);
+
+  /// Holds the running export while a phone app is in the background.
+  void setExportPaused(bool paused);
   Future<media.ThumbnailView?> cover(String projectId);
   int exportSizeEstimate(int width, int fps, int durationUs);
 
@@ -897,6 +903,13 @@ class EngineGateway implements ProjectGateway {
 
   @override
   Future<void> writeSrt(String path) => speech.writeSrt(path: path);
+
+  @override
+  Future<void> writeCover(String path, int timeUs) =>
+      exporter.writeCover(path: path, timeUs: timeUs);
+
+  @override
+  void setExportPaused(bool paused) => exporter.setExportPaused(paused: paused);
 
   @override
   Future<ProjectView> hideSegment(
