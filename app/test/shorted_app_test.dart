@@ -253,6 +253,29 @@ void main() {
     );
   });
 
+  testWidgets('a clip\'s sound has its own row; it can be detached', (
+    tester,
+  ) async {
+    final project = FakeProject('p1', 'Mine')..clips.add('c1');
+    final gateway = FakeGateway()..projects.add(project);
+    await open(
+      tester,
+      '/editor/p1/clips',
+      size: const Size(1280, 800),
+      gateway: gateway,
+    );
+    final timeline = find.byType(TimelineView);
+    // Rows: ruler, Video, then the clip's own sound right under it.
+    final origin = tester.getTopLeft(timeline);
+    await tester.tapAt(origin + const Offset(100, 24 + 36 + 18));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Split'), findsNothing, reason: 'not the clip');
+    await tester.tap(find.byTooltip('Detach the sound'));
+    await tester.pumpAndSettle();
+    expect(gateway.audioCalls.last, 'detach c1');
+  });
+
   testWidgets('a crop gesture follows the finger and records one step', (
     tester,
   ) async {
@@ -420,17 +443,17 @@ void main() {
       gateway: gateway,
     );
     final view = find.byType(TimelineView);
-    // Below Widgets, Video, Captions and Voice-over.
+    // Below Widgets, Video, Original sound, Captions and Voice-over.
     Offset at(double x, int track) =>
         tester.getTopLeft(view) + Offset(x, 24 + 36 * track + 12);
-    await tester.tapAt(at(108, 1));
+    await tester.tapAt(at(108, 2));
     await tester.pump(const Duration(milliseconds: 400));
     final moved = tester.getTopLeft(view);
     Offset after(double x, int track) =>
         moved + Offset(x, 24 + 36 * track + 12);
-    final gesture = await tester.startGesture(after(108, 1));
+    final gesture = await tester.startGesture(after(108, 2));
     await tester.pump();
-    await gesture.moveTo(after(148, 2));
+    await gesture.moveTo(after(148, 3));
     await tester.pump();
     await gesture.up();
     await tester.pumpAndSettle();

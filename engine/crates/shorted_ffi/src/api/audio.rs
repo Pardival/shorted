@@ -405,7 +405,15 @@ pub async fn set_track_flags(
         locked,
         hidden,
     };
-    edit(move |_| match id {
+    edit(move |project| match id {
+        // The clips' sound row only mutes: lock and hide stay the Video track's own.
+        None if kind == TrackKindView::OriginalSound => Ok(Command::SetTrackFlags {
+            track: TrackKind::Video,
+            flags: TrackFlags {
+                muted,
+                ..project.timeline.track_flags.video
+            },
+        }),
         Some(id) => Ok(Command::SetAudioTrackFlags {
             id: parse(&id)?,
             flags,
@@ -413,13 +421,96 @@ pub async fn set_track_flags(
         None => Ok(Command::SetTrackFlags {
             track: match kind {
                 TrackKindView::Widgets => TrackKind::Widgets,
-                TrackKindView::Video => TrackKind::Video,
+                TrackKindView::Video | TrackKindView::OriginalSound => TrackKind::Video,
                 TrackKindView::Captions => TrackKind::Captions,
                 _ => TrackKind::VoiceOver,
             },
             flags,
         }),
     })
+}
+
+/// Takes a clip's own sound out of it: the clip goes quiet and the same sound becomes a sound
+/// of its own on an audio track, at the same place, free to move (one undo step).
+fn detach_command(project: &Project, clip_id: Id) -> Result<Command, EngineError> {
+    let (index, clip) = project
+        .timeline
+        .clips
+        .iter()
+        .enumerate()
+        .find(|(_, clip)| clip.id == clip_id)
+        .ok_or_else(|| EngineError::Internal("unknown clip".into()))?;
+    let heard = project
+        .media
+        .iter()
+        .any(|m| m.id == clip.media_id && m.kind == MediaKind::Video && m.probe.has_audio);
+    if !heard {
+        return Err(EngineError::Internal("no sound to detach".into()));
+    }
+    if (clip.speed - 1.0).abs() > f32::EPSILON {
+        // A sound of its own plays at normal speed: it would no longer match the picture.
+        return Err(EngineError::Internal("sped up clip".into()));
+    }
+    let start_us = shorted_core::evaluate::clip_positions(project)
+        .get(index)
+        .map(|(_, start, _)| *start)
+        .unwrap_or_default();
+    let end_us = start_us + clip.source_out_us - clip.source_in_us;
+    let mut commands = Vec::new();
+    // The first track free over the whole sound, or a new one.
+    let free = project.timeline.audio_tracks.iter().find(|track| {
+        !project.timeline.audio.iter().any(|item| {
+            item.track == AudioTrackRef::User(track.id)
+                && item.start_us < end_us
+                && start_us < item.end_us()
+        })
+    });
+    let track = match free {
+        Some(track) => track.id,
+        None => {
+            let count = project.timeline.audio_tracks.len();
+            if count >= MAX_AUDIO_TRACKS {
+                return Err(EngineError::Internal("too many audio tracks".into()));
+            }
+            let track = new_track(count + 1);
+            let id = track.id;
+            commands.push(Command::AddAudioTrack { track });
+            id
+        }
+    };
+    let sound = &clip.original_audio;
+    commands.push(Command::SetClipAudio {
+        id: clip.id,
+        audio: ClipAudio {
+            muted: true,
+            ..*sound
+        },
+    });
+    commands.push(Command::AddAudio {
+        item: Box::new(AudioItem {
+            id: Uuid::now_v7(),
+            media_id: clip.media_id,
+            role: AudioRole::SoundEffect,
+            track: AudioTrackRef::User(track),
+            start_us,
+            source_in_us: clip.source_in_us,
+            source_out_us: clip.source_out_us,
+            volume: sound.volume,
+            fade_in_us: sound.fade_in_us,
+            fade_out_us: sound.fade_out_us,
+            loop_: false,
+            ducking: None,
+            transcript: None,
+        }),
+    });
+    Ok(Command::Group {
+        label: "detach sound".into(),
+        commands,
+    })
+}
+
+pub async fn detach_clip_sound(clip_id: String) -> Result<ProjectView, EngineFailure> {
+    edit(move |project| detach_command(project, parse(&clip_id)?))
 }
 
 /// Starts recording the microphone into the project (FR-AUD-03).
@@ -561,6 +652,44 @@ pub async fn media_peaks(media_id: String) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_detached_sound_plays_where_the_clip_was_and_the_clip_goes_quiet() {
+        let json = include_str!("../../../../fixtures/projects/v1_full.json");
+        let mut project = Project::from_json(json).unwrap();
+        for clip in &mut project.timeline.clips {
+            clip.speed = 1.0;
+        }
+        let id = project.timeline.clips[0].media_id;
+        let media = project.media.iter_mut().find(|m| m.id == id).unwrap();
+        media.probe.has_audio = true;
+        let before = project.clone();
+        let clip = project.timeline.clips[0].clone();
+        let start = shorted_core::evaluate::clip_positions(&project)[0].1;
+        let inverse = detach_command(&project, clip.id)
+            .unwrap()
+            .apply(&mut project)
+            .unwrap();
+        project.validate().unwrap();
+        assert!(project.timeline.clips[0].original_audio.muted);
+        let added = project.timeline.audio.last().unwrap();
+        assert_eq!(added.media_id, clip.media_id);
+        assert_eq!(added.start_us, start);
+        assert_eq!(
+            (added.source_in_us, added.source_out_us),
+            (clip.source_in_us, clip.source_out_us)
+        );
+        inverse.apply(&mut project).unwrap();
+        assert_eq!(project, before, "one undo step");
+
+        project.timeline.clips[0].speed = 2.0;
+        assert!(detach_command(&project, clip.id).is_err());
+        let image = project.timeline.clips[1].id;
+        assert!(
+            detach_command(&project, image).is_err(),
+            "a picture has no sound"
+        );
+    }
 
     #[test]
     fn peaks_keep_the_loudest_sample_of_each_span() {

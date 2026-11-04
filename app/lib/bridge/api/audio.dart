@@ -14,7 +14,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'projects.dart';
 import 'transcribe.dart';
 
-// These functions are ignored because they are not marked as `pub`: `audio_item`, `begin_recording`, `decode_peaks`, `finish_recording`, `item_views`, `new_track`, `peaks`, `recording_level`, `sound_view`, `trim_commands`
+// These functions are ignored because they are not marked as `pub`: `audio_item`, `begin_recording`, `decode_peaks`, `detach_command`, `finish_recording`, `item_views`, `new_track`, `peaks`, `recording_level`, `sound_view`, `trim_commands`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `eq`, `from`, `from`
 
 /// The original sound of a clip (FR-AUD-02).
@@ -121,6 +121,9 @@ Future<ProjectView> setTrackFlags({
   locked: locked,
   hidden: hidden,
 );
+
+Future<ProjectView> detachClipSound({required String clipId}) =>
+    RustLib.instance.api.crateApiAudioDetachClipSound(clipId: clipId);
 
 /// Starts recording the microphone into the project (FR-AUD-03).
 Future<void> startVoiceOver() =>

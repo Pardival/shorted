@@ -5,6 +5,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../bridge/api/audio.dart';
 import '../../bridge/api/look.dart';
 import '../../bridge/api/overlays.dart';
 import '../../bridge/api/projects.dart';
@@ -338,6 +339,9 @@ class TransportBarState extends ConsumerState<TransportBar>
   }
 }
 
+/// Marks the timeline item of a clip's own sound.
+const _soundOf = 'sound:';
+
 class TimelineArea extends ConsumerStatefulWidget {
   const TimelineArea({
     super.key,
@@ -368,6 +372,9 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
   /// A selected sound: its tools show whatever the section.
   String? _audioItem;
 
+  /// A clip's own sound, selected on its row: the id of the clip.
+  String? _clipSound;
+
   Future<void> _trackMenu(int index, Offset position) async {
     final l10n = AppLocalizations.of(context);
     final track = widget.view.tracks[index];
@@ -388,19 +395,23 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
         Offset.zero & area.size,
       ),
       items: [
-        if (isSound || track.kind == TrackKindView.video)
+        if (isSound ||
+            track.kind == TrackKindView.video ||
+            track.kind == TrackKindView.originalSound)
           PopupMenuItem(
             value: 'mute',
             child: Text(track.muted ? l10n.unmute : l10n.mute),
           ),
-        PopupMenuItem(
-          value: 'lock',
-          child: Text(track.locked ? l10n.unlockTrack : l10n.lockTrack),
-        ),
-        PopupMenuItem(
-          value: 'hide',
-          child: Text(track.hidden ? l10n.showTrack : l10n.hideTrack),
-        ),
+        if (track.kind != TrackKindView.originalSound) ...[
+          PopupMenuItem(
+            value: 'lock',
+            child: Text(track.locked ? l10n.unlockTrack : l10n.lockTrack),
+          ),
+          PopupMenuItem(
+            value: 'hide',
+            child: Text(track.hidden ? l10n.showTrack : l10n.hideTrack),
+          ),
+        ],
         if (id != null) ...[
           if (userIndex > 0)
             PopupMenuItem(value: 'up', child: Text(l10n.moveTrackUp)),
@@ -606,6 +617,48 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
     );
   }
 
+  /// A clip's own sound: its settings, quiet or not, or taken out as a sound of its own.
+  Widget _clipSoundTools(AppLocalizations l10n, String clipId) {
+    ClipSoundView? sound;
+    for (final candidate in widget.view.sound.clips) {
+      if (candidate.clipId == clipId) sound = candidate;
+    }
+    if (sound == null) return const SizedBox.shrink();
+    final current = sound;
+    return ToolStrip(
+      children: [
+        ShortedIconButton(
+          icon: Icons.graphic_eq,
+          tooltip: l10n.soundSettings,
+          onPressed: () => showSoundSheet(context, widget.view.id, clipId),
+        ),
+        ShortedIconButton(
+          icon: current.muted ? Icons.volume_off : Icons.volume_up,
+          tooltip: current.muted ? l10n.unmute : l10n.mute,
+          onPressed: () => _guard(
+            () => _editor.apply(
+              (g) => g.setClipSound(
+                clipId,
+                volume: current.volume,
+                muted: !current.muted,
+                fadeInUs: current.fadeInUs.toInt(),
+                fadeOutUs: current.fadeOutUs.toInt(),
+              ),
+            ),
+          ),
+        ),
+        ShortedIconButton(
+          icon: Icons.call_split,
+          tooltip: l10n.detachSound,
+          onPressed: () {
+            setState(() => _clipSound = null);
+            _guard(() => _editor.apply((g) => g.detachClipSound(clipId)));
+          },
+        ),
+      ],
+    );
+  }
+
   /// Several elements selected: what applies to all of them at once (T-1206).
   Widget _groupTools(AppLocalizations l10n, List<String> ids) {
     void clear() => ref.read(overlayGroupProvider.notifier).clear();
@@ -738,6 +791,7 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
           kind: switch (track.kind) {
             TrackKindView.widgets => TrackKind.widgets,
             TrackKindView.video => TrackKind.video,
+            TrackKindView.originalSound => TrackKind.originalSound,
             TrackKindView.captions => TrackKind.captions,
             TrackKindView.voiceOver => TrackKind.voiceOver,
             TrackKindView.audio => TrackKind.audio,
@@ -748,6 +802,7 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
                 TrackKindView.widgets => l10n.trackWidgets,
                 TrackKindView.video => l10n.trackVideo,
                 TrackKindView.captions => l10n.trackCaptions,
+                TrackKindView.originalSound => l10n.trackOriginalSound,
                 _ => l10n.trackVoiceOver,
               },
           id: track.id,
@@ -757,13 +812,19 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
           items: _lanesFor(track.kind, [
             for (final item in track.items)
               TimelineItem(
-                id: item.id,
+                // A clip and its sound are two items: the sound's id says it is the sound.
+                id: track.kind == TrackKindView.originalSound
+                    ? '$_soundOf${item.id}'
+                    : item.id,
                 startUs: item.startUs.toInt(),
                 endUs: item.endUs.toInt(),
                 mediaId: item.mediaId,
                 sourceInUs: item.sourceInUs.toInt(),
                 speed: item.speed,
-                locked: _overlay(item.id)?.locked ?? false,
+                // It follows its clip: trim or move the clip, not the sound.
+                locked:
+                    track.kind == TrackKindView.originalSound ||
+                    (_overlay(item.id)?.locked ?? false),
                 animated: _overlay(item.id)?.hasAnimation ?? false,
                 keyframes: [
                   for (final key in _overlay(item.id)?.keyframes ?? const [])
@@ -779,8 +840,6 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
         if (mediaId == null) continue;
         if (track.kind == TrackKindView.video) {
           _filmstrips.request(mediaId);
-          // A clip shows its own sound too: every sound heard is on the timeline.
-          if (_hasSound(item.id)) _waveforms.request(mediaId);
         } else {
           _waveforms.request(mediaId);
         }
@@ -859,6 +918,8 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
             _keyframeTools(l10n, overlay, keyframe)
           else if (overlay != null)
             _overlayTools(l10n, overlay)
+          else if (_clipSound case final clipId?)
+            _clipSoundTools(l10n, clipId)
           else if (_audioItem case final sound?)
             ToolStrip(
               children: [
@@ -992,12 +1053,18 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
                 } else {
                   groups.clear();
                 }
+                final clipSound = item != null && item.id.startsWith(_soundOf)
+                    ? item.id.substring(_soundOf.length)
+                    : null;
                 setState(() {
                   _clip = item != null && _isClip(item) ? item : null;
                   _audioItem = item != null && _isSound(item) ? item.id : null;
+                  _clipSound = clipSound;
                 });
                 ref.read(selectedClipProvider.notifier).set(_clip?.id);
-                ref.read(selectedSoundProvider.notifier).set(_audioItem);
+                ref
+                    .read(selectedSoundProvider.notifier)
+                    .set(_audioItem ?? clipSound);
                 ref
                     .read(selectedOverlayProvider.notifier)
                     .set(

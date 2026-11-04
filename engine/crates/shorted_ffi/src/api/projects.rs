@@ -38,6 +38,8 @@ pub struct ProjectSummary {
 pub enum TrackKindView {
     Widgets,
     Video,
+    /// Each clip's own sound, on its own row under the video, linked to its clip.
+    OriginalSound,
     Captions,
     VoiceOver,
     Audio,
@@ -380,6 +382,31 @@ fn track_view(session: &ProjectSession) -> Vec<TrackView> {
                         .iter()
                         .any(|m| m.id == clip.media_id && m.kind == MediaKind::Image)
                         .then_some(clip.image_motion.is_some()),
+                    ..item(id, start, end)
+                })
+                .collect(),
+        },
+        TrackView {
+            kind: TrackKindView::OriginalSound,
+            name: None,
+            id: None,
+            // The clips' sound is muted with the Video track.
+            muted: timeline.track_flags.video.muted,
+            locked: false,
+            hidden: false,
+            items: clip_positions(project)
+                .into_iter()
+                .zip(&timeline.clips)
+                .filter(|(_, clip)| {
+                    project
+                        .media
+                        .iter()
+                        .any(|m| m.id == clip.media_id && m.probe.has_audio)
+                })
+                .map(|((id, start, end), clip)| TrackItemView {
+                    media_id: Some(clip.media_id.to_string()),
+                    source_in_us: clip.source_in_us,
+                    speed: clip.speed,
                     ..item(id, start, end)
                 })
                 .collect(),

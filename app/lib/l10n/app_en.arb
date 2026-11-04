@@ -554,5 +554,7 @@
   "selectPart": "Select a part",
   "zoomIn": "Zoom in",
   "zoomOut": "Zoom out",
-  "zoomFit": "Show everything"
+  "zoomFit": "Show everything",
+  "trackOriginalSound": "Original sound",
+  "detachSound": "Detach the sound"
 }

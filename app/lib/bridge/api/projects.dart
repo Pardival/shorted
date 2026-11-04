@@ -244,7 +244,16 @@ class TrackItemView {
           slowZoom == other.slowZoom;
 }
 
-enum TrackKindView { widgets, video, captions, voiceOver, audio }
+enum TrackKindView {
+  widgets,
+  video,
+
+  /// Each clip's own sound, on its own row under the video, linked to its clip.
+  originalSound,
+  captions,
+  voiceOver,
+  audio,
+}
 
 class TrackView {
   final TrackKindView kind;

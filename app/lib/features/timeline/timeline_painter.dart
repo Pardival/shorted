@@ -5,9 +5,8 @@ import 'filmstrips.dart';
 import 'timeline_layout.dart';
 import 'waveforms.dart';
 
-/// Share of a clip's height given to its sound, and how dark behind it.
-const _soundBand = 0.35;
-const _soundBandAlpha = 0.55;
+/// The clips' sound row: a dark lime, so the waveform drawn in the accent stands out.
+const _originalSoundFill = Color(0xFF26331A);
 const _itemRadius = Radius.circular(ShortedRadius.s);
 const _itemGap = 2.0;
 const _waveformStep = 2.0;
@@ -19,6 +18,7 @@ Color _trackColor(TrackKind kind) => switch (kind) {
   TrackKind.video => ShortedColors.mediaPlaceholder,
   TrackKind.captions || TrackKind.voiceOver => ShortedColors.accent,
   TrackKind.audio => ShortedColors.lineStrong,
+  TrackKind.originalSound => _originalSoundFill,
 };
 
 /// Everything but the playhead, which has its own layer: scrubbing never repaints this.
@@ -264,30 +264,17 @@ class TimelinePainter extends CustomPainter {
       canvas.drawRRect(shape, fill);
       if (track.kind == TrackKind.video) {
         _paintFilmstrip(canvas, item, shape, size.width);
-        // The clip's own sound, along its bottom.
-        final band = Rect.fromLTRB(
-          rect.left,
-          rect.bottom - rect.height * _soundBand,
-          rect.right,
-          rect.bottom,
-        );
-        canvas.save();
-        canvas.clipRRect(shape);
-        canvas.drawRect(
-          band,
-          Paint()..color = ShortedColors.bg.withValues(alpha: _soundBandAlpha),
-        );
-        _paintWaveform(
-          canvas,
-          item,
-          band,
-          size.width,
-          color: ShortedColors.accent,
-        );
-        canvas.restore();
       } else if (track.kind == TrackKind.widgets) {
         if (item.animated) _paintDiamonds(canvas, rect);
         _paintKeyframes(canvas, item, rect);
+      } else if (track.kind == TrackKind.originalSound) {
+        _paintWaveform(
+          canvas,
+          item,
+          rect,
+          size.width,
+          color: ShortedColors.accent,
+        );
       } else {
         _paintWaveform(canvas, item, rect, size.width);
       }

@@ -79,6 +79,7 @@ class AudioPanel extends ConsumerWidget {
                   candidate.id == track.id &&
                   candidate.kind != TrackKindView.widgets &&
                   candidate.kind != TrackKindView.video &&
+                  candidate.kind != TrackKindView.originalSound &&
                   candidate.kind != TrackKindView.captions,
             ),
             media: view.media,

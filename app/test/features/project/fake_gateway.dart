@@ -167,6 +167,23 @@ class FakeGateway implements ProjectGateway {
               ),
           ],
         ),
+        TrackView(
+          kind: TrackKindView.originalSound,
+          muted: false,
+          locked: false,
+          hidden: false,
+          items: [
+            for (final (index, clip) in project.clips.indexed)
+              if (!project.stills.contains(clip))
+                TrackItemView(
+                  sourceInUs: big(0),
+                  speed: 1,
+                  id: clip,
+                  startUs: big(index * 1000000),
+                  endUs: big((index + 1) * 1000000),
+                ),
+          ],
+        ),
         for (final track in project.audioTracks)
           TrackView(
             kind: TrackKindView.audio,
@@ -788,6 +805,10 @@ class FakeGateway implements ProjectGateway {
     AudioRoleView role,
     int startUs,
   ) => _audio('add $mediaId ${role.name} $startUs');
+
+  @override
+  Future<ProjectView> detachClipSound(String clipId) =>
+      _audio('detach $clipId');
 
   @override
   Future<ProjectView> setClipSound(

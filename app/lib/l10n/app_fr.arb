@@ -340,5 +340,7 @@
   "selectPart": "Sélectionner une partie",
   "zoomIn": "Zoomer",
   "zoomOut": "Dézoomer",
-  "zoomFit": "Tout afficher"
+  "zoomFit": "Tout afficher",
+  "trackOriginalSound": "Son d'origine",
+  "detachSound": "Détacher le son"
 }

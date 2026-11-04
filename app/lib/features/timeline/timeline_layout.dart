@@ -1,6 +1,15 @@
 import 'dart:math' as math;
 
-enum TrackKind { widgets, video, captions, voiceOver, audio }
+enum TrackKind {
+  widgets,
+  video,
+
+  /// Each clip's own sound, under the video and tied to it.
+  originalSound,
+  captions,
+  voiceOver,
+  audio,
+}
 
 class TimelineItem {
   const TimelineItem({

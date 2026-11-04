@@ -91,6 +91,9 @@ abstract interface class ProjectGateway {
     required int fadeOutUs,
   });
   Future<ProjectView> setAudioLoop(String id, {required bool looped});
+
+  /// The clip goes quiet; its sound becomes a sound of its own, free to move.
+  Future<ProjectView> detachClipSound(String clipId);
   Future<ProjectView> deleteAudio(String id);
   Future<ProjectView> setDucking(String id, double? strength);
   Future<ProjectView> moveAudio(String id, int startUs, String? trackId);
@@ -481,6 +484,10 @@ class EngineGateway implements ProjectGateway {
     fadeInUs: fadeInUs,
     fadeOutUs: fadeOutUs,
   );
+
+  @override
+  Future<ProjectView> detachClipSound(String clipId) =>
+      audio.detachClipSound(clipId: clipId);
 
   @override
   Future<ProjectView> setAudioLoop(String id, {required bool looped}) =>
