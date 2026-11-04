@@ -56,6 +56,9 @@ pub struct MediaRef {
     pub content_hash: String,
     pub probe: MediaProbe,
     pub captured_at: Option<DateTime>,
+    /// What the user calls it; the file name when unset.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]

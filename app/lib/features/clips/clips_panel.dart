@@ -200,29 +200,40 @@ class _ClipsPanelState extends ConsumerState<ClipsPanel> {
     await _guard(() => _editor.relink(item.id, file.path));
   }
 
-  /// Asks first: the media's clips, sounds and elements leave the timeline with it.
+  /// At once: the media's clips, sounds and elements leave the timeline with it, and Undo
+  /// brings everything back.
   Future<void> _remove(MediaItemView item) async {
-    final l10n = AppLocalizations.of(context);
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.removeMediaTitle(item.name)),
-        content: Text(l10n.removeMediaBody),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(l10n.cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(l10n.removeMedia),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
     setState(() => _picked.remove(item.id));
     await _guard(() => _editor.removeMedia(item.id));
+  }
+
+  Future<void> _rename(MediaItemView item) async {
+    final l10n = AppLocalizations.of(context);
+    final name = await showDialog<String>(
+      context: context,
+      builder: (context) => _RenameDialog(
+        title: l10n.renameMedia,
+        initial: item.name,
+        cancel: l10n.cancel,
+        confirm: l10n.rename,
+      ),
+    );
+    if (name == null || !mounted) return;
+    await _guard(
+      () => _editor.apply((gateway) => gateway.renameMedia(item.id, name)),
+    );
+  }
+
+  /// Order shown while the engine takes a drag, so the row does not jump back.
+  List<String>? _order;
+
+  Future<void> _reorder(List<MediaItemView> media, int from, int to) async {
+    final ids = [for (final item in media) item.id];
+    final moved = ids.removeAt(from);
+    ids.insert(to, moved);
+    setState(() => _order = ids);
+    await _guard(() => _editor.apply((gateway) => gateway.reorderMedia(ids)));
+    if (mounted) setState(() => _order = null);
   }
 
   void _toggle(MediaItemView item) {
@@ -234,10 +245,17 @@ class _ClipsPanelState extends ConsumerState<ClipsPanel> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final media = [
+    final shown = [
       for (final item in widget.media)
         if (item.kind != MediaKindView.audio) item,
     ];
+    final order = _order;
+    final media = order == null
+        ? shown
+        : [
+            for (final id in order) ...shown.where((item) => item.id == id),
+            ...shown.where((item) => !order.contains(item.id)),
+          ];
     return DropTarget(
       onDragEntered: (_) => setState(() => _dragging = true),
       onDragExited: (_) => setState(() => _dragging = false),
@@ -334,17 +352,44 @@ class _ClipsPanelState extends ConsumerState<ClipsPanel> {
                           ),
                         ),
                       ),
-                    for (final item in media)
-                      _MediaRow(
-                        item: item,
-                        thumbnails: _thumbnails,
-                        order: _picked.contains(item.id)
-                            ? _picked.indexOf(item.id) + 1
-                            : null,
-                        onTap: item.offline ? null : () => _toggle(item),
-                        onRelink: () => _relink(item),
-                        onRemove: () => _remove(item),
+                    if (media.length > 1)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: ShortedSpace.s,
+                        ),
+                        child: Text(
+                          l10n.reorderMediaHint,
+                          style: const TextStyle(
+                            color: ShortedColors.textMuted,
+                          ),
+                        ),
                       ),
+                    // Press and hold a row, then drag it up or down.
+                    ReorderableListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      buildDefaultDragHandles: false,
+                      itemCount: media.length,
+                      onReorderItem: (from, to) => _reorder(media, from, to),
+                      itemBuilder: (context, index) {
+                        final item = media[index];
+                        return ReorderableDelayedDragStartListener(
+                          key: ValueKey('media-row-${item.id}'),
+                          index: index,
+                          child: _MediaRow(
+                            item: item,
+                            thumbnails: _thumbnails,
+                            order: _picked.contains(item.id)
+                                ? _picked.indexOf(item.id) + 1
+                                : null,
+                            onTap: item.offline ? null : () => _toggle(item),
+                            onRelink: () => _relink(item),
+                            onRename: () => _rename(item),
+                            onRemove: () => _remove(item),
+                          ),
+                        );
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -371,6 +416,7 @@ class _MediaRow extends StatelessWidget {
     required this.order,
     required this.onTap,
     required this.onRelink,
+    required this.onRename,
     required this.onRemove,
   });
 
@@ -379,6 +425,7 @@ class _MediaRow extends StatelessWidget {
   final int? order;
   final VoidCallback? onTap;
   final VoidCallback onRelink;
+  final VoidCallback onRename;
   final VoidCallback onRemove;
 
   @override
@@ -448,6 +495,13 @@ class _MediaRow extends StatelessWidget {
           if (item.offline)
             TextButton(onPressed: onRelink, child: Text(l10n.relink)),
           IconButton(
+            key: ValueKey('rename-media-${item.id}'),
+            tooltip: l10n.renameMedia,
+            icon: const Icon(Icons.edit_outlined),
+            color: ShortedColors.textMuted,
+            onPressed: onRename,
+          ),
+          IconButton(
             key: ValueKey('remove-media-${item.id}'),
             tooltip: l10n.removeMedia,
             icon: const Icon(Icons.remove_circle_outline),
@@ -456,6 +510,61 @@ class _MediaRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _RenameDialog extends StatefulWidget {
+  const _RenameDialog({
+    required this.title,
+    required this.initial,
+    required this.cancel,
+    required this.confirm,
+  });
+
+  final String title;
+  final String initial;
+  final String cancel;
+  final String confirm;
+
+  @override
+  State<_RenameDialog> createState() => _RenameDialogState();
+}
+
+class _RenameDialogState extends State<_RenameDialog> {
+  late final _name = TextEditingController(text: widget.initial)
+    ..selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: widget.initial.length,
+    );
+
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: TextField(
+        key: const ValueKey('media-name'),
+        controller: _name,
+        autofocus: true,
+        maxLength: 120,
+        onSubmitted: (value) => Navigator.pop(context, value),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(widget.cancel),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, _name.text),
+          child: Text(widget.confirm),
+        ),
+      ],
     );
   }
 }

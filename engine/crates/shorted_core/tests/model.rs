@@ -58,6 +58,7 @@ fn media(value: u128, kind: MediaKind, location: MediaLocation) -> MediaRef {
             color: ColorRange::Hdr,
         },
         captured_at: Some("2026-11-01T10:00:00Z".into()),
+        name: None,
     }
 }
 

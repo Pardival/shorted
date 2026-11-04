@@ -47,6 +47,14 @@ pub struct ImportOutcome {
     pub error: Option<ErrorCode>,
 }
 
+/// The name the user gave, else the file's.
+fn shown_name(media: &MediaRef) -> String {
+    media
+        .name
+        .clone()
+        .unwrap_or_else(|| display_name(&media.location))
+}
+
 fn display_name(location: &MediaLocation) -> String {
     let path = match location {
         MediaLocation::ProjectCopy { rel_path } => rel_path,
@@ -93,7 +101,7 @@ pub(crate) fn media_views(session: &ProjectSession) -> Vec<MediaItemView> {
         .filter(|media| !crate::api::library::is_library_item(media))
         .map(|media| MediaItemView {
             id: media.id.to_string(),
-            name: display_name(&media.location),
+            name: shown_name(media),
             kind: match media.kind {
                 MediaKind::Video => MediaKindView::Video,
                 MediaKind::Image => MediaKindView::Image,
@@ -207,6 +215,10 @@ pub(crate) fn make_media(path: &Path, folder: &Path) -> Result<MediaRef, EngineE
         content_hash,
         probe,
         captured_at: None,
+        // The project may keep a copy named by id: the original name stays.
+        name: path
+            .file_name()
+            .map(|name| name.to_string_lossy().into_owned()),
     })
 }
 
@@ -332,6 +344,65 @@ pub async fn relink_media(id: String, path: String) -> Result<ProjectView, Engin
     })
 }
 
+/// Longest name kept, in characters.
+const MAX_MEDIA_NAME_CHARS: usize = 120;
+
+/// Gives a media the name shown in Clips. A blank name goes back to the file's.
+pub async fn rename_media(id: String, name: String) -> Result<ProjectView, EngineFailure> {
+    on_command_thread(move || {
+        let mut command = None;
+        with_active(|session| {
+            command = Some(rename_command(session.project(), &id, &name));
+            Ok(())
+        })?;
+        let command = command.ok_or_else(|| EngineError::Internal("no project".into()))??;
+        with_active(|session| {
+            session.execute(&command)?;
+            Ok(view_of(session))
+        })
+    })
+}
+
+fn rename_command(project: &Project, id: &str, name: &str) -> Result<Command, EngineError> {
+    let media = project
+        .media
+        .iter()
+        .find(|m| m.id.to_string() == id)
+        .ok_or_else(|| EngineError::Internal("unknown media".into()))?;
+    let name: String = name.trim().chars().take(MAX_MEDIA_NAME_CHARS).collect();
+    Ok(Command::RenameMedia {
+        id: media.id,
+        name: (!name.is_empty()).then_some(name),
+    })
+}
+
+/// Puts the media of Clips in this order, as one undo step. Media not listed keep their place
+/// after them.
+pub async fn reorder_media(ids: Vec<String>) -> Result<ProjectView, EngineFailure> {
+    on_command_thread(move || {
+        let mut command = None;
+        with_active(|session| {
+            command = Some(reorder_command(session.project(), &ids));
+            Ok(())
+        })?;
+        let Some(command) = command else {
+            return Err(EngineError::Internal("no project".into()));
+        };
+        with_active(|session| {
+            session.execute(&command)?;
+            Ok(view_of(session))
+        })
+    })
+}
+
+fn reorder_command(project: &Project, ids: &[String]) -> Command {
+    let listed = |media: &MediaRef| ids.iter().position(|id| *id == media.id.to_string());
+    let mut media = project.media.clone();
+    // Stable: unlisted media keep their order, after the listed ones.
+    media.sort_by_key(|item| listed(item).unwrap_or(usize::MAX));
+    Command::RestoreMedia { media }
+}
+
 /// Takes a media out of the project, with every clip, sound and element that shows it, as one
 /// undo step. Its file stays on disk so that undo brings everything back.
 pub async fn remove_media(id: String) -> Result<ProjectView, EngineFailure> {
@@ -408,6 +479,13 @@ pub async fn collect_media() -> Result<ProjectView, EngineFailure> {
         let rel_path = copy_into_project(&folder, &path, media.id)
             .map_err(shorted_store::session::StoreError::from)
             .map_err(EngineError::from)?;
+        // The copy is named by id: keep the file's name for the list.
+        if media.name.is_none() {
+            commands.push(Command::RenameMedia {
+                id: media.id,
+                name: Some(display_name(&media.location)),
+            });
+        }
         commands.push(Command::RelinkMedia {
             id: media.id,
             location: MediaLocation::ProjectCopy { rel_path },
@@ -832,5 +910,59 @@ mod filmstrip_tests {
             project.validate().unwrap();
         }
         assert!(remove_media_command(&original, "nope").is_err());
+    }
+
+    #[test]
+    fn a_media_takes_a_new_name_and_a_blank_one_goes_back_to_the_file() {
+        let json = include_str!("../../../../fixtures/projects/v1_full.json");
+        let mut project = Project::from_json(json).unwrap();
+        let original = project.clone();
+        let id = project.media[0].id.to_string();
+        let inverse = rename_command(&project, &id, "  Plage au matin  ")
+            .unwrap()
+            .apply(&mut project)
+            .unwrap();
+        assert_eq!(shown_name(&project.media[0]), "Plage au matin");
+        project.validate().unwrap();
+        inverse.apply(&mut project).unwrap();
+        assert_eq!(project, original);
+
+        rename_command(&project, &id, "   ")
+            .unwrap()
+            .apply(&mut project)
+            .unwrap();
+        assert_eq!(project.media[0].name, None);
+        assert_eq!(
+            shown_name(&project.media[0]),
+            display_name(&project.media[0].location)
+        );
+        let long = "a".repeat(500);
+        let command = rename_command(&project, &id, &long).unwrap();
+        let Command::RenameMedia {
+            name: Some(kept), ..
+        } = command
+        else {
+            panic!("expected a name");
+        };
+        assert_eq!(kept.chars().count(), MAX_MEDIA_NAME_CHARS);
+    }
+
+    #[test]
+    fn media_follow_the_new_order_and_undo_puts_them_back() {
+        let json = include_str!("../../../../fixtures/projects/v1_full.json");
+        let mut project = Project::from_json(json).unwrap();
+        let original = project.clone();
+        let mut ids: Vec<String> = project.media.iter().map(|m| m.id.to_string()).collect();
+        ids.reverse();
+        let listed = ids[..2].to_vec();
+        let inverse = reorder_command(&project, &listed)
+            .apply(&mut project)
+            .unwrap();
+        let now: Vec<String> = project.media.iter().map(|m| m.id.to_string()).collect();
+        assert_eq!(now[..2], listed[..]);
+        assert_eq!(now.len(), original.media.len());
+        project.validate().unwrap();
+        inverse.apply(&mut project).unwrap();
+        assert_eq!(project, original);
     }
 }

@@ -14,7 +14,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'projects.dart';
 import 'transcribe.dart';
 
-// These functions are ignored because they are not marked as `pub`: `audio_probe`, `cache_folders`, `clip_for`, `decode_strip`, `display_name`, `encode_strip`, `folder_bytes`, `image_probe`, `import_one`, `location_for`, `make_media`, `make_strip`, `media_views`, `read_cover`, `remove_media_command`, `resolve`, `send_still`, `send_strip`, `strip_cache`, `thumbnail_size`, `thumbnail_times`, `video_probe`, `write_cover`
+// These functions are ignored because they are not marked as `pub`: `audio_probe`, `cache_folders`, `clip_for`, `decode_strip`, `display_name`, `encode_strip`, `folder_bytes`, `image_probe`, `import_one`, `location_for`, `make_media`, `make_strip`, `media_views`, `read_cover`, `remove_media_command`, `rename_command`, `reorder_command`, `resolve`, `send_still`, `send_strip`, `shown_name`, `strip_cache`, `thumbnail_size`, `thumbnail_times`, `video_probe`, `write_cover`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `eq`
 
 /// Imports files one by one: a bad file fails alone.
@@ -28,6 +28,15 @@ Future<ProjectView> placeClips({required List<String> mediaIds}) =>
 /// Points a missing media at a file with the same content.
 Future<ProjectView> relinkMedia({required String id, required String path}) =>
     RustLib.instance.api.crateApiMediaRelinkMedia(id: id, path: path);
+
+/// Gives a media the name shown in Clips. A blank name goes back to the file's.
+Future<ProjectView> renameMedia({required String id, required String name}) =>
+    RustLib.instance.api.crateApiMediaRenameMedia(id: id, name: name);
+
+/// Puts the media of Clips in this order, as one undo step. Media not listed keep their place
+/// after them.
+Future<ProjectView> reorderMedia({required List<String> ids}) =>
+    RustLib.instance.api.crateApiMediaReorderMedia(ids: ids);
 
 /// Takes a media out of the project, with every clip, sound and element that shows it, as one
 /// undo step. Its file stays on disk so that undo brings everything back.

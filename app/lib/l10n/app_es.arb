@@ -358,6 +358,6 @@
   "onboardingStart": "Empezar",
   "replayOnboarding": "Ver la presentación otra vez",
   "removeMedia": "Quitar del proyecto",
-  "removeMediaTitle": "¿Quitar «{name}»?",
-  "removeMediaBody": "Sus clips, sonidos y elementos también salen de la línea de tiempo. El archivo en tu dispositivo se conserva y Deshacer lo restaura todo."
+  "renameMedia": "Renombrar el clip",
+  "reorderMediaHint": "Mantén pulsado un clip para moverlo."
 }

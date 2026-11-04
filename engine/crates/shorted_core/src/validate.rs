@@ -292,6 +292,9 @@ impl Project {
 
         for item in &self.media {
             media_location(&item.location)?;
+            if let Some(name) = &item.name {
+                text(name, "media name")?;
+            }
         }
         for item in &timeline.clips {
             clip(item, &media)?;

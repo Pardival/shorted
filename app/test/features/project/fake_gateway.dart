@@ -1204,4 +1204,29 @@ class FakeGateway implements ProjectGateway {
     opened!.media.removeWhere((m) => m.id == mediaId);
     return view();
   }
+
+  @override
+  Future<ProjectView> renameMedia(String mediaId, String name) async {
+    final media = opened!.media;
+    final index = media.indexWhere((m) => m.id == mediaId);
+    final old = media[index];
+    media[index] = MediaItemView(
+      id: old.id,
+      name: name.trim().isEmpty ? old.name : name.trim(),
+      kind: old.kind,
+      durationUs: old.durationUs,
+      offline: old.offline,
+    );
+    return view();
+  }
+
+  final mediaOrders = <List<String>>[];
+  @override
+  Future<ProjectView> reorderMedia(List<String> mediaIds) async {
+    mediaOrders.add(mediaIds);
+    opened!.media.sort(
+      (a, b) => mediaIds.indexOf(a.id).compareTo(mediaIds.indexOf(b.id)),
+    );
+    return view();
+  }
 }

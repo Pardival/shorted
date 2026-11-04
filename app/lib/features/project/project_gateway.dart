@@ -59,6 +59,12 @@ abstract interface class ProjectGateway {
 
   /// Takes a media out of the project with what shows it on the timeline, as one undo step.
   Future<ProjectView> removeMedia(String mediaId);
+
+  /// The name shown in Clips; a blank one goes back to the file's.
+  Future<ProjectView> renameMedia(String mediaId, String name);
+
+  /// Clips lists media in this order.
+  Future<ProjectView> reorderMedia(List<String> mediaIds);
   Future<ProjectView> splitClip(String id, int timeUs);
   Future<ProjectView> deleteClip(String id);
   Future<ProjectView> duplicateClip(String id);
@@ -408,6 +414,14 @@ class EngineGateway implements ProjectGateway {
   @override
   Future<ProjectView> removeMedia(String mediaId) =>
       media.removeMedia(id: mediaId);
+
+  @override
+  Future<ProjectView> renameMedia(String mediaId, String name) =>
+      media.renameMedia(id: mediaId, name: name);
+
+  @override
+  Future<ProjectView> reorderMedia(List<String> mediaIds) =>
+      media.reorderMedia(ids: mediaIds);
 
   @override
   Future<ProjectView> splitClip(String id, int timeUs) =>

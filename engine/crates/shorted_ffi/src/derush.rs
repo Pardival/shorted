@@ -208,6 +208,7 @@ mod tests {
                 color: ColorRange::Sdr,
             },
             captured_at: None,
+            name: None,
         }
     }
 
