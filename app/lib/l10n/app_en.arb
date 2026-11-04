@@ -567,5 +567,15 @@
       }
     }
   },
-  "exportPaused": "Export paused: it goes on when you come back"
+  "exportPaused": "Export paused: it goes on when you come back",
+  "onboardingClipsTitle": "Drop your clips",
+  "onboardingClipsBody": "Bring in videos and photos. Shorted puts them in order on a vertical 9:16 timeline.",
+  "onboardingCaptionsTitle": "Talk, we caption",
+  "onboardingCaptionsBody": "Your words become captions, word by word, ready to restyle and fix.",
+  "onboardingMotionTitle": "Make it move",
+  "onboardingMotionBody": "Add sound, text, stickers and transitions, then export in one tap.",
+  "onboardingPrivacy": "Your videos stay on your device.",
+  "onboardingNext": "Next",
+  "onboardingStart": "Start",
+  "replayOnboarding": "Show the introduction again"
 }

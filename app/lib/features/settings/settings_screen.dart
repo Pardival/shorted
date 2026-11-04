@@ -11,12 +11,6 @@ import 'ai_settings_section.dart';
 import 'app_settings.dart';
 
 const _bytesPerMegabyte = 1024 * 1024;
-const _languages = {
-  'en': 'English',
-  'fr': 'Français',
-  'es': 'Español',
-  'pt': 'Português',
-};
 
 final _cacheBytesProvider = FutureProvider.autoDispose<int>(
   (ref) => ref.read(projectGatewayProvider).cacheBytes(),
@@ -67,7 +61,8 @@ class SettingsScreen extends ConsumerWidget {
                 selected: locale == null,
                 onTap: () => ref.read(localeProvider.notifier).set(null),
               ),
-              for (final MapEntry(key: code, value: name) in _languages.entries)
+              for (final MapEntry(key: code, value: name)
+                  in languageNames.entries)
                 ShortedChip(
                   label: name,
                   selected: locale?.languageCode == code,
@@ -115,6 +110,10 @@ class SettingsScreen extends ConsumerWidget {
           _Heading(l10n.settingsAbout),
           ShortedListRow(title: l10n.aboutEngine(engineVersion)),
           ShortedListRow(title: l10n.sourceCode),
+          SecondaryButton(
+            label: l10n.replayOnboarding,
+            onPressed: () => context.go('/onboarding'),
+          ),
           SecondaryButton(
             label: l10n.openSourceLicences,
             onPressed: () => showLicensePage(context: context),

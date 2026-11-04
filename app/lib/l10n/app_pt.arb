@@ -346,5 +346,15 @@
   "exportCover": "Salvar também uma imagem de capa",
   "exportCoverHint": "Um quadro do vídeo, salvo como JPEG ao lado dele.",
   "exportCoverAt": "Quadro em {time}. Mova o controle para escolher outro.",
-  "exportPaused": "Exportação em pausa: continua quando você voltar"
+  "exportPaused": "Exportação em pausa: continua quando você voltar",
+  "onboardingClipsTitle": "Solte seus clipes",
+  "onboardingClipsBody": "Adicione vídeos e fotos. O Shorted os organiza numa linha do tempo vertical 9:16.",
+  "onboardingCaptionsTitle": "Fale, nós legendamos",
+  "onboardingCaptionsBody": "Suas palavras viram legendas, palavra por palavra, prontas para estilizar e corrigir.",
+  "onboardingMotionTitle": "Dê movimento",
+  "onboardingMotionBody": "Adicione som, texto, figurinhas e transições, e exporte com um toque.",
+  "onboardingPrivacy": "Seus vídeos ficam no seu dispositivo.",
+  "onboardingNext": "Próximo",
+  "onboardingStart": "Começar",
+  "replayOnboarding": "Ver a apresentação de novo"
 }

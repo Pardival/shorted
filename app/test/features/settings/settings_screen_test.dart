@@ -35,10 +35,20 @@ void main() {
     final folder = Directory.systemTemp.createTempSync('shorted-settings');
     addTearDown(() => folder.deleteSync(recursive: true));
     final file = File('${folder.path}/settings.json');
-    expect(await loadLocale(file), isNull);
+    expect(savedLocale(await loadSettings(file)), isNull);
+    expect(savedOnboarded(await loadSettings(file)), isFalse);
     file.writeAsStringSync('{not json');
-    expect(await loadLocale(file), isNull);
-    file.writeAsStringSync('{"locale": "fr"}');
-    expect(await loadLocale(file), const Locale('fr'));
+    expect(await loadSettings(file), isEmpty);
+    file.writeAsStringSync('{"locale": "fr", "onboarded": true}');
+    final saved = await loadSettings(file);
+    expect(savedLocale(saved), const Locale('fr'));
+    expect(savedOnboarded(saved), isTrue);
+  });
+
+  testWidgets('About can show the introduction again', (tester) async {
+    await open(tester, '/settings', size: const Size(800, 2400));
+    await tester.tap(find.text('Show the introduction again'));
+    await tester.pumpAndSettle();
+    expect(find.text('Drop your clips'), findsOneWidget);
   });
 }

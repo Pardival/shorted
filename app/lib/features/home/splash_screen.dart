@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../design_system/motion.dart';
 import '../../design_system/tokens.g.dart';
+import '../settings/app_settings.dart';
 
 const _cut = Duration(milliseconds: 600);
 const _barAngle = -0.1;
 const _barHeight = 3.0;
 
-/// S01: a lime bar slices the name, then Home takes over.
-class SplashScreen extends StatefulWidget {
+/// S01: a lime bar slices the name, then onboarding on the first launch, Home after.
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
+class _SplashScreenState extends ConsumerState<SplashScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _bar = AnimationController(vsync: this);
 
@@ -26,7 +28,8 @@ class _SplashScreenState extends State<SplashScreen>
     if (_bar.isAnimating || _bar.isCompleted) return;
     _bar.duration = motionDuration(context, _cut);
     _bar.forward().whenComplete(() {
-      if (mounted) context.go('/home');
+      if (!mounted) return;
+      context.go(ref.read(onboardedProvider) ? '/home' : '/onboarding');
     });
   }
 
