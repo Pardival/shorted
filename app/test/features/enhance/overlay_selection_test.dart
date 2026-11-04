@@ -1,0 +1,249 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shorted/bridge/api/overlays.dart';
+import 'package:shorted/features/enhance/animate_sheet.dart';
+import 'package:shorted/features/enhance/overlay_selection.dart';
+
+import '../../shorted_app_test.dart' show open;
+import '../project/fake_gateway.dart';
+
+const _start = TransformView(
+  x: 540,
+  y: 960,
+  scale: 1,
+  rotation: 0,
+  opacity: 1,
+  flip: false,
+);
+
+Future<FakeGateway> _editor(
+  WidgetTester tester, {
+  bool locked = false,
+  OverlayView? second,
+  OverlayBoxView? secondBox,
+}) async {
+  final project = FakeProject('p1', 'Mine')..clips.add('c1');
+  project.overlays.add(
+    OverlayView(
+      colorable: true,
+      color: null,
+      path: null,
+      keyframes: const [],
+      animIn: null,
+      animLoop: null,
+      animOut: null,
+      text: null,
+      id: 'o9',
+      kind: OverlayKindView.shape,
+      startUs: big(0),
+      endUs: big(3000000),
+      locked: locked,
+      hidden: false,
+      hasAnimation: false,
+      transform: _start,
+    ),
+  );
+  if (second != null) project.overlays.add(second);
+  final gateway = FakeGateway()
+    ..projects.add(project)
+    ..boxes = [
+      OverlayBoxView(
+        id: 'o9',
+        centerX: 540,
+        centerY: 960,
+        width: 360,
+        height: 360,
+        rotation: 0,
+      ),
+      ?secondBox,
+    ];
+  await open(
+    tester,
+    '/editor/p1/enhance',
+    size: const Size(1280, 800),
+    gateway: gateway,
+  );
+  return gateway;
+}
+
+/// Canvas units to screen pixels on the preview.
+Offset _at(WidgetTester tester, double x, double y) {
+  final area = find.byType(OverlaySelection);
+  final scale = tester.getSize(area).width / canvasWidth;
+  return tester.getTopLeft(area) + Offset(x * scale, y * scale);
+}
+
+void main() {
+  test('a centre near the middle lines snaps onto them', () {
+    final near = snapCentre(const Offset(545, 950), const Size(100, 100), 12);
+    expect(near.centre, const Offset(540, 960));
+    expect(near.guides, {Guide.centreX, Guide.centreY});
+    final far = snapCentre(const Offset(600, 700), const Size(100, 100), 12);
+    expect(far.centre, const Offset(600, 700));
+    expect(far.guides, isEmpty);
+  });
+
+  test('an edge near the safe zone snaps onto it', () {
+    final top = snapCentre(const Offset(300, 345), const Size(100, 100), 12);
+    expect(top.centre.dy, safeTop + 50);
+    expect(top.guides, {Guide.safeTop});
+    final bottom = snapCentre(
+      const Offset(300, 1385),
+      const Size(100, 100),
+      12,
+    );
+    expect(bottom.centre.dy, safeBottom - 50);
+    expect(bottom.guides, {Guide.safeBottom});
+  });
+
+  testWidgets('dragging an element moves it live and records it once', (
+    tester,
+  ) async {
+    final gateway = await _editor(tester);
+    final from = _at(tester, 540, 960);
+    final gesture = await tester.startGesture(from);
+    for (var step = 1; step <= 5; step++) {
+      await gesture.moveTo(from + Offset(0, step * 20.0));
+      await tester.pump();
+    }
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(gateway.previewed, isNotEmpty);
+    expect(gateway.previewed.last.y, greaterThan(960));
+    expect(gateway.overlayCalls, hasLength(1));
+    expect(gateway.overlayCalls.single, startsWith('transform o9 540 '));
+  });
+
+  testWidgets('a corner handle scales and the top handle turns', (
+    tester,
+  ) async {
+    final gateway = await _editor(tester);
+    await tester.tapAt(_at(tester, 540, 960));
+    await tester.pumpAndSettle();
+
+    await tester.dragFrom(_at(tester, 720, 1140), const Offset(30, 30));
+    await tester.pumpAndSettle();
+    expect(gateway.overlayCalls.last, contains(' 0 1.0 false'));
+    expect(gateway.previewed.last.scale, greaterThan(1));
+
+    final scale = tester.getSize(find.byType(OverlaySelection)).width / 1080;
+    final knob = _at(tester, 540, 780) - Offset(0, 24);
+    await tester.dragFrom(knob, Offset(180 * scale + 24, 180 * scale + 24));
+    await tester.pumpAndSettle();
+    expect(gateway.previewed.last.rotation, greaterThan(30));
+    expect(gateway.overlayCalls, hasLength(2));
+  });
+
+  testWidgets('in keyframe mode a drag keys the element at the playhead', (
+    tester,
+  ) async {
+    final gateway = await _editor(tester);
+    await tester.tapAt(_at(tester, 540, 960));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Animate'));
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.ensureVisible(find.byKey(const ValueKey('keyframe-mode')));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.byKey(const ValueKey('keyframe-mode')));
+    await tester.pump(const Duration(milliseconds: 300));
+    Navigator.of(tester.element(find.byType(AnimateSheet))).pop();
+    await tester.pumpAndSettle();
+
+    await tester.dragFrom(_at(tester, 540, 960), const Offset(0, 60));
+    await tester.pumpAndSettle();
+    expect(gateway.previewed, isEmpty);
+    expect(gateway.previewedKeys, isNotEmpty);
+    expect(gateway.overlayCalls.single, startsWith('key o9 0 540 '));
+  });
+
+  testWidgets('a locked element does not move', (tester) async {
+    final gateway = await _editor(tester, locked: true);
+    await tester.dragFrom(_at(tester, 540, 960), const Offset(0, 80));
+    await tester.pumpAndSettle();
+    expect(gateway.previewed, isEmpty);
+    expect(gateway.overlayCalls, isEmpty);
+  });
+
+  testWidgets('opacity and flip are set from the panel', (tester) async {
+    final gateway = await _editor(tester);
+    await tester.tapAt(_at(tester, 540, 960));
+    await tester.pumpAndSettle();
+    // The section panel and the Properties column both offer it.
+    await tester.tap(find.byTooltip('Flip').first);
+    await tester.pumpAndSettle();
+    expect(gateway.overlayCalls.last, endsWith('1.0 true'));
+  });
+
+  testWidgets('an element takes a swatch or any colour', (tester) async {
+    final gateway = await _editor(tester);
+    await tester.tapAt(_at(tester, 540, 960));
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsLabel('#4DD2FFFF').first);
+    await tester.pumpAndSettle();
+    expect(gateway.overlayCalls.last, endsWith('#4DD2FFFF'));
+
+    await tester.tap(find.byTooltip('Any colour').first);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('colour-code')),
+      '#123456',
+    );
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    expect(gateway.overlayCalls.last, endsWith('#123456FF'));
+  });
+
+  testWidgets('a long press groups elements; the group moves and goes as one', (
+    tester,
+  ) async {
+    final gateway = await _editor(
+      tester,
+      second: OverlayView(
+        colorable: true,
+        color: null,
+        path: null,
+        keyframes: const [],
+        animIn: null,
+        animLoop: null,
+        animOut: null,
+        text: null,
+        id: 'o8',
+        kind: OverlayKindView.shape,
+        startUs: big(0),
+        endUs: big(3000000),
+        locked: false,
+        hidden: false,
+        hasAnimation: false,
+        transform: const TransformView(
+          x: 540,
+          y: 400,
+          scale: 1,
+          rotation: 0,
+          opacity: 1,
+          flip: false,
+        ),
+      ),
+      secondBox: OverlayBoxView(
+        id: 'o8',
+        centerX: 540,
+        centerY: 400,
+        width: 200,
+        height: 200,
+        rotation: 0,
+      ),
+    );
+    await tester.tapAt(_at(tester, 540, 960));
+    await tester.pumpAndSettle();
+    await tester.longPressAt(_at(tester, 540, 400));
+    await tester.pumpAndSettle();
+    expect(find.text('2 selected'), findsOneWidget);
+
+    await tester.dragFrom(_at(tester, 540, 400), const Offset(40, 0));
+    await tester.pumpAndSettle();
+    expect(gateway.overlayCalls.last, startsWith('move o8,o9 '));
+
+    await tester.tap(find.byTooltip('Delete').first);
+    await tester.pumpAndSettle();
+    expect(gateway.overlayCalls.last, anyOf('delete o8,o9', 'delete o9,o8'));
+  });
+}

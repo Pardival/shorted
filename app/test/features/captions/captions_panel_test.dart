@@ -1,0 +1,136 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shorted/bridge/api/transcribe.dart';
+import 'package:shorted/bridge/runtime.dart';
+
+import '../../shorted_app_test.dart' show open;
+import '../project/fake_gateway.dart';
+
+TranscriptView transcript() => TranscriptView(
+  clipId: 'c1',
+  language: 'en',
+  segments: [
+    SegmentView(
+      id: 's1',
+      hidden: false,
+      words: [
+        WordView(
+          index: 0,
+          text: 'Hello',
+          startUs: big(0),
+          deleted: false,
+          emphasis: false,
+        ),
+        WordView(
+          index: 1,
+          text: 'gone',
+          startUs: big(9),
+          deleted: true,
+          emphasis: false,
+        ),
+      ],
+    ),
+  ],
+);
+
+void main() {
+  testWidgets('presets and the entrance reach the engine', (tester) async {
+    final project = FakeProject('p1', 'Mine');
+    final gateway = FakeGateway()
+      ..projects.add(project)
+      ..modelReady = true;
+    await open(
+      tester,
+      '/editor/p1/captions',
+      size: const Size(1280, 1400),
+      gateway: gateway,
+    );
+    await tester.tap(find.text('Karaoke'));
+    await tester.pumpAndSettle();
+    expect(gateway.speechCalls.last, 'preset karaoke');
+    await tester.tap(find.text('Typewriter'));
+    await tester.pumpAndSettle();
+    expect(gateway.speechCalls.last, 'animation typewriter');
+    await tester.tap(find.byType(Switch).first);
+    await tester.pumpAndSettle();
+    expect(gateway.speechCalls.last, 'enabled false');
+  });
+
+  testWidgets('without a model the panel offers it, and shows its size', (
+    tester,
+  ) async {
+    final project = FakeProject('p1', 'Mine');
+    final gateway = FakeGateway()..projects.add(project);
+    await open(
+      tester,
+      '/editor/p1/captions',
+      size: const Size(1280, 800),
+      gateway: gateway,
+    );
+    await tester.tap(find.text('Download the speech model (60 MB)'));
+    await tester.pump();
+    expect(gateway.speechCalls, ['download']);
+    gateway.speechEvents.add(TaskEvent.started(taskId: BigInt.from(4)));
+    gateway.speechEvents.add(const TaskEvent.finished());
+    await tester.pump();
+    await tester.pump();
+    gateway.modelReady = true;
+  });
+
+  testWidgets('OpenAI asks for a key, then for consent, then sends', (
+    tester,
+  ) async {
+    final project = FakeProject('p1', 'Mine');
+    final gateway = FakeGateway()
+      ..projects.add(project)
+      ..modelReady = true;
+    await open(
+      tester,
+      '/editor/p1/captions',
+      size: const Size(1280, 1400),
+      gateway: gateway,
+    );
+    await tester.tap(find.text('Better words with OpenAI (your key)'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, ' sk-test ');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(find.text('Send the sound to OpenAI?'), findsOneWidget);
+    expect(gateway.speechCalls, ['key']);
+    await tester.tap(find.text('Send'));
+    await tester.pump();
+    expect(gateway.speechCalls, ['key', 'openai']);
+  });
+
+  testWidgets('transcript words can be fixed and phrases hidden', (
+    tester,
+  ) async {
+    final project = FakeProject('p1', 'Mine')..transcripts.add(transcript());
+    final gateway = FakeGateway()
+      ..projects.add(project)
+      ..modelReady = true;
+    await open(
+      tester,
+      '/editor/p1/captions',
+      size: const Size(1280, 800),
+      gateway: gateway,
+    );
+    expect(find.text('Hello'), findsOneWidget);
+    expect(find.text('gone'), findsNothing);
+
+    await tester.tap(find.byTooltip('Hide from captions'));
+    await tester.pumpAndSettle();
+    expect(gateway.speechCalls, ['hide s1 true']);
+
+    await tester.tap(find.text('Hello'));
+    await tester.pumpAndSettle();
+    expect(gateway.speechCalls.last, 'emphasis s1 0');
+
+    await tester.longPress(find.text('Hello'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Hi');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+    expect(gateway.speechCalls.last, 'edit s1 0 Hi');
+  });
+}

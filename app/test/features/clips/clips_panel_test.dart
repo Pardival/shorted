@@ -1,6 +1,9 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shorted/bridge/api/media.dart';
 import 'package:shorted/design_system/theme.dart';
 import 'package:shorted/features/clips/clips_panel.dart';
 import 'package:shorted/features/project/project_providers.dart';
@@ -49,6 +52,35 @@ void main() {
     expect(find.text('Add videos and photos'), findsOneWidget);
     expect(find.text('or drop files here'), findsOneWidget);
     expect(find.textContaining('Place in this order'), findsNothing);
+  });
+
+  testWidgets('each file shows its first frame', (tester) async {
+    final project = FakeProject('p1', 'Mine');
+    final gateway = FakeGateway()
+      ..projects.add(project)
+      ..thumbnails = [
+        ThumbnailView(timeUs: big(0), width: 2, height: 2, rgba: Uint8List(16)),
+      ];
+    await gateway.open('p1');
+    await gateway.importFiles(const ['/a.mov']);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [projectGatewayProvider.overrideWithValue(gateway)],
+        child: MaterialApp(
+          theme: shortedTheme(),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const Harness(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    // Pixels are decoded by the engine of the test, outside fake time.
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 200)),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(RawImage), findsOneWidget);
   });
 
   testWidgets('tap order becomes timeline order', (tester) async {

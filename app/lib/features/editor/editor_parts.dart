@@ -2,20 +2,33 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../bridge/api/media.dart';
+import '../../bridge/api/audio.dart';
+import '../../bridge/api/look.dart';
+import '../../bridge/api/overlays.dart';
 import '../../bridge/api/projects.dart';
 import '../../design_system/components.dart';
+import '../../design_system/motion.dart';
 import '../../design_system/tokens.g.dart';
 import '../../l10n/generated/app_localizations.dart';
+import '../audio/audio_panel.dart';
+import '../captions/captions_panel.dart';
 import '../clips/clips_panel.dart';
+import '../enhance/animate_sheet.dart';
+import '../enhance/enhance_panel.dart';
+import '../enhance/path_bar.dart';
+import '../enhance/overlay_selection.dart';
 import '../export/export_panel.dart';
 import '../project/project_dialogs.dart';
 import '../preview/preview_controller.dart';
+import '../project/project_gateway.dart';
 import '../project/project_providers.dart';
+import '../timeline/filmstrips.dart';
 import '../timeline/timeline_layout.dart';
 import '../timeline/timeline_view.dart';
+import '../timeline/waveforms.dart';
 import 'editor_section.dart';
 
 class EditorTopBar extends StatelessWidget {
@@ -25,14 +38,14 @@ class EditorTopBar extends StatelessWidget {
     required this.save,
     required this.onRename,
     required this.onClose,
-    required this.onExport,
+    this.onHistory,
   });
 
   final String title;
   final SaveStateView save;
   final VoidCallback onRename;
   final VoidCallback onClose;
-  final VoidCallback onExport;
+  final VoidCallback? onHistory;
 
   @override
   Widget build(BuildContext context) {
@@ -70,12 +83,12 @@ class EditorTopBar extends StatelessWidget {
               style: text.labelMedium?.copyWith(color: ShortedColors.textMuted),
             ),
           ),
-          const SizedBox(width: ShortedSpace.m),
-          PrimaryButton(
-            label: l10n.sectionExport,
-            onPressed: onExport,
-            height: 40,
-          ),
+          if (onHistory != null)
+            ShortedIconButton(
+              icon: Icons.history,
+              tooltip: l10n.versionHistory,
+              onPressed: onHistory,
+            ),
           const SizedBox(width: ShortedSpace.s),
         ],
       ),
@@ -107,7 +120,14 @@ class _SavedDot extends StatelessWidget {
 
 /// The engine's frames, in a texture. Nothing here may draw video content (ADR-0003).
 class PreviewArea extends ConsumerStatefulWidget {
-  const PreviewArea({super.key});
+  const PreviewArea({super.key, this.projectId, this.playheadUs});
+
+  /// With both, the selected overlay is outlined and a tap selects one.
+  final String? projectId;
+  final ValueNotifier<int>? playheadUs;
+
+  @visibleForTesting
+  static const cropKey = ValueKey('preview-crop');
 
   @override
   ConsumerState<PreviewArea> createState() => _PreviewAreaState();
@@ -116,6 +136,7 @@ class PreviewArea extends ConsumerStatefulWidget {
 class _PreviewAreaState extends ConsumerState<PreviewArea> {
   int? _textureId;
   late final PreviewTransport _transport = ref.read(previewTransportProvider);
+  double _pinch = 1;
 
   @override
   void initState() {
@@ -136,21 +157,77 @@ class _PreviewAreaState extends ConsumerState<PreviewArea> {
   @override
   Widget build(BuildContext context) {
     final id = _textureId;
+    final crop = ref.watch(cropTargetProvider);
+    final picture = ClipRRect(
+      borderRadius: BorderRadius.circular(ShortedRadius.m),
+      child: ColoredBox(
+        color: ShortedColors.bg,
+        child: id == null ? null : Texture(textureId: id),
+      ),
+    );
     return Padding(
       padding: const EdgeInsets.all(ShortedSpace.s),
       child: Center(
         child: AspectRatio(
           aspectRatio: 9 / 16,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(ShortedRadius.m),
-            child: ColoredBox(
-              color: ShortedColors.bg,
-              child: id == null ? null : Texture(textureId: id),
-            ),
-          ),
+          child: crop == null
+              ? _withSelection(picture)
+              : LayoutBuilder(
+                  builder: (context, box) => GestureDetector(
+                    key: PreviewArea.cropKey,
+                    onScaleStart: (_) => _pinch = 1,
+                    onScaleUpdate: (details) {
+                      ref
+                          .read(projectGatewayProvider)
+                          .moveCrop(
+                            crop.clipId,
+                            details.focalPointDelta.dx / box.maxWidth,
+                            details.focalPointDelta.dy / box.maxHeight,
+                            details.scale / _pinch,
+                          );
+                      _pinch = details.scale;
+                    },
+                    onScaleEnd: (_) => _commit(crop),
+                    child: DecoratedBox(
+                      position: DecorationPosition.foreground,
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: ShortedColors.accent,
+                          width: 2,
+                        ),
+                        borderRadius: BorderRadius.circular(ShortedRadius.m),
+                      ),
+                      child: picture,
+                    ),
+                  ),
+                ),
         ),
       ),
     );
+  }
+
+  Widget _withSelection(Widget picture) {
+    final projectId = widget.projectId;
+    final playheadUs = widget.playheadUs;
+    if (projectId == null || playheadUs == null) return picture;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        picture,
+        OverlaySelection(projectId: projectId, playheadUs: playheadUs),
+      ],
+    );
+  }
+
+  Future<void> _commit(({String projectId, String clipId}) crop) async {
+    final l10n = AppLocalizations.of(context);
+    try {
+      await ref
+          .read(editorProvider(crop.projectId).notifier)
+          .commitCrop(crop.clipId);
+    } on Object catch (error) {
+      if (mounted) showToast(context, errorMessage(l10n, error));
+    }
   }
 }
 
@@ -169,10 +246,10 @@ class TransportBar extends ConsumerStatefulWidget {
   final VoidCallback? onRedo;
 
   @override
-  ConsumerState<TransportBar> createState() => _TransportBarState();
+  ConsumerState<TransportBar> createState() => TransportBarState();
 }
 
-class _TransportBarState extends ConsumerState<TransportBar>
+class TransportBarState extends ConsumerState<TransportBar>
     with SingleTickerProviderStateMixin {
   late final Ticker _ticker = createTicker(_follow);
   late final PreviewTransport _transport = ref.read(previewTransportProvider);
@@ -206,7 +283,11 @@ class _TransportBarState extends ConsumerState<TransportBar>
     }
   }
 
-  void _toggle() {
+  void pause() {
+    if (_transport.isPlaying) toggle();
+  }
+
+  void toggle() {
     if (_transport.isPlaying) {
       _transport.pause();
       _ticker.stop();
@@ -220,6 +301,9 @@ class _TransportBarState extends ConsumerState<TransportBar>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    ref.listen(recordingVoiceProvider, (_, recording) {
+      if (recording != _transport.isPlaying) toggle();
+    });
     return SizedBox(
       height: ShortedSize.transport,
       child: Row(
@@ -227,7 +311,7 @@ class _TransportBarState extends ConsumerState<TransportBar>
           ShortedIconButton(
             icon: _transport.isPlaying ? Icons.pause : Icons.play_arrow,
             tooltip: l10n.playPause,
-            onPressed: widget.durationUs > 0 ? _toggle : null,
+            onPressed: widget.durationUs > 0 ? toggle : null,
           ),
           const SizedBox(width: ShortedSpace.s),
           Expanded(
@@ -255,15 +339,26 @@ class _TransportBarState extends ConsumerState<TransportBar>
   }
 }
 
+/// Marks the timeline item of a clip's own sound.
+const _soundOf = 'sound:';
+
 class TimelineArea extends ConsumerStatefulWidget {
   const TimelineArea({
     super.key,
+    this.zoomRequests,
+    this.collapsed = false,
+    this.onToggleExpanded,
     required this.height,
     required this.view,
     required this.playheadUs,
   });
 
   final double height;
+  final Stream<double>? zoomRequests;
+  final bool collapsed;
+
+  /// Offered on phones, where the timeline folds.
+  final VoidCallback? onToggleExpanded;
   final ProjectView view;
   final ValueNotifier<int> playheadUs;
 
@@ -272,8 +367,140 @@ class TimelineArea extends ConsumerStatefulWidget {
 }
 
 class _TimelineAreaState extends ConsumerState<TimelineArea> {
+  (int, int)? _range;
+
+  /// A selected sound: its tools show whatever the section.
+  String? _audioItem;
+
+  /// A clip's own sound, selected on its row: the id of the clip.
+  String? _clipSound;
+
+  Future<void> _trackMenu(int index, Offset position) async {
+    final l10n = AppLocalizations.of(context);
+    final track = widget.view.tracks[index];
+    final id = track.id;
+    final isSound =
+        track.kind == TrackKindView.audio ||
+        track.kind == TrackKindView.voiceOver;
+    final users = [
+      for (final other in widget.view.tracks)
+        if (other.id != null) other.id,
+    ];
+    final userIndex = users.indexOf(id);
+    final area = Overlay.of(context).context.findRenderObject()! as RenderBox;
+    final choice = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromRect(
+        position & Size.zero,
+        Offset.zero & area.size,
+      ),
+      items: [
+        if (isSound ||
+            track.kind == TrackKindView.video ||
+            track.kind == TrackKindView.originalSound)
+          PopupMenuItem(
+            value: 'mute',
+            child: Text(track.muted ? l10n.unmute : l10n.mute),
+          ),
+        if (track.kind != TrackKindView.originalSound) ...[
+          PopupMenuItem(
+            value: 'lock',
+            child: Text(track.locked ? l10n.unlockTrack : l10n.lockTrack),
+          ),
+          PopupMenuItem(
+            value: 'hide',
+            child: Text(track.hidden ? l10n.showTrack : l10n.hideTrack),
+          ),
+        ],
+        if (id != null) ...[
+          if (userIndex > 0)
+            PopupMenuItem(value: 'up', child: Text(l10n.moveTrackUp)),
+          if (userIndex < users.length - 1)
+            PopupMenuItem(value: 'down', child: Text(l10n.moveTrackDown)),
+          PopupMenuItem(value: 'rename', child: Text(l10n.renameTrack)),
+          PopupMenuItem(value: 'remove', child: Text(l10n.removeTrack)),
+        ],
+      ],
+    );
+    if (!mounted || choice == null) return;
+    switch (choice) {
+      case 'mute':
+        await _guard(
+          () => _editor.apply(
+            (gateway) => gateway.setTrackFlags(track, muted: !track.muted),
+          ),
+        );
+      case 'lock':
+        await _guard(
+          () => _editor.apply(
+            (gateway) => gateway.setTrackFlags(track, locked: !track.locked),
+          ),
+        );
+      case 'hide':
+        await _guard(
+          () => _editor.apply(
+            (gateway) => gateway.setTrackFlags(track, hidden: !track.hidden),
+          ),
+        );
+      case 'up' when id != null:
+        await _guard(
+          () => _editor.apply((g) => g.reorderAudioTrack(id, userIndex - 1)),
+        );
+      case 'down' when id != null:
+        await _guard(
+          () => _editor.apply((g) => g.reorderAudioTrack(id, userIndex + 1)),
+        );
+      case 'rename':
+        final name = await askTitle(context, track.name ?? '');
+        if (name != null && id != null) {
+          await _guard(
+            () => _editor.apply((g) => g.renameAudioTrack(id, name)),
+          );
+        }
+      case 'remove':
+        if (id == null) return;
+        if (track.items.isNotEmpty && !await _confirmRemove()) return;
+        await _guard(() => _editor.apply((g) => g.removeAudioTrack(id)));
+    }
+  }
+
+  Future<bool> _confirmRemove() async {
+    final l10n = AppLocalizations.of(context);
+    final sure = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.removeTrack),
+        content: Text(l10n.removeTrackBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(l10n.delete),
+          ),
+        ],
+      ),
+    );
+    return sure ?? false;
+  }
+
   /// The selected clip, for the tools. Other tracks get their tools with their tickets.
   TimelineItem? _clip;
+
+  late final _filmstrips = Filmstrips(
+    ref.read(projectGatewayProvider).filmstrip,
+  );
+
+  late final _waveforms = Waveforms(ref.read(projectGatewayProvider).peaks);
+
+  @override
+  void dispose() {
+    _filmstrips.dispose();
+    _waveforms.dispose();
+    super.dispose();
+  }
 
   EditorController get _editor =>
       ref.read(editorProvider(widget.view.id).notifier);
@@ -286,6 +513,268 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
       if (mounted) showToast(context, errorMessage(l10n, error));
     }
   }
+
+  Future<void> _onRange(
+    Future<ProjectView> Function(ProjectGateway gateway) action,
+  ) async {
+    setState(() => _range = null);
+    await _guard(() => _editor.apply(action));
+  }
+
+  bool get _cropping => ref.read(cropTargetProvider) != null;
+
+  void _stopCropping() => ref.read(cropTargetProvider.notifier).set(null);
+
+  /// Reframing happens on the picture of the clip, so the playhead goes there.
+  void _toggleCrop(TimelineItem clip) {
+    if (_cropping) {
+      _stopCropping();
+      return;
+    }
+    final playhead = widget.playheadUs.value;
+    if (playhead < clip.startUs || playhead >= clip.endUs) {
+      widget.playheadUs.value = clip.startUs;
+    }
+    ref.read(cropTargetProvider.notifier).set((
+      projectId: widget.view.id,
+      clipId: clip.id,
+    ));
+  }
+
+  /// Null unless the clip is a still image; otherwise whether its slow zoom is on.
+  bool? _slowZoom(TimelineItem clip) {
+    for (final track in widget.view.tracks) {
+      for (final item in track.items) {
+        if (item.id == clip.id) return item.slowZoom;
+      }
+    }
+    return null;
+  }
+
+  bool _isSound(TimelineItem item) => widget.view.tracks.any(
+    (track) =>
+        (track.kind == TrackKindView.audio ||
+            track.kind == TrackKindView.voiceOver) &&
+        track.items.any((other) => other.id == item.id),
+  );
+
+  OverlayView? _overlay(String? id) {
+    for (final overlay in widget.view.overlays) {
+      if (overlay.id == id) return overlay;
+    }
+    return null;
+  }
+
+  /// The easing to the next keys, and delete (T-0707).
+  Widget _keyframeTools(
+    AppLocalizations l10n,
+    OverlayView overlay,
+    KeyframeView keyframe,
+  ) {
+    final time = keyframe.timeUs.toInt();
+    void clear() => ref.read(selectedKeyframeProvider.notifier).set(null);
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final (easing, label) in [
+            (EasingView.linear, l10n.easingLinear),
+            (EasingView.easeIn, l10n.easingIn),
+            (EasingView.easeOut, l10n.easingOut),
+            (EasingView.easeInOut, l10n.easingInOut),
+            (EasingView.spring, l10n.easingSpring),
+          ])
+            Padding(
+              padding: const EdgeInsets.only(right: ShortedSpace.xs),
+              child: ShortedChip(
+                label: label,
+                selected: keyframe.easing == easing,
+                onTap: () => _guard(
+                  () => _editor.apply(
+                    (g) => g.setKeyframeEasing(overlay.id, time, easing),
+                  ),
+                ),
+              ),
+            ),
+          ShortedIconButton(
+            icon: Icons.delete_outline,
+            tooltip: l10n.deleteKeyframe,
+            onPressed: () {
+              clear();
+              _guard(
+                () =>
+                    _editor.apply((g) => g.removeKeyframesAt(overlay.id, time)),
+              );
+            },
+          ),
+          ShortedIconButton(
+            icon: Icons.close,
+            tooltip: l10n.cancel,
+            onPressed: clear,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// A clip's own sound: its settings, quiet or not, or taken out as a sound of its own.
+  Widget _clipSoundTools(AppLocalizations l10n, String clipId) {
+    ClipSoundView? sound;
+    for (final candidate in widget.view.sound.clips) {
+      if (candidate.clipId == clipId) sound = candidate;
+    }
+    if (sound == null) return const SizedBox.shrink();
+    final current = sound;
+    return ToolStrip(
+      children: [
+        ShortedIconButton(
+          icon: Icons.graphic_eq,
+          tooltip: l10n.soundSettings,
+          onPressed: () => showSoundSheet(context, widget.view.id, clipId),
+        ),
+        ShortedIconButton(
+          icon: current.muted ? Icons.volume_off : Icons.volume_up,
+          tooltip: current.muted ? l10n.unmute : l10n.mute,
+          onPressed: () => _guard(
+            () => _editor.apply(
+              (g) => g.setClipSound(
+                clipId,
+                volume: current.volume,
+                muted: !current.muted,
+                fadeInUs: current.fadeInUs.toInt(),
+                fadeOutUs: current.fadeOutUs.toInt(),
+              ),
+            ),
+          ),
+        ),
+        ShortedIconButton(
+          icon: Icons.call_split,
+          tooltip: l10n.detachSound,
+          onPressed: () {
+            setState(() => _clipSound = null);
+            _guard(() => _editor.apply((g) => g.detachClipSound(clipId)));
+          },
+        ),
+      ],
+    );
+  }
+
+  /// Several elements selected: what applies to all of them at once (T-1206).
+  Widget _groupTools(AppLocalizations l10n, List<String> ids) {
+    void clear() => ref.read(overlayGroupProvider.notifier).clear();
+    return ToolStrip(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: ShortedSpace.s),
+          child: Text(l10n.selectedCount(ids.length)),
+        ),
+        ShortedIconButton(
+          icon: Icons.copy_outlined,
+          tooltip: l10n.duplicate,
+          onPressed: () =>
+              _guard(() => _editor.apply((g) => g.duplicateOverlays(ids))),
+        ),
+        ShortedIconButton(
+          icon: Icons.delete_outline,
+          tooltip: l10n.delete,
+          onPressed: () {
+            clear();
+            ref.read(selectedOverlayProvider.notifier).set(null);
+            _guard(() => _editor.apply((g) => g.deleteOverlays(ids)));
+          },
+        ),
+        ShortedIconButton(
+          icon: Icons.close,
+          tooltip: l10n.clearSelection,
+          onPressed: clear,
+        ),
+      ],
+    );
+  }
+
+  Widget _overlayTools(AppLocalizations l10n, OverlayView overlay) {
+    Future<void> run(
+      Future<ProjectView> Function(ProjectGateway gateway) action,
+    ) => _guard(() => _editor.apply(action));
+    return ToolStrip(
+      children: [
+        ShortedIconButton(
+          icon: Icons.animation,
+          tooltip: l10n.animate,
+          onPressed: overlay.locked
+              ? null
+              : () => showAnimateSheet(
+                  context,
+                  projectId: widget.view.id,
+                  overlayId: overlay.id,
+                ),
+        ),
+        ShortedIconButton(
+          icon: Icons.gesture,
+          tooltip: l10n.path,
+          onPressed: overlay.locked
+              ? null
+              : () => ref.read(pathEditingProvider.notifier).set(overlay.id),
+        ),
+        ShortedIconButton(
+          icon: Icons.flip_to_front,
+          tooltip: l10n.bringForward,
+          onPressed: () =>
+              run((g) => g.shiftOverlayLayer(overlay.id, forward: true)),
+        ),
+        ShortedIconButton(
+          icon: Icons.flip_to_back,
+          tooltip: l10n.sendBackward,
+          onPressed: () =>
+              run((g) => g.shiftOverlayLayer(overlay.id, forward: false)),
+        ),
+        ShortedIconButton(
+          icon: overlay.locked ? Icons.lock : Icons.lock_open,
+          tooltip: overlay.locked ? l10n.unlockTrack : l10n.lockTrack,
+          onPressed: () => run(
+            (g) => g.setOverlayFlags(
+              overlay.id,
+              locked: !overlay.locked,
+              hidden: overlay.hidden,
+            ),
+          ),
+        ),
+        ShortedIconButton(
+          icon: overlay.hidden ? Icons.visibility_off : Icons.visibility,
+          tooltip: overlay.hidden ? l10n.showTrack : l10n.hideTrack,
+          onPressed: () => run(
+            (g) => g.setOverlayFlags(
+              overlay.id,
+              locked: overlay.locked,
+              hidden: !overlay.hidden,
+            ),
+          ),
+        ),
+        ShortedIconButton(
+          icon: Icons.copy_outlined,
+          tooltip: l10n.duplicate,
+          onPressed: () => run((g) => g.duplicateOverlay(overlay.id)),
+        ),
+        ShortedIconButton(
+          icon: Icons.delete_outline,
+          tooltip: l10n.delete,
+          onPressed: overlay.locked
+              ? null
+              : () {
+                  ref.read(selectedOverlayProvider.notifier).set(null);
+                  run((g) => g.deleteOverlay(overlay.id));
+                },
+        ),
+      ],
+    );
+  }
+
+  /// Elements that overlap get rows of their own on the Widgets track.
+  List<TimelineItem> _lanesFor(TrackKindView kind, List<TimelineItem> items) =>
+      kind == TrackKindView.widgets ? inLanes(items) : items;
+
+  bool _hasSound(String clipId) =>
+      widget.view.sound.clips.any((clip) => clip.clipId == clipId);
 
   bool _isClip(TimelineItem item) => widget.view.tracks.any(
     (track) =>
@@ -302,6 +791,7 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
           kind: switch (track.kind) {
             TrackKindView.widgets => TrackKind.widgets,
             TrackKindView.video => TrackKind.video,
+            TrackKindView.originalSound => TrackKind.originalSound,
             TrackKindView.captions => TrackKind.captions,
             TrackKindView.voiceOver => TrackKind.voiceOver,
             TrackKindView.audio => TrackKind.audio,
@@ -312,26 +802,145 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
                 TrackKindView.widgets => l10n.trackWidgets,
                 TrackKindView.video => l10n.trackVideo,
                 TrackKindView.captions => l10n.trackCaptions,
+                TrackKindView.originalSound => l10n.trackOriginalSound,
                 _ => l10n.trackVoiceOver,
               },
-          items: [
+          id: track.id,
+          muted: track.muted,
+          locked: track.locked,
+          hidden: track.hidden,
+          items: _lanesFor(track.kind, [
             for (final item in track.items)
               TimelineItem(
-                id: item.id,
+                // A clip and its sound are two items: the sound's id says it is the sound.
+                id: track.kind == TrackKindView.originalSound
+                    ? '$_soundOf${item.id}'
+                    : item.id,
                 startUs: item.startUs.toInt(),
                 endUs: item.endUs.toInt(),
+                mediaId: item.mediaId,
+                sourceInUs: item.sourceInUs.toInt(),
+                speed: item.speed,
+                // It follows its clip: trim or move the clip, not the sound.
+                locked:
+                    track.kind == TrackKindView.originalSound ||
+                    (_overlay(item.id)?.locked ?? false),
+                animated: _overlay(item.id)?.hasAnimation ?? false,
+                keyframes: [
+                  for (final key in _overlay(item.id)?.keyframes ?? const [])
+                    key.timeUs.toInt(),
+                ],
               ),
-          ],
+          ]),
         ),
     ];
+    for (final track in widget.view.tracks) {
+      for (final item in track.items) {
+        final mediaId = item.mediaId;
+        if (mediaId == null) continue;
+        if (track.kind == TrackKindView.video) {
+          _filmstrips.request(mediaId);
+        } else {
+          _waveforms.request(mediaId);
+        }
+      }
+    }
     final clip = _clip;
-    return SizedBox(
+    final range = _range;
+    final selectedOverlay = ref.watch(selectedOverlayProvider);
+    final overlay = _overlay(selectedOverlay);
+    final group = ref.watch(overlayGroupProvider);
+    final picked = ref.watch(selectedKeyframeProvider);
+    final pathEditing = ref.watch(pathEditingProvider);
+    KeyframeView? keyframe;
+    if (overlay != null && picked?.overlayId == overlay.id) {
+      for (final key in overlay.keyframes) {
+        if (key.timeUs.toInt() == picked?.timeUs) keyframe = key;
+      }
+    }
+    final cropping = ref.watch(cropTargetProvider) != null;
+    ref.watch(selectedClipProvider);
+    final slowZoom = clip == null ? null : _slowZoom(clip);
+    return AnimatedContainer(
+      duration: motionDuration(context, ShortedMotion.section),
+      curve: Curves.easeOutCubic,
       height: widget.height,
       child: Column(
         children: [
-          if (clip != null)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+          if (widget.onToggleExpanded != null)
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: widget.onToggleExpanded,
+                child: Text(
+                  widget.collapsed ? l10n.allTracks : l10n.collapseTimeline,
+                ),
+              ),
+            ),
+          if (range != null)
+            ToolStrip(
+              children: [
+                ShortedIconButton(
+                  icon: Icons.vertical_split_outlined,
+                  tooltip: l10n.splitAll,
+                  onPressed: () =>
+                      _onRange((gateway) => gateway.splitAllAt(range.$1)),
+                ),
+                ShortedIconButton(
+                  icon: Icons.delete_sweep_outlined,
+                  tooltip: l10n.deleteRange,
+                  onPressed: () => _onRange(
+                    (gateway) => gateway.deleteRange(range.$1, range.$2),
+                  ),
+                ),
+                ShortedIconButton(
+                  icon: Icons.volume_off_outlined,
+                  tooltip: l10n.muteRange,
+                  onPressed: () => _onRange(
+                    (gateway) => gateway.muteRange(range.$1, range.$2),
+                  ),
+                ),
+                ShortedIconButton(
+                  icon: Icons.close,
+                  tooltip: l10n.clearRange,
+                  onPressed: () => setState(() => _range = null),
+                ),
+              ],
+            )
+          else if (overlay != null && pathEditing == overlay.id)
+            PathBar(
+              overlay: overlay,
+              run: (action) => _guard(() => _editor.apply(action)),
+            )
+          else if (group.length > 1)
+            _groupTools(l10n, group.toList())
+          else if (overlay != null && keyframe != null)
+            _keyframeTools(l10n, overlay, keyframe)
+          else if (overlay != null)
+            _overlayTools(l10n, overlay)
+          else if (_clipSound case final clipId?)
+            _clipSoundTools(l10n, clipId)
+          else if (_audioItem case final sound?)
+            ToolStrip(
+              children: [
+                ShortedIconButton(
+                  icon: Icons.graphic_eq,
+                  tooltip: l10n.soundSettings,
+                  onPressed: () =>
+                      showSoundSheet(context, widget.view.id, sound),
+                ),
+                ShortedIconButton(
+                  icon: Icons.delete_outline,
+                  tooltip: l10n.delete,
+                  onPressed: () {
+                    setState(() => _audioItem = null);
+                    _guard(() => _editor.apply((g) => g.deleteAudio(sound)));
+                  },
+                ),
+              ],
+            )
+          else if (clip != null)
+            ToolStrip(
               children: [
                 ShortedIconButton(
                   icon: Icons.content_cut,
@@ -345,11 +954,38 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
                   tooltip: l10n.duplicate,
                   onPressed: () => _guard(() => _editor.duplicateClip(clip.id)),
                 ),
+                if (_hasSound(clip.id))
+                  ShortedIconButton(
+                    icon: Icons.graphic_eq,
+                    tooltip: l10n.soundSettings,
+                    onPressed: () =>
+                        showSoundSheet(context, widget.view.id, clip.id),
+                  ),
+                if (slowZoom != null)
+                  ShortedIconButton(
+                    icon: slowZoom ? Icons.zoom_in_map : Icons.zoom_out_map,
+                    tooltip: l10n.slowZoom,
+                    onPressed: () =>
+                        _guard(() => _editor.toggleSlowZoom(clip.id)),
+                  ),
+                ShortedIconButton(
+                  icon: cropping ? Icons.check : Icons.crop,
+                  tooltip: l10n.crop,
+                  onPressed: () => _toggleCrop(clip),
+                ),
+                if (cropping)
+                  ShortedIconButton(
+                    icon: Icons.restart_alt,
+                    tooltip: l10n.resetCrop,
+                    onPressed: () => _guard(() => _editor.resetCrop(clip.id)),
+                  ),
                 ShortedIconButton(
                   icon: Icons.delete_outline,
                   tooltip: l10n.delete,
                   onPressed: () {
+                    _stopCropping();
                     setState(() => _clip = null);
+                    ref.read(selectedClipProvider.notifier).set(null);
                     _guard(() => _editor.deleteClip(clip.id));
                   },
                 ),
@@ -360,9 +996,83 @@ class _TimelineAreaState extends ConsumerState<TimelineArea> {
               tracks: tracks,
               durationUs: widget.view.durationUs.toInt(),
               playheadUs: widget.playheadUs,
-              onSelect: (item) => setState(() {
-                _clip = item != null && _isClip(item) ? item : null;
-              }),
+              filmstrips: _filmstrips,
+              waveforms: _waveforms,
+              collapsed: widget.collapsed,
+              onTrackMenu: _trackMenu,
+              onAudioMove: (item, startUs, track) => _guard(
+                () => _editor.apply(
+                  (gateway) => gateway.moveAudio(item.id, startUs, track.id),
+                ),
+              ),
+              onAudioTrim: (item, start, deltaUs) => _guard(
+                () => _editor.apply(
+                  (gateway) => gateway.trimAudio(
+                    item.id,
+                    start: start,
+                    deltaUs: deltaUs,
+                  ),
+                ),
+              ),
+              selectedId: selectedOverlay,
+              selectedKeyframe: keyframe?.timeUs.toInt(),
+              onKeyframeTap: (item, timeUs) {
+                ref.read(selectedOverlayProvider.notifier).set(item.id);
+                ref.read(selectedKeyframeProvider.notifier).set((
+                  overlayId: item.id,
+                  timeUs: timeUs,
+                ));
+              },
+              onKeyframeMove: (item, fromUs, toUs) {
+                ref.read(selectedKeyframeProvider.notifier).set((
+                  overlayId: item.id,
+                  timeUs: toUs,
+                ));
+                _guard(
+                  () => _editor.apply(
+                    (g) => g.moveKeyframes(item.id, fromUs, toUs),
+                  ),
+                );
+              },
+              onOverlayTiming: (item, startUs, endUs) => _guard(
+                () => _editor.apply(
+                  (gateway) =>
+                      gateway.setOverlayTiming(item.id, startUs, endUs),
+                ),
+              ),
+              rangeUs: range,
+              onRange: (next) => setState(() => _range = next),
+              zoomRequests: widget.zoomRequests,
+              onSelect: (item) {
+                _stopCropping();
+                final groups = ref.read(overlayGroupProvider.notifier);
+                if (item != null &&
+                    _overlay(item.id) != null &&
+                    HardwareKeyboard.instance.isShiftPressed) {
+                  groups.toggle(item.id, ref.read(selectedOverlayProvider));
+                } else {
+                  groups.clear();
+                }
+                final clipSound = item != null && item.id.startsWith(_soundOf)
+                    ? item.id.substring(_soundOf.length)
+                    : null;
+                setState(() {
+                  _clip = item != null && _isClip(item) ? item : null;
+                  _audioItem = item != null && _isSound(item) ? item.id : null;
+                  _clipSound = clipSound;
+                });
+                ref.read(selectedClipProvider.notifier).set(_clip?.id);
+                ref
+                    .read(selectedSoundProvider.notifier)
+                    .set(_audioItem ?? clipSound);
+                ref
+                    .read(selectedOverlayProvider.notifier)
+                    .set(
+                      item != null && _overlay(item.id) != null
+                          ? item.id
+                          : null,
+                    );
+              },
               onTrim: (item, start, deltaUs) => _guard(
                 () => _editor.trimClip(item.id, start: start, deltaUs: deltaUs),
               ),
@@ -381,40 +1091,40 @@ class SectionPanel extends StatelessWidget {
     super.key,
     required this.section,
     required this.projectId,
-    required this.media,
-    required this.durationUs,
+    required this.view,
   });
 
   final EditorSection section;
   final String projectId;
-  final List<MediaItemView> media;
-  final int durationUs;
+  final ProjectView view;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
+    // Only the panel animates: the preview and timeline sit outside it and never move.
     return AnimatedSwitcher(
-      duration: ShortedMotion.section,
+      duration: motionDuration(context, ShortedMotion.section),
+      transitionBuilder: fadeThrough,
       child: switch (section) {
         EditorSection.clips => ClipsPanel(
           key: const ValueKey(EditorSection.clips),
           projectId: projectId,
-          media: media,
+          media: view.media,
+        ),
+        EditorSection.audio => AudioPanel(
+          key: const ValueKey(EditorSection.audio),
+          view: view,
+        ),
+        EditorSection.captions => CaptionsPanel(
+          key: const ValueKey(EditorSection.captions),
+          view: view,
+        ),
+        EditorSection.enhance => EnhancePanel(
+          key: const ValueKey(EditorSection.enhance),
+          view: view,
         ),
         EditorSection.export => ExportPanel(
           key: const ValueKey(EditorSection.export),
-          durationUs: durationUs,
-        ),
-        _ => Center(
-          key: ValueKey(section),
-          child: Padding(
-            padding: const EdgeInsets.all(ShortedSpace.l),
-            child: Text(
-              l10n.toolsPlaceholder(section.label(l10n)),
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: ShortedColors.textMuted),
-            ),
-          ),
+          durationUs: view.durationUs.toInt(),
         ),
       },
     );
@@ -477,28 +1187,121 @@ class SectionRail extends StatelessWidget {
   }
 }
 
-class Inspector extends StatelessWidget {
-  const Inspector({super.key});
+/// The desktop Properties column: what is selected and what can be changed about it (T-1204).
+class Inspector extends ConsumerWidget {
+  const Inspector({super.key, required this.view});
+
+  final ProjectView view;
+
+  Widget? _soundOf(
+    BuildContext context,
+    String? id,
+    Future<void> Function(
+      Future<ProjectView> Function(ProjectGateway gateway) action,
+    )
+    run,
+  ) => id == null ? null : soundSettingsFor(context, view, id, run);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
+    final editor = ref.read(editorProvider(view.id).notifier);
+    Future<void> run(
+      Future<ProjectView> Function(ProjectGateway gateway) action,
+    ) async {
+      try {
+        await editor.apply(action);
+      } on Object catch (error) {
+        if (context.mounted) showToast(context, errorMessage(l10n, error));
+      }
+    }
+
+    final overlayId = ref.watch(selectedOverlayProvider);
+    final clipId = ref.watch(selectedClipProvider);
+    final soundId = ref.watch(selectedSoundProvider);
+    final muted = Theme.of(context).textTheme.bodySmall
+        ?.copyWith(color: ShortedColors.textMuted);
+    Widget heading(String text) => Padding(
+      padding: const EdgeInsets.only(bottom: ShortedSpace.s),
+      child: Text(text, style: Theme.of(context).textTheme.titleSmall),
+    );
+    String span(int startUs, int endUs) =>
+        '${formatTimecode(startUs)} – ${formatTimecode(endUs)}';
+
+    final children = <Widget>[];
+    OverlayView? overlay;
+    for (final candidate in view.overlays) {
+      if (candidate.id == overlayId) overlay = candidate;
+    }
+    var clipIndex = -1;
+    ClipLookView? look;
+    if (clipId != null) {
+      for (final (index, candidate) in view.look.clips.indexed) {
+        if (candidate.clipId == clipId) {
+          clipIndex = index;
+          look = candidate;
+        }
+      }
+    }
+    if (overlay != null) {
+      children
+        ..add(heading(overlay.text?.content ?? l10n.inspectorElement))
+        ..add(
+          Text(
+            span(overlay.startUs.toInt(), overlay.endUs.toInt()),
+            style: muted,
+          ),
+        )
+        ..add(const SizedBox(height: ShortedSpace.s))
+        ..add(
+          OverlayLook(key: ValueKey(overlay.id), overlay: overlay, run: run),
+        );
+    } else if (look != null && clipId != null) {
+      children
+        ..add(heading(l10n.clipNumber(clipIndex + 1)))
+        ..add(ClipLook(key: ValueKey(clipId), clip: look, run: run));
+      final sound = soundSettingsFor(context, view, clipId, run);
+      if (sound != null) {
+        children
+          ..add(const Divider(height: ShortedSpace.xl))
+          ..add(sound);
+      }
+    } else if (_soundOf(context, soundId, run) case final sound?) {
+      children
+        ..add(heading(l10n.soundSettings))
+        ..add(sound);
+    } else {
+      var sounds = 0;
+      for (final track in view.sound.tracks) {
+        sounds += track.items.length;
+      }
+      children
+        ..add(heading(view.title))
+        ..add(
+          Text(
+            l10n.projectSummary(
+              view.look.clips.length,
+              sounds,
+              formatTimecode(view.durationUs.toInt()),
+            ),
+            style: muted,
+          ),
+        )
+        ..add(const SizedBox(height: ShortedSpace.m))
+        ..add(Text(l10n.inspectorHint, style: muted));
+    }
     return Container(
       width: 280,
       color: ShortedColors.surface,
-      padding: const EdgeInsets.all(ShortedSpace.l),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: ListView(
+        padding: const EdgeInsets.all(ShortedSpace.l),
         children: [
           Text(
             l10n.inspectorTitle,
             style: Theme.of(context).textTheme.titleMedium,
           ),
-          const SizedBox(height: ShortedSpace.s),
-          Text(
-            l10n.nothingSelected,
-            style: const TextStyle(color: ShortedColors.textMuted),
-          ),
+          const SizedBox(height: ShortedSpace.m),
+          ...children,
         ],
       ),
     );

@@ -17,8 +17,9 @@ thiserror = "2.0.21"
 block2 = "0.6.2"
 objc2 = "0.6.5"
 objc2-av-foundation = { version = "0.3.2", features = ["objc2-core-media", "objc2-core-foundation", "objc2-core-video", "block2"] }
+objc2-core-audio-types = "0.3.2"
 objc2-core-foundation = "0.3.2"
-objc2-core-media = { version = "0.3.2", features = ["objc2-core-video"] }
+objc2-core-media = { version = "0.3.2", features = ["objc2-core-audio-types", "objc2-core-video"] }
 objc2-core-video = { version = "0.3.2", features = ["objc2-io-surface"] }
 objc2-foundation = "0.3.2"
 objc2-io-surface = "0.3.2"

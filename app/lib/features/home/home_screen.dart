@@ -1,3 +1,4 @@
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,6 +14,8 @@ import 'project_card.dart';
 const _cardMaxWidth = 200.0;
 const _cardAspectRatio = 0.6;
 
+const _bundleType = XTypeGroup(label: 'Shorted', extensions: ['shorted']);
+
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -26,6 +29,25 @@ class HomeScreen extends ConsumerWidget {
     } on Object catch (error) {
       if (context.mounted) showToast(context, errorMessage(l10n, error));
     }
+  }
+
+  /// A project title as a file name: letters, digits, spaces and dashes only.
+  static String _fileName(String title) {
+    final kept = title.replaceAll(
+      RegExp(r'[^\p{L}\p{N} _-]', unicode: true),
+      '',
+    );
+    return kept.trim().isEmpty ? 'project' : kept.trim();
+  }
+
+  Future<void> _import(BuildContext context, WidgetRef ref) async {
+    final file = await openFile(acceptedTypeGroups: const [_bundleType]);
+    if (file == null || !context.mounted) return;
+    final l10n = AppLocalizations.of(context);
+    await _guard(context, () async {
+      await ref.read(projectListProvider.notifier).importBundle(file.path);
+      if (context.mounted) showToast(context, l10n.bundleImported);
+    });
   }
 
   Future<void> _create(BuildContext context, WidgetRef ref) {
@@ -53,6 +75,16 @@ class HomeScreen extends ConsumerWidget {
       case ProjectAction.duplicate:
         final title = l10n.copyOf(project.title);
         return _guard(context, () => list.duplicate(project.id, title));
+      case ProjectAction.export:
+        final location = await getSaveLocation(
+          suggestedName: '${_fileName(project.title)}.shorted',
+          acceptedTypeGroups: const [_bundleType],
+        );
+        if (location == null || !context.mounted) return;
+        await _guard(context, () async {
+          await list.exportBundle(project.id, location.path);
+          if (context.mounted) showToast(context, l10n.bundleExported);
+        });
       case ProjectAction.delete:
         if (!await confirmDelete(context, project.title)) return;
         if (!context.mounted) return;
@@ -86,6 +118,11 @@ class HomeScreen extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: Text(l10n.appTitle, style: text.displaySmall),
+                  ),
+                  ShortedIconButton(
+                    icon: Icons.file_open_outlined,
+                    tooltip: l10n.importBundle,
+                    onPressed: () => _import(context, ref),
                   ),
                   ShortedIconButton(
                     icon: Icons.delete_outline,

@@ -9,14 +9,20 @@ use std::time::SystemTime;
 
 use shorted_core::command::Command;
 use shorted_core::evaluate::clip_positions;
-use shorted_core::model::{AudioTrackRef, Id, Project};
+use shorted_core::model::{AudioTrackRef, CaptionSource, Id, MediaKind, Project, Transcript};
 use shorted_store::library::{self, ProjectEntry};
 use shorted_store::session::{project_folder, ProjectSession, SaveStatus, StoreError};
 use time::format_description::well_known::Rfc3339;
 use time::OffsetDateTime;
 use uuid::Uuid;
 
+use shorted_store::versions::VersionReason;
+
+use crate::api::audio::{sound_view, SoundView};
+use crate::api::look::{look_view, LookView};
 use crate::api::media::{media_views, MediaItemView};
+use crate::api::overlays::{overlay_views, OverlayView};
+use crate::api::transcribe::{captions_view, transcript_views, CaptionsView, TranscriptView};
 use crate::error::{EngineError, EngineFailure};
 use crate::frb_generated::StreamSink;
 use crate::runtime;
@@ -32,6 +38,8 @@ pub struct ProjectSummary {
 pub enum TrackKindView {
     Widgets,
     Video,
+    /// Each clip's own sound, on its own row under the video, linked to its clip.
+    OriginalSound,
     Captions,
     VoiceOver,
     Audio,
@@ -41,12 +49,23 @@ pub struct TrackItemView {
     pub id: String,
     pub start_us: i64,
     pub end_us: i64,
+    /// Set for clips, so that their filmstrip can follow trims and speed.
+    pub media_id: Option<String>,
+    pub source_in_us: i64,
+    pub speed: f32,
+    /// Set for clips made from a still image.
+    pub slow_zoom: Option<bool>,
 }
 
 pub struct TrackView {
     pub kind: TrackKindView,
     /// Set for user audio tracks; the others get their name from the app's translations.
     pub name: Option<String>,
+    /// Set for user audio tracks.
+    pub id: Option<String>,
+    pub muted: bool,
+    pub locked: bool,
+    pub hidden: bool,
     pub items: Vec<TrackItemView>,
 }
 
@@ -58,6 +77,12 @@ pub struct ProjectView {
     pub can_redo: bool,
     pub tracks: Vec<TrackView>,
     pub media: Vec<MediaItemView>,
+    pub sound: SoundView,
+    pub look: LookView,
+    pub transcripts: Vec<TranscriptView>,
+    pub captions: CaptionsView,
+    /// Bottom first.
+    pub overlays: Vec<OverlayView>,
 }
 
 #[derive(Clone, Copy)]
@@ -216,6 +241,42 @@ pub async fn duplicate_project(
     })
 }
 
+/// Writes a project, closed first if open, as one `.shorted` file at `path` (FR-PRJ-06).
+pub async fn export_project_bundle(
+    root: String,
+    id: String,
+    path: String,
+) -> Result<(), EngineFailure> {
+    on_command_thread(move || {
+        let id = parse_id(&id)?;
+        close_active()?;
+        let root = Path::new(&root);
+        let project = library::load_project(root, id).map_err(EngineError::from)?;
+        let folder = project_folder(root, id);
+        shorted_store::bundle::export_bundle(
+            &project,
+            |media| crate::api::media::resolve(media, &folder),
+            Path::new(&path),
+            env!("CARGO_PKG_VERSION"),
+            &now(),
+        )
+        .map_err(EngineError::from)
+    })
+}
+
+/// Adds the project of a `.shorted` file as a new project, and returns its id.
+pub async fn import_project_bundle(root: String, path: String) -> Result<String, EngineFailure> {
+    on_command_thread(move || {
+        let project = shorted_store::bundle::import_bundle(
+            Path::new(&root),
+            Path::new(&path),
+            Uuid::now_v7(),
+        )
+        .map_err(EngineError::from)?;
+        Ok(project.id.to_string())
+    })
+}
+
 pub async fn trash_project(root: String, id: String) -> Result<(), EngineFailure> {
     on_command_thread(move || {
         let id = parse_id(&id)?;
@@ -267,6 +328,10 @@ fn track_view(session: &ProjectSession) -> Vec<TrackView> {
         id: id.to_string(),
         start_us,
         end_us,
+        media_id: None,
+        source_in_us: 0,
+        speed: 1.0,
+        slow_zoom: None,
     };
     let mut overlays: Vec<TrackItemView> = timeline
         .overlays
@@ -279,7 +344,11 @@ fn track_view(session: &ProjectSession) -> Vec<TrackView> {
             .audio
             .iter()
             .filter(|a| a.track == track)
-            .map(|a| item(a.id, a.start_us, a.end_us()))
+            .map(|a| TrackItemView {
+                media_id: Some(a.media_id.to_string()),
+                source_in_us: a.source_in_us,
+                ..item(a.id, a.start_us, a.end_us())
+            })
             .collect();
         items.sort_by_key(|a| a.start_us);
         items
@@ -288,33 +357,159 @@ fn track_view(session: &ProjectSession) -> Vec<TrackView> {
         TrackView {
             kind: TrackKindView::Widgets,
             name: None,
+            id: None,
+            muted: timeline.track_flags.widgets.muted,
+            locked: timeline.track_flags.widgets.locked,
+            hidden: timeline.track_flags.widgets.hidden,
             items: overlays,
         },
         TrackView {
             kind: TrackKindView::Video,
             name: None,
+            id: None,
+            muted: timeline.track_flags.video.muted,
+            locked: timeline.track_flags.video.locked,
+            hidden: timeline.track_flags.video.hidden,
             items: clip_positions(project)
                 .into_iter()
-                .map(|(id, start, end)| item(id, start, end))
+                .zip(&timeline.clips)
+                .map(|((id, start, end), clip)| TrackItemView {
+                    media_id: Some(clip.media_id.to_string()),
+                    source_in_us: clip.source_in_us,
+                    speed: clip.speed,
+                    slow_zoom: project
+                        .media
+                        .iter()
+                        .any(|m| m.id == clip.media_id && m.kind == MediaKind::Image)
+                        .then_some(clip.image_motion.is_some()),
+                    ..item(id, start, end)
+                })
+                .collect(),
+        },
+        TrackView {
+            kind: TrackKindView::OriginalSound,
+            name: None,
+            id: None,
+            // The clips' sound is muted with the Video track.
+            muted: timeline.track_flags.video.muted,
+            locked: false,
+            hidden: false,
+            items: clip_positions(project)
+                .into_iter()
+                .zip(&timeline.clips)
+                .filter(|(_, clip)| {
+                    project
+                        .media
+                        .iter()
+                        .any(|m| m.id == clip.media_id && m.probe.has_audio)
+                })
+                .map(|((id, start, end), clip)| TrackItemView {
+                    media_id: Some(clip.media_id.to_string()),
+                    source_in_us: clip.source_in_us,
+                    speed: clip.speed,
+                    ..item(id, start, end)
+                })
                 .collect(),
         },
         TrackView {
             kind: TrackKindView::Captions,
             name: None,
-            items: Vec::new(),
+            id: None,
+            muted: timeline.track_flags.captions.muted,
+            locked: timeline.track_flags.captions.locked,
+            hidden: timeline.track_flags.captions.hidden,
+            items: caption_items(project),
         },
         TrackView {
             kind: TrackKindView::VoiceOver,
             name: None,
+            id: None,
+            muted: timeline.track_flags.voice_over.muted,
+            locked: timeline.track_flags.voice_over.locked,
+            hidden: timeline.track_flags.voice_over.hidden,
             items: audio_on(AudioTrackRef::VoiceOver),
         },
     ];
     tracks.extend(timeline.audio_tracks.iter().map(|track| TrackView {
         kind: TrackKindView::Audio,
         name: Some(track.name.clone()),
+        id: Some(track.id.to_string()),
+        muted: track.flags.muted,
+        locked: track.flags.locked,
+        hidden: track.flags.hidden,
         items: audio_on(AudioTrackRef::User(track.id)),
     }));
     tracks
+}
+
+/// Each phrase shown as a caption, where it plays on the timeline (T-1203).
+fn caption_items(project: &Project) -> Vec<TrackItemView> {
+    let settings = &project.captions;
+    if !settings.enabled {
+        return Vec::new();
+    }
+    let timeline = &project.timeline;
+    let phrases = |transcript: &Transcript, used: std::ops::Range<i64>| {
+        transcript
+            .segments
+            .iter()
+            .filter(|segment| !segment.hidden)
+            .filter_map(move |segment| {
+                let mut words = segment
+                    .words
+                    .iter()
+                    .filter(|w| !w.deleted && used.contains(&w.start_us));
+                let first = words.next()?;
+                let last = words.next_back().unwrap_or(first);
+                Some((segment.id, first.start_us, last.end_us.min(used.end)))
+            })
+            .collect::<Vec<_>>()
+    };
+    let mut items = Vec::new();
+    if settings.sources.contains(&CaptionSource::OriginalSound) {
+        for ((_, start, _), clip) in clip_positions(project).into_iter().zip(&timeline.clips) {
+            let Some(transcript) = clip.transcript.as_ref() else {
+                continue;
+            };
+            if !clip.original_audio.transcribe {
+                continue;
+            }
+            let speed = f64::from(clip.speed.max(0.01));
+            let at = |source: i64| start + ((source - clip.source_in_us) as f64 / speed) as i64;
+            for (id, from, to) in phrases(transcript, clip.source_in_us..clip.source_out_us) {
+                items.push((id, at(from), at(to)));
+            }
+        }
+    }
+    for item in &timeline.audio {
+        if !settings
+            .sources
+            .contains(&CaptionSource::AudioItem(item.id))
+        {
+            continue;
+        }
+        let Some(transcript) = item.transcript.as_ref() else {
+            continue;
+        };
+        let at = |source: i64| item.start_us + source - item.source_in_us;
+        for (id, from, to) in phrases(transcript, item.source_in_us..item.source_out_us) {
+            items.push((id, at(from), at(to)));
+        }
+    }
+    items.sort_by_key(|(_, start, _)| *start);
+    items
+        .into_iter()
+        .filter(|(_, start, end)| end > start)
+        .map(|(id, start_us, end_us)| TrackItemView {
+            id: id.to_string(),
+            start_us,
+            end_us,
+            media_id: None,
+            source_in_us: 0,
+            speed: 1.0,
+            slow_zoom: None,
+        })
+        .collect()
 }
 
 pub(crate) fn view_of(session: &ProjectSession) -> ProjectView {
@@ -327,12 +522,61 @@ pub(crate) fn view_of(session: &ProjectSession) -> ProjectView {
         can_undo: session.can_undo(),
         can_redo: session.can_redo(),
         tracks: track_view(session),
+        sound: sound_view(project),
+        look: look_view(project),
+        transcripts: transcript_views(project),
+        captions: captions_view(project),
+        overlays: overlay_views(project),
         media: media_views(session),
     }
 }
 
 pub async fn project_view() -> Result<ProjectView, EngineFailure> {
     on_command_thread(|| with_active(|session| Ok(view_of(session))))
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum VersionReasonView {
+    Activity,
+    BeforeAi,
+    BeforeRestore,
+}
+
+pub struct VersionView {
+    /// What `restore_version` takes.
+    pub name: String,
+    pub saved_at_ms: i64,
+    pub reason: VersionReasonView,
+}
+
+/// The open project's version history, newest first (FR-PRJ-04).
+pub async fn version_history() -> Result<Vec<VersionView>, EngineFailure> {
+    on_command_thread(|| {
+        with_active(|session| {
+            Ok(shorted_store::versions::list_versions(session.folder())
+                .into_iter()
+                .map(|version| VersionView {
+                    name: version.name,
+                    saved_at_ms: version.saved_at_ms as i64,
+                    reason: match version.reason {
+                        VersionReason::Activity => VersionReasonView::Activity,
+                        VersionReason::BeforeAi => VersionReasonView::BeforeAi,
+                        VersionReason::BeforeRestore => VersionReasonView::BeforeRestore,
+                    },
+                })
+                .collect())
+        })
+    })
+}
+
+/// Puts a version back as one undoable edit; the present is kept as a version first.
+pub async fn restore_version(name: String) -> Result<ProjectView, EngineFailure> {
+    on_command_thread(move || {
+        with_active(|session| {
+            session.restore_version(&name)?;
+            Ok(view_of(session))
+        })
+    })
 }
 
 pub async fn undo() -> Result<ProjectView, EngineFailure> {
@@ -351,4 +595,29 @@ pub async fn redo() -> Result<ProjectView, EngineFailure> {
             Ok(view_of(session))
         })
     })
+}
+
+#[cfg(test)]
+mod caption_track_tests {
+    use super::*;
+
+    #[test]
+    fn phrases_show_on_the_captions_track_where_they_play() {
+        let json = include_str!("../../../../fixtures/projects/v1_full.json");
+        let mut project = Project::from_json(json).unwrap();
+        project.captions.enabled = true;
+        project.captions.sources = vec![CaptionSource::OriginalSound];
+        let items = caption_items(&project);
+        assert!(!items.is_empty());
+        let end = project.duration_us();
+        for item in &items {
+            assert!(
+                item.start_us < item.end_us && item.end_us <= end,
+                "{}",
+                item.id
+            );
+        }
+        project.captions.enabled = false;
+        assert!(caption_items(&project).is_empty());
+    }
 }

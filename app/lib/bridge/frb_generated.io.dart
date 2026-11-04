@@ -4,11 +4,19 @@
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
 import 'api.dart';
+import 'api/ai.dart';
+import 'api/arrange.dart';
+import 'api/audio.dart';
+import 'api/brand_kit.dart';
 import 'api/clips.dart';
 import 'api/export.dart';
+import 'api/library.dart';
+import 'api/look.dart';
 import 'api/media.dart';
+import 'api/overlays.dart';
 import 'api/preview.dart';
 import 'api/projects.dart';
+import 'api/transcribe.dart';
 
 import 'dart:async';
 import 'dart:convert';
@@ -41,13 +49,51 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   RustStreamSink<TaskEvent> dco_decode_StreamSink_task_event_Sse(dynamic raw);
 
   @protected
+  RustStreamSink<ThumbnailView> dco_decode_StreamSink_thumbnail_view_Sse(
+    dynamic raw,
+  );
+
+  @protected
   RustStreamSink<BigInt> dco_decode_StreamSink_u_64_Sse(dynamic raw);
 
   @protected
   String dco_decode_String(dynamic raw);
 
   @protected
+  AiPayloadView dco_decode_ai_payload_view(dynamic raw);
+
+  @protected
+  AiProviderView dco_decode_ai_provider_view(dynamic raw);
+
+  @protected
+  AiSettingsView dco_decode_ai_settings_view(dynamic raw);
+
+  @protected
+  AnimSlotView dco_decode_anim_slot_view(dynamic raw);
+
+  @protected
+  ArrangeReviewView dco_decode_arrange_review_view(dynamic raw);
+
+  @protected
+  AudioItemView dco_decode_audio_item_view(dynamic raw);
+
+  @protected
+  AudioRoleView dco_decode_audio_role_view(dynamic raw);
+
+  @protected
+  AudioTrackView dco_decode_audio_track_view(dynamic raw);
+
+  @protected
   bool dco_decode_bool(dynamic raw);
+
+  @protected
+  AiProviderView dco_decode_box_autoadd_ai_provider_view(dynamic raw);
+
+  @protected
+  bool dco_decode_box_autoadd_bool(dynamic raw);
+
+  @protected
+  CaptionHitView dco_decode_box_autoadd_caption_hit_view(dynamic raw);
 
   @protected
   ErrorCode dco_decode_box_autoadd_error_code(dynamic raw);
@@ -56,7 +102,67 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ExportSettings dco_decode_box_autoadd_export_settings(dynamic raw);
 
   @protected
+  double dco_decode_box_autoadd_f_32(dynamic raw);
+
+  @protected
+  PathView dco_decode_box_autoadd_path_view(dynamic raw);
+
+  @protected
+  PictureView dco_decode_box_autoadd_picture_view(dynamic raw);
+
+  @protected
+  PresetKindView dco_decode_box_autoadd_preset_kind_view(dynamic raw);
+
+  @protected
+  PresetView dco_decode_box_autoadd_preset_view(dynamic raw);
+
+  @protected
+  TextElementView dco_decode_box_autoadd_text_element_view(dynamic raw);
+
+  @protected
+  ThumbnailView dco_decode_box_autoadd_thumbnail_view(dynamic raw);
+
+  @protected
+  TransformView dco_decode_box_autoadd_transform_view(dynamic raw);
+
+  @protected
+  TransitionKindView dco_decode_box_autoadd_transition_kind_view(dynamic raw);
+
+  @protected
+  BrandAssetView dco_decode_brand_asset_view(dynamic raw);
+
+  @protected
+  BrandKindView dco_decode_brand_kind_view(dynamic raw);
+
+  @protected
+  CaptionAnimationView dco_decode_caption_animation_view(dynamic raw);
+
+  @protected
+  CaptionHitView dco_decode_caption_hit_view(dynamic raw);
+
+  @protected
+  CaptionPresetView dco_decode_caption_preset_view(dynamic raw);
+
+  @protected
+  CaptionsView dco_decode_captions_view(dynamic raw);
+
+  @protected
   ClipEdge dco_decode_clip_edge(dynamic raw);
+
+  @protected
+  ClipLookView dco_decode_clip_look_view(dynamic raw);
+
+  @protected
+  ClipSoundView dco_decode_clip_sound_view(dynamic raw);
+
+  @protected
+  DecisionKindView dco_decode_decision_kind_view(dynamic raw);
+
+  @protected
+  DecisionView dco_decode_decision_view(dynamic raw);
+
+  @protected
+  EasingView dco_decode_easing_view(dynamic raw);
 
   @protected
   EngineFailure dco_decode_engine_failure(dynamic raw);
@@ -66,6 +172,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ExportSettings dco_decode_export_settings(dynamic raw);
+
+  @protected
+  double dco_decode_f_32(dynamic raw);
 
   @protected
   double dco_decode_f_64(dynamic raw);
@@ -80,13 +189,52 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ImportOutcome dco_decode_import_outcome(dynamic raw);
 
   @protected
+  KeyframeView dco_decode_keyframe_view(dynamic raw);
+
+  @protected
+  LibraryItemView dco_decode_library_item_view(dynamic raw);
+
+  @protected
   List<String> dco_decode_list_String(dynamic raw);
+
+  @protected
+  List<AudioItemView> dco_decode_list_audio_item_view(dynamic raw);
+
+  @protected
+  List<AudioTrackView> dco_decode_list_audio_track_view(dynamic raw);
+
+  @protected
+  List<BrandAssetView> dco_decode_list_brand_asset_view(dynamic raw);
+
+  @protected
+  List<ClipLookView> dco_decode_list_clip_look_view(dynamic raw);
+
+  @protected
+  List<ClipSoundView> dco_decode_list_clip_sound_view(dynamic raw);
+
+  @protected
+  List<DecisionView> dco_decode_list_decision_view(dynamic raw);
 
   @protected
   List<ImportOutcome> dco_decode_list_import_outcome(dynamic raw);
 
   @protected
+  List<KeyframeView> dco_decode_list_keyframe_view(dynamic raw);
+
+  @protected
+  List<LibraryItemView> dco_decode_list_library_item_view(dynamic raw);
+
+  @protected
   List<MediaItemView> dco_decode_list_media_item_view(dynamic raw);
+
+  @protected
+  List<OverlayBoxView> dco_decode_list_overlay_box_view(dynamic raw);
+
+  @protected
+  List<OverlayView> dco_decode_list_overlay_view(dynamic raw);
+
+  @protected
+  List<PathPointView> dco_decode_list_path_point_view(dynamic raw);
 
   @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
@@ -95,10 +243,28 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<ProjectSummary> dco_decode_list_project_summary(dynamic raw);
 
   @protected
+  List<SegmentView> dco_decode_list_segment_view(dynamic raw);
+
+  @protected
   List<TrackItemView> dco_decode_list_track_item_view(dynamic raw);
 
   @protected
   List<TrackView> dco_decode_list_track_view(dynamic raw);
+
+  @protected
+  List<TranscriptView> dco_decode_list_transcript_view(dynamic raw);
+
+  @protected
+  List<UncertainView> dco_decode_list_uncertain_view(dynamic raw);
+
+  @protected
+  List<VersionView> dco_decode_list_version_view(dynamic raw);
+
+  @protected
+  List<WordView> dco_decode_list_word_view(dynamic raw);
+
+  @protected
+  LookView dco_decode_look_view(dynamic raw);
 
   @protected
   MediaItemView dco_decode_media_item_view(dynamic raw);
@@ -107,10 +273,78 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   MediaKindView dco_decode_media_kind_view(dynamic raw);
 
   @protected
+  ModelView dco_decode_model_view(dynamic raw);
+
+  @protected
   String? dco_decode_opt_String(dynamic raw);
 
   @protected
+  AiProviderView? dco_decode_opt_box_autoadd_ai_provider_view(dynamic raw);
+
+  @protected
+  bool? dco_decode_opt_box_autoadd_bool(dynamic raw);
+
+  @protected
+  CaptionHitView? dco_decode_opt_box_autoadd_caption_hit_view(dynamic raw);
+
+  @protected
   ErrorCode? dco_decode_opt_box_autoadd_error_code(dynamic raw);
+
+  @protected
+  double? dco_decode_opt_box_autoadd_f_32(dynamic raw);
+
+  @protected
+  PathView? dco_decode_opt_box_autoadd_path_view(dynamic raw);
+
+  @protected
+  PictureView? dco_decode_opt_box_autoadd_picture_view(dynamic raw);
+
+  @protected
+  PresetKindView? dco_decode_opt_box_autoadd_preset_kind_view(dynamic raw);
+
+  @protected
+  PresetView? dco_decode_opt_box_autoadd_preset_view(dynamic raw);
+
+  @protected
+  TextElementView? dco_decode_opt_box_autoadd_text_element_view(dynamic raw);
+
+  @protected
+  ThumbnailView? dco_decode_opt_box_autoadd_thumbnail_view(dynamic raw);
+
+  @protected
+  TransformView? dco_decode_opt_box_autoadd_transform_view(dynamic raw);
+
+  @protected
+  TransitionKindView? dco_decode_opt_box_autoadd_transition_kind_view(
+    dynamic raw,
+  );
+
+  @protected
+  OverlayBoxView dco_decode_overlay_box_view(dynamic raw);
+
+  @protected
+  OverlayKindView dco_decode_overlay_kind_view(dynamic raw);
+
+  @protected
+  OverlayView dco_decode_overlay_view(dynamic raw);
+
+  @protected
+  PathPointView dco_decode_path_point_view(dynamic raw);
+
+  @protected
+  PathView dco_decode_path_view(dynamic raw);
+
+  @protected
+  PictureView dco_decode_picture_view(dynamic raw);
+
+  @protected
+  PresetKindView dco_decode_preset_kind_view(dynamic raw);
+
+  @protected
+  PresetSampleView dco_decode_preset_sample_view(dynamic raw);
+
+  @protected
+  PresetView dco_decode_preset_view(dynamic raw);
 
   @protected
   ProjectSummary dco_decode_project_summary(dynamic raw);
@@ -122,7 +356,25 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   SaveStateView dco_decode_save_state_view(dynamic raw);
 
   @protected
+  SegmentView dco_decode_segment_view(dynamic raw);
+
+  @protected
+  ShapeKindView dco_decode_shape_kind_view(dynamic raw);
+
+  @protected
+  SoundView dco_decode_sound_view(dynamic raw);
+
+  @protected
   TaskEvent dco_decode_task_event(dynamic raw);
+
+  @protected
+  TextDecorationView dco_decode_text_decoration_view(dynamic raw);
+
+  @protected
+  TextElementView dco_decode_text_element_view(dynamic raw);
+
+  @protected
+  ThumbnailView dco_decode_thumbnail_view(dynamic raw);
 
   @protected
   TrackItemView dco_decode_track_item_view(dynamic raw);
@@ -134,6 +386,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   TrackView dco_decode_track_view(dynamic raw);
 
   @protected
+  TranscriptView dco_decode_transcript_view(dynamic raw);
+
+  @protected
+  TransformView dco_decode_transform_view(dynamic raw);
+
+  @protected
+  TransitionKindView dco_decode_transition_kind_view(dynamic raw);
+
+  @protected
   int dco_decode_u_32(dynamic raw);
 
   @protected
@@ -143,7 +404,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   int dco_decode_u_8(dynamic raw);
 
   @protected
+  UncertainView dco_decode_uncertain_view(dynamic raw);
+
+  @protected
   void dco_decode_unit(dynamic raw);
+
+  @protected
+  VersionReasonView dco_decode_version_reason_view(dynamic raw);
+
+  @protected
+  VersionView dco_decode_version_view(dynamic raw);
+
+  @protected
+  WordView dco_decode_word_view(dynamic raw);
 
   @protected
   AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
@@ -159,6 +432,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  RustStreamSink<ThumbnailView> sse_decode_StreamSink_thumbnail_view_Sse(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   RustStreamSink<BigInt> sse_decode_StreamSink_u_64_Sse(
     SseDeserializer deserializer,
   );
@@ -167,7 +445,46 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String sse_decode_String(SseDeserializer deserializer);
 
   @protected
+  AiPayloadView sse_decode_ai_payload_view(SseDeserializer deserializer);
+
+  @protected
+  AiProviderView sse_decode_ai_provider_view(SseDeserializer deserializer);
+
+  @protected
+  AiSettingsView sse_decode_ai_settings_view(SseDeserializer deserializer);
+
+  @protected
+  AnimSlotView sse_decode_anim_slot_view(SseDeserializer deserializer);
+
+  @protected
+  ArrangeReviewView sse_decode_arrange_review_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  AudioItemView sse_decode_audio_item_view(SseDeserializer deserializer);
+
+  @protected
+  AudioRoleView sse_decode_audio_role_view(SseDeserializer deserializer);
+
+  @protected
+  AudioTrackView sse_decode_audio_track_view(SseDeserializer deserializer);
+
+  @protected
   bool sse_decode_bool(SseDeserializer deserializer);
+
+  @protected
+  AiProviderView sse_decode_box_autoadd_ai_provider_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  bool sse_decode_box_autoadd_bool(SseDeserializer deserializer);
+
+  @protected
+  CaptionHitView sse_decode_box_autoadd_caption_hit_view(
+    SseDeserializer deserializer,
+  );
 
   @protected
   ErrorCode sse_decode_box_autoadd_error_code(SseDeserializer deserializer);
@@ -178,7 +495,81 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  double sse_decode_box_autoadd_f_32(SseDeserializer deserializer);
+
+  @protected
+  PathView sse_decode_box_autoadd_path_view(SseDeserializer deserializer);
+
+  @protected
+  PictureView sse_decode_box_autoadd_picture_view(SseDeserializer deserializer);
+
+  @protected
+  PresetKindView sse_decode_box_autoadd_preset_kind_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  PresetView sse_decode_box_autoadd_preset_view(SseDeserializer deserializer);
+
+  @protected
+  TextElementView sse_decode_box_autoadd_text_element_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ThumbnailView sse_decode_box_autoadd_thumbnail_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  TransformView sse_decode_box_autoadd_transform_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  TransitionKindView sse_decode_box_autoadd_transition_kind_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  BrandAssetView sse_decode_brand_asset_view(SseDeserializer deserializer);
+
+  @protected
+  BrandKindView sse_decode_brand_kind_view(SseDeserializer deserializer);
+
+  @protected
+  CaptionAnimationView sse_decode_caption_animation_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CaptionHitView sse_decode_caption_hit_view(SseDeserializer deserializer);
+
+  @protected
+  CaptionPresetView sse_decode_caption_preset_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CaptionsView sse_decode_captions_view(SseDeserializer deserializer);
+
+  @protected
   ClipEdge sse_decode_clip_edge(SseDeserializer deserializer);
+
+  @protected
+  ClipLookView sse_decode_clip_look_view(SseDeserializer deserializer);
+
+  @protected
+  ClipSoundView sse_decode_clip_sound_view(SseDeserializer deserializer);
+
+  @protected
+  DecisionKindView sse_decode_decision_kind_view(SseDeserializer deserializer);
+
+  @protected
+  DecisionView sse_decode_decision_view(SseDeserializer deserializer);
+
+  @protected
+  EasingView sse_decode_easing_view(SseDeserializer deserializer);
 
   @protected
   EngineFailure sse_decode_engine_failure(SseDeserializer deserializer);
@@ -188,6 +579,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ExportSettings sse_decode_export_settings(SseDeserializer deserializer);
+
+  @protected
+  double sse_decode_f_32(SseDeserializer deserializer);
 
   @protected
   double sse_decode_f_64(SseDeserializer deserializer);
@@ -202,7 +596,43 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ImportOutcome sse_decode_import_outcome(SseDeserializer deserializer);
 
   @protected
+  KeyframeView sse_decode_keyframe_view(SseDeserializer deserializer);
+
+  @protected
+  LibraryItemView sse_decode_library_item_view(SseDeserializer deserializer);
+
+  @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer);
+
+  @protected
+  List<AudioItemView> sse_decode_list_audio_item_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<AudioTrackView> sse_decode_list_audio_track_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<BrandAssetView> sse_decode_list_brand_asset_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<ClipLookView> sse_decode_list_clip_look_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<ClipSoundView> sse_decode_list_clip_sound_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<DecisionView> sse_decode_list_decision_view(
+    SseDeserializer deserializer,
+  );
 
   @protected
   List<ImportOutcome> sse_decode_list_import_outcome(
@@ -210,7 +640,30 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<KeyframeView> sse_decode_list_keyframe_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<LibraryItemView> sse_decode_list_library_item_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<MediaItemView> sse_decode_list_media_item_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<OverlayBoxView> sse_decode_list_overlay_box_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<OverlayView> sse_decode_list_overlay_view(SseDeserializer deserializer);
+
+  @protected
+  List<PathPointView> sse_decode_list_path_point_view(
     SseDeserializer deserializer,
   );
 
@@ -223,6 +676,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<SegmentView> sse_decode_list_segment_view(SseDeserializer deserializer);
+
+  @protected
   List<TrackItemView> sse_decode_list_track_item_view(
     SseDeserializer deserializer,
   );
@@ -231,18 +687,121 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<TrackView> sse_decode_list_track_view(SseDeserializer deserializer);
 
   @protected
+  List<TranscriptView> sse_decode_list_transcript_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<UncertainView> sse_decode_list_uncertain_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<VersionView> sse_decode_list_version_view(SseDeserializer deserializer);
+
+  @protected
+  List<WordView> sse_decode_list_word_view(SseDeserializer deserializer);
+
+  @protected
+  LookView sse_decode_look_view(SseDeserializer deserializer);
+
+  @protected
   MediaItemView sse_decode_media_item_view(SseDeserializer deserializer);
 
   @protected
   MediaKindView sse_decode_media_kind_view(SseDeserializer deserializer);
 
   @protected
+  ModelView sse_decode_model_view(SseDeserializer deserializer);
+
+  @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
+
+  @protected
+  AiProviderView? sse_decode_opt_box_autoadd_ai_provider_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  bool? sse_decode_opt_box_autoadd_bool(SseDeserializer deserializer);
+
+  @protected
+  CaptionHitView? sse_decode_opt_box_autoadd_caption_hit_view(
+    SseDeserializer deserializer,
+  );
 
   @protected
   ErrorCode? sse_decode_opt_box_autoadd_error_code(
     SseDeserializer deserializer,
   );
+
+  @protected
+  double? sse_decode_opt_box_autoadd_f_32(SseDeserializer deserializer);
+
+  @protected
+  PathView? sse_decode_opt_box_autoadd_path_view(SseDeserializer deserializer);
+
+  @protected
+  PictureView? sse_decode_opt_box_autoadd_picture_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  PresetKindView? sse_decode_opt_box_autoadd_preset_kind_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  PresetView? sse_decode_opt_box_autoadd_preset_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  TextElementView? sse_decode_opt_box_autoadd_text_element_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ThumbnailView? sse_decode_opt_box_autoadd_thumbnail_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  TransformView? sse_decode_opt_box_autoadd_transform_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  TransitionKindView? sse_decode_opt_box_autoadd_transition_kind_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  OverlayBoxView sse_decode_overlay_box_view(SseDeserializer deserializer);
+
+  @protected
+  OverlayKindView sse_decode_overlay_kind_view(SseDeserializer deserializer);
+
+  @protected
+  OverlayView sse_decode_overlay_view(SseDeserializer deserializer);
+
+  @protected
+  PathPointView sse_decode_path_point_view(SseDeserializer deserializer);
+
+  @protected
+  PathView sse_decode_path_view(SseDeserializer deserializer);
+
+  @protected
+  PictureView sse_decode_picture_view(SseDeserializer deserializer);
+
+  @protected
+  PresetKindView sse_decode_preset_kind_view(SseDeserializer deserializer);
+
+  @protected
+  PresetSampleView sse_decode_preset_sample_view(SseDeserializer deserializer);
+
+  @protected
+  PresetView sse_decode_preset_view(SseDeserializer deserializer);
 
   @protected
   ProjectSummary sse_decode_project_summary(SseDeserializer deserializer);
@@ -254,7 +813,27 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   SaveStateView sse_decode_save_state_view(SseDeserializer deserializer);
 
   @protected
+  SegmentView sse_decode_segment_view(SseDeserializer deserializer);
+
+  @protected
+  ShapeKindView sse_decode_shape_kind_view(SseDeserializer deserializer);
+
+  @protected
+  SoundView sse_decode_sound_view(SseDeserializer deserializer);
+
+  @protected
   TaskEvent sse_decode_task_event(SseDeserializer deserializer);
+
+  @protected
+  TextDecorationView sse_decode_text_decoration_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  TextElementView sse_decode_text_element_view(SseDeserializer deserializer);
+
+  @protected
+  ThumbnailView sse_decode_thumbnail_view(SseDeserializer deserializer);
 
   @protected
   TrackItemView sse_decode_track_item_view(SseDeserializer deserializer);
@@ -266,6 +845,17 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   TrackView sse_decode_track_view(SseDeserializer deserializer);
 
   @protected
+  TranscriptView sse_decode_transcript_view(SseDeserializer deserializer);
+
+  @protected
+  TransformView sse_decode_transform_view(SseDeserializer deserializer);
+
+  @protected
+  TransitionKindView sse_decode_transition_kind_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   int sse_decode_u_32(SseDeserializer deserializer);
 
   @protected
@@ -275,7 +865,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   int sse_decode_u_8(SseDeserializer deserializer);
 
   @protected
+  UncertainView sse_decode_uncertain_view(SseDeserializer deserializer);
+
+  @protected
   void sse_decode_unit(SseDeserializer deserializer);
+
+  @protected
+  VersionReasonView sse_decode_version_reason_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  VersionView sse_decode_version_view(SseDeserializer deserializer);
+
+  @protected
+  WordView sse_decode_word_view(SseDeserializer deserializer);
 
   @protected
   void sse_encode_AnyhowException(
@@ -296,6 +900,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_StreamSink_thumbnail_view_Sse(
+    RustStreamSink<ThumbnailView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_StreamSink_u_64_Sse(
     RustStreamSink<BigInt> self,
     SseSerializer serializer,
@@ -305,7 +915,58 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_String(String self, SseSerializer serializer);
 
   @protected
+  void sse_encode_ai_payload_view(AiPayloadView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_ai_provider_view(
+    AiProviderView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_ai_settings_view(
+    AiSettingsView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_anim_slot_view(AnimSlotView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_arrange_review_view(
+    ArrangeReviewView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_audio_item_view(AudioItemView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_audio_role_view(AudioRoleView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_audio_track_view(
+    AudioTrackView self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_bool(bool self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_ai_provider_view(
+    AiProviderView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_bool(bool self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_caption_hit_view(
+    CaptionHitView self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_box_autoadd_error_code(
@@ -320,7 +981,106 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_f_32(double self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_path_view(
+    PathView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_picture_view(
+    PictureView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_preset_kind_view(
+    PresetKindView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_preset_view(
+    PresetView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_text_element_view(
+    TextElementView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_thumbnail_view(
+    ThumbnailView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_transform_view(
+    TransformView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_transition_kind_view(
+    TransitionKindView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_brand_asset_view(
+    BrandAssetView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_brand_kind_view(BrandKindView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_caption_animation_view(
+    CaptionAnimationView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_caption_hit_view(
+    CaptionHitView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_caption_preset_view(
+    CaptionPresetView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_captions_view(CaptionsView self, SseSerializer serializer);
+
+  @protected
   void sse_encode_clip_edge(ClipEdge self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_clip_look_view(ClipLookView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_clip_sound_view(ClipSoundView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_decision_kind_view(
+    DecisionKindView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_decision_view(DecisionView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_easing_view(EasingView self, SseSerializer serializer);
 
   @protected
   void sse_encode_engine_failure(EngineFailure self, SseSerializer serializer);
@@ -335,6 +1095,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_f_32(double self, SseSerializer serializer);
+
+  @protected
   void sse_encode_f_64(double self, SseSerializer serializer);
 
   @protected
@@ -347,7 +1110,52 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_import_outcome(ImportOutcome self, SseSerializer serializer);
 
   @protected
+  void sse_encode_keyframe_view(KeyframeView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_library_item_view(
+    LibraryItemView self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_audio_item_view(
+    List<AudioItemView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_audio_track_view(
+    List<AudioTrackView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_brand_asset_view(
+    List<BrandAssetView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_clip_look_view(
+    List<ClipLookView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_clip_sound_view(
+    List<ClipSoundView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_decision_view(
+    List<DecisionView> self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_list_import_outcome(
@@ -356,8 +1164,38 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_keyframe_view(
+    List<KeyframeView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_library_item_view(
+    List<LibraryItemView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_media_item_view(
     List<MediaItemView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_overlay_box_view(
+    List<OverlayBoxView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_overlay_view(
+    List<OverlayView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_path_point_view(
+    List<PathPointView> self,
     SseSerializer serializer,
   );
 
@@ -374,6 +1212,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_segment_view(
+    List<SegmentView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_track_item_view(
     List<TrackItemView> self,
     SseSerializer serializer,
@@ -386,19 +1230,151 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_transcript_view(
+    List<TranscriptView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_uncertain_view(
+    List<UncertainView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_version_view(
+    List<VersionView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_word_view(List<WordView> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_look_view(LookView self, SseSerializer serializer);
+
+  @protected
   void sse_encode_media_item_view(MediaItemView self, SseSerializer serializer);
 
   @protected
   void sse_encode_media_kind_view(MediaKindView self, SseSerializer serializer);
 
   @protected
+  void sse_encode_model_view(ModelView self, SseSerializer serializer);
+
+  @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_ai_provider_view(
+    AiProviderView? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_bool(bool? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_caption_hit_view(
+    CaptionHitView? self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_opt_box_autoadd_error_code(
     ErrorCode? self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_opt_box_autoadd_f_32(double? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_path_view(
+    PathView? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_picture_view(
+    PictureView? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_preset_kind_view(
+    PresetKindView? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_preset_view(
+    PresetView? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_text_element_view(
+    TextElementView? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_thumbnail_view(
+    ThumbnailView? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_transform_view(
+    TransformView? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_transition_kind_view(
+    TransitionKindView? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_overlay_box_view(
+    OverlayBoxView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_overlay_kind_view(
+    OverlayKindView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_overlay_view(OverlayView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_path_point_view(PathPointView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_path_view(PathView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_picture_view(PictureView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_preset_kind_view(
+    PresetKindView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_preset_sample_view(
+    PresetSampleView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_preset_view(PresetView self, SseSerializer serializer);
 
   @protected
   void sse_encode_project_summary(
@@ -413,7 +1389,31 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_save_state_view(SaveStateView self, SseSerializer serializer);
 
   @protected
+  void sse_encode_segment_view(SegmentView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_shape_kind_view(ShapeKindView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_sound_view(SoundView self, SseSerializer serializer);
+
+  @protected
   void sse_encode_task_event(TaskEvent self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_text_decoration_view(
+    TextDecorationView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_text_element_view(
+    TextElementView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_thumbnail_view(ThumbnailView self, SseSerializer serializer);
 
   @protected
   void sse_encode_track_item_view(TrackItemView self, SseSerializer serializer);
@@ -425,6 +1425,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_track_view(TrackView self, SseSerializer serializer);
 
   @protected
+  void sse_encode_transcript_view(
+    TranscriptView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_transform_view(TransformView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_transition_kind_view(
+    TransitionKindView self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_u_32(int self, SseSerializer serializer);
 
   @protected
@@ -434,7 +1449,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_u_8(int self, SseSerializer serializer);
 
   @protected
+  void sse_encode_uncertain_view(UncertainView self, SseSerializer serializer);
+
+  @protected
   void sse_encode_unit(void self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_version_reason_view(
+    VersionReasonView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_version_view(VersionView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_word_view(WordView self, SseSerializer serializer);
 }
 
 // Section: wire_class

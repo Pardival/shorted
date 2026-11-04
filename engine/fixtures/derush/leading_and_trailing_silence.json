@@ -1,0 +1,25 @@
+{
+  "duration_ms": 9000,
+  "room": 0.003,
+  "speech": [
+    [
+      1800,
+      4200
+    ],
+    [
+      4500,
+      6900
+    ]
+  ],
+  "dead": [
+    [
+      0,
+      1650
+    ],
+    [
+      7050,
+      9000
+    ]
+  ],
+  "name": "leading_and_trailing_silence"
+}

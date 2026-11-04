@@ -2,10 +2,12 @@
 
 #![deny(unsafe_op_in_unsafe_fn)]
 
+pub mod bundle;
 pub mod library;
 pub mod media;
 pub mod migrations;
 pub mod session;
+pub mod versions;
 
 /// Name of this crate, used by the workspace smoke tests.
 pub const CRATE_NAME: &str = "shorted_store";

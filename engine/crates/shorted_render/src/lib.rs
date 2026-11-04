@@ -4,8 +4,14 @@
 
 #[cfg(target_vendor = "apple")]
 pub mod apple;
+pub mod captions;
 pub mod compositor;
+pub mod library;
+mod library_index;
+pub mod overlays;
+pub mod pictures;
 pub mod spike;
+pub mod text;
 
 /// Name of this crate, used by the workspace smoke tests.
 pub const CRATE_NAME: &str = "shorted_render";

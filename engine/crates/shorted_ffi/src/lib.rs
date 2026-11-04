@@ -2,7 +2,13 @@
 
 #![deny(unsafe_op_in_unsafe_fn)]
 
+mod ai_access;
+mod ai_arrange;
 pub mod api;
+#[cfg(target_vendor = "apple")]
+mod audio_output;
+mod caption_layout;
+mod derush;
 pub mod error;
 #[cfg(target_vendor = "apple")]
 pub mod frame_composer;
@@ -11,6 +17,8 @@ mod frb_generated;
 pub mod logging;
 #[cfg(target_vendor = "apple")]
 pub mod preview_session;
+#[cfg(target_vendor = "apple")]
+mod recorder;
 pub mod runtime;
 pub mod spike;
 mod transport;

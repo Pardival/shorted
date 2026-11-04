@@ -17,11 +17,18 @@ use shorted_core::validate::{MAX_DOCUMENT_BYTES, MAX_JOURNAL_LINE_BYTES};
 use thiserror::Error;
 
 use crate::migrations::migrate;
+use crate::versions::{VersionReason, load_version, write_version};
 
 pub const PROJECT_FILE: &str = "project.json";
 pub const JOURNAL_FILE: &str = "journal.jsonl";
 pub const SNAPSHOT_EVERY_COMMANDS: u32 = 50;
 pub const SNAPSHOT_EVERY: Duration = Duration::from_secs(30);
+/// Editing time between two versions of the history (FR-PRJ-04).
+pub const VERSION_EVERY: Duration = Duration::from_secs(10 * 60);
+/// A pause longer than this between edits is not editing time.
+const IDLE_AFTER: Duration = Duration::from_secs(60);
+/// AI edits are `Group`s whose label starts with this: a version is kept before each.
+pub const AI_GROUP_PREFIX: &str = "ai:";
 /// Below the 1 s of NFR-REL-01, leaving room for a slow disk.
 const FLUSH_DELAY: Duration = Duration::from_millis(500);
 
@@ -64,10 +71,10 @@ fn sync_directory(_path: &Path) -> io::Result<()> {
 }
 
 #[derive(Serialize, Deserialize)]
-struct Snapshot<T> {
-    revision: u64,
+pub(crate) struct Snapshot<T> {
+    pub(crate) revision: u64,
     #[serde(flatten)]
-    project: T,
+    pub(crate) project: T,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -98,7 +105,13 @@ pub enum SaveStatus {
 
 enum WriterMessage {
     Append(Vec<u8>),
-    Snapshot { bytes: Vec<u8> },
+    Snapshot {
+        bytes: Vec<u8>,
+    },
+    Version {
+        reason: VersionReason,
+        bytes: Vec<u8>,
+    },
     Close,
 }
 
@@ -160,6 +173,12 @@ fn writer_loop(
                     // The journal stays valid: lines older than the snapshot are skipped on open.
                     tracing::error!(%error, "snapshot failed");
                     report(SaveStatus::Failed);
+                }
+            }
+            Ok(WriterMessage::Version { reason, bytes }) => {
+                if let Err(error) = write_version(&folder, now_ms(), reason, &bytes) {
+                    // Only the history suffers: the project itself is saved.
+                    tracing::error!(%error, "version not kept");
                 }
             }
             Ok(WriterMessage::Close) | Err(RecvTimeoutError::Disconnected) => {
@@ -240,9 +259,13 @@ pub(crate) fn load(folder: &Path) -> Result<(Project, u64), StoreError> {
 
 pub struct ProjectSession {
     editor: Editor,
+    folder: PathBuf,
     revision: u64,
     commands_since_snapshot: u32,
     last_snapshot: Instant,
+    /// Editing time since the last version, and when the last edit came.
+    active: Duration,
+    last_edit: Option<Instant>,
     sender: Sender<WriterMessage>,
     writer: Option<JoinHandle<()>>,
 }
@@ -259,14 +282,18 @@ impl ProjectSession {
             .append(true)
             .open(folder.join(JOURNAL_FILE))?;
         let (sender, receiver) = mpsc::channel();
+        let writer_folder = folder.clone();
         let writer = thread::Builder::new()
             .name("shorted-journal".into())
-            .spawn(move || writer_loop(folder, journal, receiver, status))?;
+            .spawn(move || writer_loop(writer_folder, journal, receiver, status))?;
         Ok(Self {
             editor: Editor::new(project),
+            folder,
             revision,
             commands_since_snapshot: 0,
             last_snapshot: Instant::now(),
+            active: Duration::ZERO,
+            last_edit: None,
             sender,
             writer: Some(writer),
         })
@@ -308,9 +335,61 @@ impl ProjectSession {
     }
 
     pub fn execute(&mut self, command: &Command) -> Result<ChangeEvent, StoreError> {
+        if matches!(command, Command::Group { label, .. } if label.starts_with(AI_GROUP_PREFIX)) {
+            self.keep_version(VersionReason::BeforeAi)?;
+        }
         let event = self.editor.execute(command)?;
         self.record(command)?;
+        self.count_activity(Instant::now())?;
         Ok(event)
+    }
+
+    /// Adds the time since the last edit, unless it was a pause, and keeps a version after ten
+    /// minutes of editing.
+    fn count_activity(&mut self, now: Instant) -> Result<(), StoreError> {
+        if let Some(last) = self.last_edit {
+            let gap = now.saturating_duration_since(last);
+            if gap <= IDLE_AFTER {
+                self.active += gap;
+            }
+        }
+        self.last_edit = Some(now);
+        if self.active >= VERSION_EVERY {
+            self.keep_version(VersionReason::Activity)?;
+        }
+        Ok(())
+    }
+
+    /// Queues a copy of the project as it is now for the history.
+    pub fn keep_version(&mut self, reason: VersionReason) -> Result<(), StoreError> {
+        let bytes = snapshot_bytes(self.editor.project(), self.revision)?;
+        self.active = Duration::ZERO;
+        self.send(WriterMessage::Version { reason, bytes })
+    }
+
+    /// Puts back a version as one undoable edit, after keeping the present as a version too.
+    pub fn restore_version(&mut self, name: &str) -> Result<ChangeEvent, StoreError> {
+        let version = load_version(&self.folder, name)?;
+        self.keep_version(VersionReason::BeforeRestore)?;
+        let command = Command::Group {
+            label: "restore version".into(),
+            commands: vec![
+                Command::RestoreMedia {
+                    media: version.media,
+                },
+                Command::RestoreTimeline {
+                    timeline: Box::new(version.timeline),
+                    captions: Box::new(version.captions),
+                },
+            ],
+        };
+        let event = self.editor.execute(&command)?;
+        self.record(&command)?;
+        Ok(event)
+    }
+
+    pub fn folder(&self) -> &Path {
+        &self.folder
     }
 
     /// A gesture update: shown, never saved.
@@ -392,4 +471,36 @@ impl Drop for ProjectSession {
 
 pub fn project_folder(root: &Path, id: Id) -> PathBuf {
     root.join("projects").join(id.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+
+    use super::*;
+    use crate::versions::list_versions;
+
+    #[test]
+    fn ten_minutes_of_editing_keep_a_version_and_pauses_do_not_count() {
+        let root = tempfile::tempdir().unwrap();
+        let (status, _) = mpsc::channel();
+        let project = Project::new(Id::nil(), "t".into(), "2026-11-02T10:00:00Z".into());
+        let mut session = ProjectSession::create(root.path(), project, status).unwrap();
+        let folder = session.folder.clone();
+        let start = Instant::now();
+        session.count_activity(start).unwrap();
+        // A two-hour pause, then nine and a half minutes of edits 30 s apart.
+        let mut now = start + Duration::from_secs(7200);
+        session.count_activity(now).unwrap();
+        for _ in 0..19 {
+            now += Duration::from_secs(30);
+            session.count_activity(now).unwrap();
+        }
+        assert_eq!(session.active, Duration::from_secs(570));
+        now += Duration::from_secs(30);
+        session.count_activity(now).unwrap();
+        assert_eq!(session.active, Duration::ZERO);
+        session.close().unwrap();
+        assert_eq!(list_versions(&folder).len(), 1);
+    }
 }

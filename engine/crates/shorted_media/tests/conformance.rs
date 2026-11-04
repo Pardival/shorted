@@ -4,7 +4,7 @@
 
 use std::path::{Path, PathBuf};
 
-use shorted_media::apple::AppleBackend;
+use shorted_media::apple::{AppleBackend, decode_audio, has_audio};
 use shorted_media::{DecodedFrame, MediaBackend, VideoDecoder};
 
 fn fixture(name: &str) -> Option<PathBuf> {
@@ -93,4 +93,41 @@ fn seek_lands_on_the_first_frame_at_or_after_the_target() {
         "{}",
         frame.pts_us()
     );
+}
+
+#[test]
+fn sound_decodes_to_48_khz_stereo_at_the_right_pitch() {
+    let Some(path) = fixture("h264_audio_440hz.mov") else {
+        return;
+    };
+    assert!(has_audio(&path));
+    let samples = decode_audio(&path).unwrap();
+    let frames = samples.len() / 2;
+    assert!((frames as i64 - 96_000).abs() < 3_000, "{frames}");
+    // 440 Hz crosses zero 880 times a second: count over 1 s, past the encoder's start.
+    let left: Vec<f32> = samples
+        .iter()
+        .step_by(2)
+        .skip(24_000)
+        .take(48_000)
+        .copied()
+        .collect();
+    let crossings = left
+        .windows(2)
+        .filter(|pair| pair[0] <= 0.0 && pair[1] > 0.0)
+        .count();
+    assert!((crossings as i64 - 440).abs() <= 3, "{crossings}");
+    let peak = left
+        .iter()
+        .fold(0.0f32, |peak, value| peak.max(value.abs()));
+    assert!((0.4..0.6).contains(&peak), "{peak}");
+}
+
+#[test]
+fn a_silent_clip_has_no_sound() {
+    let Some(path) = fixture("h264_1080p_vfr.mov") else {
+        return;
+    };
+    assert!(!has_audio(&path));
+    assert!(decode_audio(&path).unwrap().is_empty());
 }

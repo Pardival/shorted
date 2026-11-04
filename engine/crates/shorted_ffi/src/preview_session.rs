@@ -51,6 +51,7 @@ impl PreviewSession {
 /// Returns a session, or null without a GPU.
 #[no_mangle]
 pub extern "C" fn shorted_preview_create(width: u32, height: u32) -> *mut PreviewSession {
+    crate::audio_output::ensure_started();
     match Compositor::new(width, height) {
         Ok(compositor) => Box::into_raw(Box::new(PreviewSession {
             composer: FrameComposer::new(compositor),

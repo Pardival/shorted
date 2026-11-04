@@ -5,12 +5,16 @@
 
 import '../error.dart';
 import '../frb_generated.dart';
+import 'audio.dart';
+import 'look.dart';
+import 'overlays.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 import 'projects.dart';
+import 'transcribe.dart';
 
-// These functions are ignored because they are not marked as `pub`: `clip_for`, `display_name`, `image_probe`, `import_one`, `location_for`, `make_media`, `media_views`, `resolve`, `video_probe`
+// These functions are ignored because they are not marked as `pub`: `audio_probe`, `cache_folders`, `clip_for`, `decode_strip`, `display_name`, `encode_strip`, `folder_bytes`, `image_probe`, `import_one`, `location_for`, `make_media`, `make_strip`, `media_views`, `read_cover`, `resolve`, `send_still`, `send_strip`, `strip_cache`, `thumbnail_size`, `thumbnail_times`, `video_probe`, `write_cover`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `eq`
 
 /// Imports files one by one: a bad file fails alone.
@@ -24,6 +28,29 @@ Future<ProjectView> placeClips({required List<String> mediaIds}) =>
 /// Points a missing media at a file with the same content.
 Future<ProjectView> relinkMedia({required String id, required String path}) =>
     RustLib.instance.api.crateApiMediaRelinkMedia(id: id, path: path);
+
+/// Copies every referenced file into the project, as one undo step (T-0106). Files that cannot
+/// be reached stay referenced.
+Future<ProjectView> collectMedia() =>
+    RustLib.instance.api.crateApiMediaCollectMedia();
+
+/// Bytes used by thumbnails and waveforms, which can all be made again.
+Future<BigInt> cacheBytes({required String root}) =>
+    RustLib.instance.api.crateApiMediaCacheBytes(root: root);
+
+/// Removes every cache. Projects and media are left alone.
+Future<void> clearCaches({required String root}) =>
+    RustLib.instance.api.crateApiMediaClearCaches(root: root);
+
+/// The picture of a project's first clip, once its filmstrip has been made.
+Future<ThumbnailView?> projectCover({
+  required String root,
+  required String id,
+}) => RustLib.instance.api.crateApiMediaProjectCover(root: root, id: id);
+
+/// Streams the thumbnails of a video or image, in time order, from a thread of its own.
+Stream<ThumbnailView> mediaFilmstrip({required String mediaId}) =>
+    RustLib.instance.api.crateApiMediaMediaFilmstrip(mediaId: mediaId);
 
 /// One file of an import: the others go on when one fails.
 class ImportOutcome {
@@ -80,3 +107,31 @@ class MediaItemView {
 }
 
 enum MediaKindView { video, image, animatedImage, audio }
+
+class ThumbnailView {
+  final PlatformInt64 timeUs;
+  final int width;
+  final int height;
+  final Uint8List rgba;
+
+  const ThumbnailView({
+    required this.timeUs,
+    required this.width,
+    required this.height,
+    required this.rgba,
+  });
+
+  @override
+  int get hashCode =>
+      timeUs.hashCode ^ width.hashCode ^ height.hashCode ^ rgba.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ThumbnailView &&
+          runtimeType == other.runtimeType &&
+          timeUs == other.timeUs &&
+          width == other.width &&
+          height == other.height &&
+          rgba == other.rgba;
+}

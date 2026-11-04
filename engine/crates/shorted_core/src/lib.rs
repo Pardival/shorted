@@ -2,6 +2,7 @@
 
 #![deny(unsafe_op_in_unsafe_fn)]
 
+pub mod captions;
 pub mod command;
 pub mod editor;
 pub mod error;

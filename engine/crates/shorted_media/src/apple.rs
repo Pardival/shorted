@@ -2,13 +2,14 @@
 //! pixel buffers that the renderer can sample without a CPU copy.
 
 use std::path::Path;
+use std::ptr;
 
 use objc2::rc::{Retained, autoreleasepool};
 use objc2::runtime::AnyObject;
 use objc2::runtime::Bool;
 use objc2_av_foundation::{
-    AVAssetReader, AVAssetReaderStatus, AVAssetReaderTrackOutput, AVAssetTrack, AVMediaTypeVideo,
-    AVURLAsset,
+    AVAssetReader, AVAssetReaderStatus, AVAssetReaderTrackOutput, AVAssetTrack, AVMediaTypeAudio,
+    AVMediaTypeVideo, AVURLAsset,
 };
 use objc2_core_foundation::CFRetained;
 use objc2_core_media::{CMSampleBuffer, CMTime, CMTimeRange, kCMTimePositiveInfinity};
@@ -20,12 +21,15 @@ use objc2_foundation::{
     NSData, NSDictionary, NSNumber, NSString, NSURL, NSURLBookmarkCreationOptions,
     NSURLBookmarkResolutionOptions,
 };
-use objc2_io_surface::IOSurfaceRef;
+use objc2_io_surface::{IOSurfaceLockOptions, IOSurfaceRef};
 
-use crate::{DecodedFrame, MediaBackend, MediaError, MediaInfo, VideoDecoder};
+use crate::{DecodedFrame, MediaBackend, MediaError, MediaInfo, VideoDecoder, thumbnail_rgba};
 
 const BGRA_FOURCC: u32 = 0x4247_5241;
 const TIMESCALE: i32 = 1_000_000;
+const LINEAR_PCM_FOURCC: u32 = 0x6C70_636D;
+const AUDIO_SAMPLE_RATE: u32 = 48_000;
+const AUDIO_CHANNELS: u32 = 2;
 
 pub struct AppleBackend;
 
@@ -242,5 +246,199 @@ impl VideoDecoder for AppleDecoder {
 
     fn seek(&mut self, time_us: i64) -> Result<(), MediaError> {
         autoreleasepool(|_| self.start_at(time_us))
+    }
+}
+
+/// True if the file has a sound track.
+pub fn has_audio(path: &Path) -> bool {
+    autoreleasepool(|_| {
+        let url = NSURL::fileURLWithPath(&NSString::from_str(&path.to_string_lossy()));
+        // SAFETY: valid URL, no options; the media type is an AVFoundation static.
+        unsafe {
+            let asset = AVURLAsset::URLAssetWithURL_options(&url, None);
+            let Some(media_type) = AVMediaTypeAudio else {
+                return false;
+            };
+            #[allow(deprecated)]
+            let tracks = asset.tracksWithMediaType(media_type);
+            tracks.firstObject().is_some()
+        }
+    })
+}
+
+/// Length of a sound file with at least one audio track.
+pub fn audio_duration_us(path: &Path) -> Result<i64, MediaError> {
+    if !has_audio(path) {
+        return Err(MediaError::OpenFailed);
+    }
+    autoreleasepool(|_| {
+        let url = NSURL::fileURLWithPath(&NSString::from_str(&path.to_string_lossy()));
+        // SAFETY: valid URL, no options; a plain property read.
+        unsafe {
+            let asset = AVURLAsset::URLAssetWithURL_options(&url, None);
+            #[allow(deprecated)]
+            let duration = asset.duration();
+            Ok(seconds_to_us(duration.seconds()))
+        }
+    })
+}
+
+fn pcm_settings() -> Retained<NSDictionary<NSString, AnyObject>> {
+    // Values of AVFAudio's keys, a framework the bindings here do not cover.
+    let keys: Vec<Retained<NSString>> = [
+        "AVFormatIDKey",
+        "AVSampleRateKey",
+        "AVNumberOfChannelsKey",
+        "AVLinearPCMBitDepthKey",
+        "AVLinearPCMIsFloatKey",
+        "AVLinearPCMIsBigEndianKey",
+        "AVLinearPCMIsNonInterleaved",
+    ]
+    .map(NSString::from_str)
+    .into();
+    let format = NSNumber::new_u32(LINEAR_PCM_FOURCC);
+    let rate = NSNumber::new_u32(AUDIO_SAMPLE_RATE);
+    let channels = NSNumber::new_u32(AUDIO_CHANNELS);
+    let bits = NSNumber::new_u32(32);
+    let yes = NSNumber::new_bool(true);
+    let no = NSNumber::new_bool(false);
+    let values: [&AnyObject; 7] = [&format, &rate, &channels, &bits, &yes, &no, &no];
+    let references: Vec<&NSString> = keys.iter().map(|key| &**key).collect();
+    NSDictionary::from_slices(&references, &values)
+}
+
+/// Decodes the whole sound track to interleaved stereo float at 48 kHz. Empty without a track.
+pub fn decode_audio(path: &Path) -> Result<Vec<f32>, MediaError> {
+    autoreleasepool(|_| {
+        let url = NSURL::fileURLWithPath(&NSString::from_str(&path.to_string_lossy()));
+        // SAFETY: objects are configured before reading starts; each block buffer holds
+        // `length` bytes, and the output vector has room for them.
+        unsafe {
+            let asset = AVURLAsset::URLAssetWithURL_options(&url, None);
+            let media_type = AVMediaTypeAudio.ok_or(MediaError::OpenFailed)?;
+            #[allow(deprecated)]
+            let tracks = asset.tracksWithMediaType(media_type);
+            let Some(track) = tracks.firstObject() else {
+                return Ok(Vec::new());
+            };
+            let reader = AVAssetReader::assetReaderWithAsset_error(&asset)
+                .map_err(|_| MediaError::OpenFailed)?;
+            let settings = pcm_settings();
+            let output = AVAssetReaderTrackOutput::assetReaderTrackOutputWithTrack_outputSettings(
+                &track,
+                Some(&settings),
+            );
+            reader.addOutput(&output);
+            if !reader.startReading() {
+                return Err(MediaError::OpenFailed);
+            }
+            let mut samples: Vec<f32> = Vec::new();
+            while let Some(sample) = output.copyNextSampleBuffer() {
+                let Some(block) = sample.data_buffer() else {
+                    continue;
+                };
+                let length = block.data_length();
+                let start = samples.len();
+                samples.resize(start + length / size_of::<f32>(), 0.0);
+                let target = std::ptr::NonNull::new(samples[start..].as_mut_ptr().cast());
+                let target = target.ok_or(MediaError::DecodeFailed)?;
+                if block.copy_data_bytes(0, length, target) != 0 {
+                    return Err(MediaError::DecodeFailed);
+                }
+            }
+            if reader.status() == AVAssetReaderStatus::Failed {
+                return Err(MediaError::DecodeFailed);
+            }
+            Ok(samples)
+        }
+    })
+}
+
+/// Decodes a frame at each of `times_us` into a thumbnail, stopping when `each` returns false.
+/// Sits on the decoder's own seek, so a thumbnail costs one keyframe decode.
+pub fn filmstrip(
+    path: &Path,
+    times_us: impl IntoIterator<Item = i64>,
+    rotation_degrees: i32,
+    size: (usize, usize),
+    mut each: impl FnMut(i64, Vec<u8>) -> bool,
+) -> Result<(), MediaError> {
+    let mut decoder = AppleBackend.open_decoder(path)?;
+    for time_us in times_us {
+        decoder.seek(time_us)?;
+        let Some(frame) = decoder.next_frame()? else {
+            break;
+        };
+        let surface = frame.surface().ok_or(MediaError::DecodeFailed)?;
+        let options = IOSurfaceLockOptions::ReadOnly;
+        // SAFETY: the surface is alive; the seed is optional. The slice covers the locked
+        // surface, and is not used after the unlock.
+        let pixels = unsafe {
+            if surface.lock(options, ptr::null_mut()) != 0 {
+                return Err(MediaError::DecodeFailed);
+            }
+            let (stride, height) = (surface.bytes_per_row(), surface.height());
+            let bytes = std::slice::from_raw_parts(
+                surface.base_address().as_ptr().cast::<u8>(),
+                stride * height,
+            );
+            let pixels = thumbnail_rgba(
+                bytes,
+                stride,
+                (surface.width(), height),
+                rotation_degrees,
+                size,
+            );
+            surface.unlock(options, ptr::null_mut());
+            pixels
+        };
+        if !each(frame.pts_us(), pixels) {
+            break;
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod filmstrip_tests {
+    use super::*;
+
+    /// The fixtures come from scripts/make_fixtures.swift.
+    #[test]
+    fn real_clips_give_thumbnails_that_change_over_time() {
+        let root = concat!(env!("CARGO_MANIFEST_DIR"), "/../../fixtures/media/");
+        for (clip, rotation) in [("h264_1080p60.mov", 0), ("h264_1080p60_rotated.mov", 90)] {
+            let path = Path::new(root).join(clip);
+            if !path.exists() {
+                return;
+            }
+            let mut strips = Vec::new();
+            filmstrip(&path, [0, 1_000_000], rotation, (54, 96), |time, rgba| {
+                assert_eq!(rgba.len(), 54 * 96 * 4);
+                strips.push((time, rgba));
+                true
+            })
+            .unwrap();
+            assert_eq!(strips.len(), 2, "{clip}");
+            assert!(strips[1].0 >= 1_000_000, "{clip}");
+            assert!(strips[0].1.chunks(4).any(|p| p[..3] != [0, 0, 0]), "{clip}");
+            assert_ne!(strips[0].1, strips[1].1, "{clip}");
+        }
+    }
+
+    #[test]
+    fn a_consumer_can_stop_the_strip() {
+        let root = concat!(env!("CARGO_MANIFEST_DIR"), "/../../fixtures/media/");
+        let path = Path::new(root).join("h264_1080p60.mov");
+        if !path.exists() {
+            return;
+        }
+        let mut seen = 0;
+        filmstrip(&path, [0, 1_000_000, 2_000_000], 0, (4, 4), |_, _| {
+            seen += 1;
+            false
+        })
+        .unwrap();
+        assert_eq!(seen, 1);
     }
 }

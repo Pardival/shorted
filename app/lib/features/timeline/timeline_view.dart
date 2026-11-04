@@ -1,10 +1,16 @@
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../design_system/tokens.g.dart';
+import '../../l10n/generated/app_localizations.dart';
 import 'timeline_layout.dart';
+import 'filmstrips.dart';
 import 'timeline_painter.dart';
+import 'waveforms.dart';
 
 const _headerWidth = 88.0;
 const _rulerHeight = 24.0;
@@ -13,7 +19,26 @@ const _wheelZoomSpeed = 0.002;
 const _handleWidth = 14.0;
 const _snapPixels = 8.0;
 
-enum _DragKind { scrub, trimStart, trimEnd, move }
+enum _DragKind {
+  scrub,
+  trimStart,
+  trimEnd,
+  move,
+  keyframe,
+
+  /// A mouse drag on the tracks moves the view, like a hand (T-1208).
+  pan,
+
+  /// In range mode, a drag on the tracks selects the part between its ends.
+  range,
+
+  /// An end of the selected range, dragged.
+  rangeStart,
+  rangeEnd,
+}
+
+const _zoomStep = 1.5;
+const _controlSize = 36.0;
 
 /// Multi-track timeline. Collapsed and expanded modes come with T-0207.
 class TimelineView extends StatefulWidget {
@@ -28,6 +53,20 @@ class TimelineView extends StatefulWidget {
     this.onSelect,
     this.onTrim,
     this.onMove,
+    this.filmstrips,
+    this.waveforms,
+    this.rangeUs,
+    this.onRange,
+    this.zoomRequests,
+    this.collapsed = false,
+    this.onTrackMenu,
+    this.onAudioMove,
+    this.onAudioTrim,
+    this.onOverlayTiming,
+    this.selectedId,
+    this.selectedKeyframe,
+    this.onKeyframeTap,
+    this.onKeyframeMove,
   });
 
   final List<TimelineTrack> tracks;
@@ -42,6 +81,42 @@ class TimelineView extends StatefulWidget {
 
   /// The selected item dragged to a new position among its track.
   final void Function(TimelineItem item, int toIndex)? onMove;
+  final Filmstrips? filmstrips;
+  final Waveforms? waveforms;
+
+  /// The range selected on the ruler, owned by the parent.
+  final (int, int)? rangeUs;
+  final ValueChanged<(int, int)?>? onRange;
+
+  /// Each value multiplies the zoom, around the playhead.
+  final Stream<double>? zoomRequests;
+
+  /// Phone layout: the Video track and a thin strip per other track.
+  final bool collapsed;
+
+  /// A track header was tapped: its index, and where, for a menu.
+  final void Function(int index, Offset globalPosition)? onTrackMenu;
+
+  /// A sound dragged to a new time, and maybe to another sound track.
+  final void Function(TimelineItem item, int startUs, TimelineTrack track)?
+  onAudioMove;
+
+  /// A dragged edge of the selected sound: true for its start, the change in time.
+  final void Function(TimelineItem item, bool start, int deltaUs)? onAudioTrim;
+
+  /// An overlay moved or one of its edges dragged: its new range.
+  final void Function(TimelineItem item, int startUs, int endUs)?
+  onOverlayTiming;
+
+  /// Set when something else selects an item, such as a tap on the preview.
+  final String? selectedId;
+
+  /// The keyframe picked on the selected element.
+  final int? selectedKeyframe;
+
+  /// A keyframe diamond tapped, or dragged from one time to another.
+  final void Function(TimelineItem item, int timeUs)? onKeyframeTap;
+  final void Function(TimelineItem item, int fromUs, int toUs)? onKeyframeMove;
 
   @override
   State<TimelineView> createState() => _TimelineViewState();
@@ -64,11 +139,90 @@ class _TimelineViewState extends State<TimelineView> {
   (int, int, int)? _dragPreview;
   int? _lastSnap;
   var _pointers = 0;
+  int? _rangeAnchor;
+  Offset? _panFrom;
+
+  /// While on, a drag on the tracks selects a part instead of moving things.
+  var _rangeMode = false;
+  int? _keyframeFrom;
+  (int, int)? _keyframeDrag;
+  StreamSubscription<double>? _zoomRequests;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedId = widget.selectedId;
+    _zoomRequests = widget.zoomRequests?.listen(_zoomBy);
+  }
+
+  @override
+  void didUpdateWidget(TimelineView old) {
+    super.didUpdateWidget(old);
+    final selected = widget.selectedId;
+    if (selected != null && selected != old.selectedId) _selectedId = selected;
+  }
+
+  @override
+  void dispose() {
+    unawaited(_zoomRequests?.cancel());
+    super.dispose();
+  }
+
+  void _zoomBy(double factor) {
+    final focusX = _layout.xForTime(widget.playheadUs.value);
+    setState(() => _layout = _layout.zoomed(factor, focusX));
+  }
+
+  int _clampedTime(double x) =>
+      _layout.timeForX(x).clamp(0, widget.durationUs).toInt();
+
+  void _rangeStart(LongPressStartDetails details) {
+    if (details.localPosition.dy >= _rulerHeight) return;
+    _rangeAnchor = _clampedTime(details.localPosition.dx);
+  }
+
+  void _rangeMove(LongPressMoveUpdateDetails details) {
+    final anchor = _rangeAnchor;
+    if (anchor == null) return;
+    final time = _clampedTime(details.localPosition.dx);
+    if (time == anchor) return;
+    widget.onRange?.call(time < anchor ? (time, anchor) : (anchor, time));
+  }
+
+  double _viewportHeight = 0;
+  double? _headerDragY;
+
+  int? get _pinnedIndex {
+    final index = widget.tracks.indexWhere((t) => t.kind == TrackKind.video);
+    return index < 0 ? null : index;
+  }
+
+  /// The layout for the current tracks: they come and go, and the widget can resize.
+  TimelineLayout get _current {
+    final layout = _layout.copyWith(
+      pinnedIndex: _pinnedIndex,
+      collapsed: widget.collapsed,
+    );
+    final most = layout.maxScrollY(widget.tracks.length, _viewportHeight);
+    return layout.copyWith(scrollY: layout.scrollY.clamp(0, most));
+  }
+
+  void _scrollBy(double dy) {
+    final most = _current.maxScrollY(widget.tracks.length, _viewportHeight);
+    setState(() {
+      _layout = _current.copyWith(
+        scrollY: (_current.scrollY + dy).clamp(0, most),
+      );
+    });
+  }
 
   void _pointerDown(PointerDownEvent event) {
+    if (event.localPosition.dx < _layout.headerWidth) {
+      _headerDragY = event.localPosition.dy;
+    }
     _pointers++;
     if (_pointers == 1) {
-      _beginDrag(event.localPosition);
+      _beginDrag(event.localPosition, event.kind);
     } else {
       // A second finger means zoom: the edit is dropped.
       setState(() => _dragPreview = null);
@@ -78,24 +232,151 @@ class _TimelineViewState extends State<TimelineView> {
   }
 
   void _pointerGone(PointerEvent event) {
+    _headerDragY = null;
     _pointers--;
-    if (_drag != _DragKind.scrub) _endDrag();
+    _panFrom = null;
+    if (_isRangeDrag || _drag == _DragKind.pan) {
+      _rangeAnchor = null;
+    } else if (_drag != _DragKind.scrub) {
+      _endDrag();
+    }
     _drag = _DragKind.scrub;
   }
 
+  bool get _isRangeDrag =>
+      _drag == _DragKind.range ||
+      _drag == _DragKind.rangeStart ||
+      _drag == _DragKind.rangeEnd;
+
+  void _pan(Offset position) {
+    final from = _panFrom;
+    if (from == null) return;
+    _panFrom = position;
+    final delta = position - from;
+    final deltaUs = (delta.dx / _layout.pixelsPerSecond * 1e6).round();
+    final most = _current.maxScrollY(widget.tracks.length, _viewportHeight);
+    setState(() {
+      _layout = _current.copyWith(
+        scrollUs: math.max(0, _layout.scrollUs - deltaUs),
+        scrollY: (_current.scrollY - delta.dy).clamp(0, most),
+      );
+    });
+  }
+
+  void _dragRange(double x) {
+    final time = _clampedTime(x);
+    final range = widget.rangeUs;
+    final (int, int)? next = switch (_drag) {
+      _DragKind.range => () {
+        final anchor = _rangeAnchor;
+        if (anchor == null || anchor == time) return null;
+        return time < anchor ? (time, anchor) : (anchor, time);
+      }(),
+      _DragKind.rangeStart when range != null =>
+        time < range.$2 ? (time, range.$2) : null,
+      _DragKind.rangeEnd when range != null =>
+        time > range.$1 ? (range.$1, time) : null,
+      _ => null,
+    };
+    if (next != null) widget.onRange?.call(next);
+  }
+
+  /// Shows the whole project in the width there is.
+  void _fit() {
+    final width = context.size?.width ?? 0;
+    final seconds = widget.durationUs / 1e6;
+    if (seconds <= 0 || width <= _current.headerWidth) return;
+    final target = (width - _current.headerWidth - _handleWidth) / seconds;
+    setState(() {
+      _layout = _layout
+          .copyWith(scrollUs: 0)
+          .zoomed(target / _layout.pixelsPerSecond, _current.headerWidth);
+    });
+  }
+
+  Widget _controls(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    Widget button(
+      IconData icon,
+      String tooltip,
+      VoidCallback onPressed, {
+      bool on = false,
+    }) => IconButton(
+      icon: Icon(icon, size: 18),
+      tooltip: tooltip,
+      onPressed: onPressed,
+      isSelected: on,
+      color: on ? ShortedColors.onAccent : ShortedColors.text,
+      style: IconButton.styleFrom(
+        backgroundColor: on ? ShortedColors.accent : null,
+      ),
+      constraints: const BoxConstraints.tightFor(
+        width: _controlSize,
+        height: _controlSize,
+      ),
+    );
+    return Material(
+      color: ShortedColors.surfaceRaised.withValues(alpha: 0.92),
+      borderRadius: BorderRadius.circular(ShortedRadius.pill),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          button(
+            Icons.highlight_alt,
+            l10n.selectPart,
+            () => setState(() => _rangeMode = !_rangeMode),
+            on: _rangeMode,
+          ),
+          button(Icons.zoom_out, l10n.zoomOut, () => _zoomBy(1 / _zoomStep)),
+          button(Icons.zoom_in, l10n.zoomIn, () => _zoomBy(_zoomStep)),
+          button(Icons.fit_screen_outlined, l10n.zoomFit, _fit),
+        ],
+      ),
+    );
+  }
+
   /// Decides at touch down what this drag does: only the selected item can be edited.
-  void _beginDrag(Offset position) {
+  void _beginDrag(Offset position, PointerDeviceKind device) {
     _drag = _DragKind.scrub;
-    final index = _layout.trackAt(position.dy, widget.tracks.length);
+    final onTracks =
+        position.dy >= _rulerHeight && position.dx >= _current.headerWidth;
+    final range = widget.rangeUs;
+    if (range != null && position.dx >= _current.headerWidth) {
+      final slop = (_handleWidth / _layout.pixelsPerSecond * 1e6).round();
+      final time = _layout.timeForX(position.dx);
+      if ((time - range.$1).abs() <= slop) {
+        _drag = _DragKind.rangeStart;
+        return;
+      }
+      if ((time - range.$2).abs() <= slop) {
+        _drag = _DragKind.rangeEnd;
+        return;
+      }
+    }
+    if (onTracks && _rangeMode) {
+      _drag = _DragKind.range;
+      _rangeAnchor = _clampedTime(position.dx);
+      return;
+    }
+    if (onTracks && device == PointerDeviceKind.mouse) {
+      _drag = _DragKind.pan;
+      _panFrom = position;
+    }
+    final index = _current.trackAt(position.dy, widget.tracks.length);
     if (index == null || _selectedId == null) return;
+    if (widget.tracks[index].locked) return;
     final time = _layout.timeForX(position.dx);
     final slop = (_handleWidth / _layout.pixelsPerSecond * 1e6).round();
     for (final item in widget.tracks[index].items) {
-      if (item.id != _selectedId) continue;
+      if (item.id != _selectedId || item.locked) continue;
       _dragItem = item;
       _dragTrack = index;
       _dragStartX = position.dx;
-      if ((time - item.startUs).abs() <= slop) {
+      final key = _keyframeNear(item, time);
+      if (key != null) {
+        _drag = _DragKind.keyframe;
+        _keyframeFrom = key;
+      } else if ((time - item.startUs).abs() <= slop) {
         _drag = _DragKind.trimStart;
       } else if ((time - item.endUs).abs() <= slop) {
         _drag = _DragKind.trimEnd;
@@ -103,6 +384,20 @@ class _TimelineViewState extends State<TimelineView> {
         _drag = _DragKind.move;
       }
     }
+  }
+
+  /// A keyframe of `item` within half a handle of `timeUs`.
+  int? _keyframeNear(TimelineItem item, int timeUs) {
+    final slop = (_handleWidth / 2 / _layout.pixelsPerSecond * 1e6).round();
+    int? nearest;
+    for (final key in item.keyframes) {
+      final distance = (key - timeUs).abs();
+      if (distance <= slop &&
+          (nearest == null || distance < (nearest - timeUs).abs())) {
+        nearest = key;
+      }
+    }
+    return nearest;
   }
 
   int _snapped(int timeUs, TimelineItem item) {
@@ -120,9 +415,28 @@ class _TimelineViewState extends State<TimelineView> {
     return snapped;
   }
 
-  void _updateDrag(double x) {
+  bool _isSound(int index) {
+    final kind = widget.tracks[index].kind;
+    return kind == TrackKind.audio || kind == TrackKind.voiceOver;
+  }
+
+  void _updateDrag(double x, double y) {
     final item = _dragItem;
     if (item == null) return;
+    final from = _keyframeFrom;
+    if (_drag == _DragKind.keyframe && from != null) {
+      final deltaUs = ((x - _dragStartX) / _layout.pixelsPerSecond * 1e6)
+          .round();
+      final to = (from + deltaUs).clamp(item.startUs, item.endUs).toInt();
+      setState(() => _keyframeDrag = (from, to));
+      return;
+    }
+    if (_drag == _DragKind.move && _isSound(_dragTrack)) {
+      final over = _current.trackAt(y, widget.tracks.length);
+      if (over != null && _isSound(over) && !widget.tracks[over].locked) {
+        _dragTrack = over;
+      }
+    }
     final deltaUs = ((x - _dragStartX) / _layout.pixelsPerSecond * 1e6).round();
     setState(() {
       _dragPreview = switch (_drag) {
@@ -145,12 +459,48 @@ class _TimelineViewState extends State<TimelineView> {
   }
 
   void _endDrag() {
+    final keyDrag = _keyframeDrag;
+    if (_drag == _DragKind.keyframe) {
+      final item = _dragItem;
+      setState(() => _keyframeDrag = null);
+      _keyframeFrom = null;
+      _dragItem = null;
+      if (item != null && keyDrag != null && keyDrag.$1 != keyDrag.$2) {
+        widget.onKeyframeMove?.call(item, keyDrag.$1, keyDrag.$2);
+      }
+      return;
+    }
     final item = _dragItem;
     final preview = _dragPreview;
     setState(() => _dragPreview = null);
     _dragItem = null;
     if (item == null || preview == null) return;
     final (_, start, end) = preview;
+    if (widget.tracks[_dragTrack].kind == TrackKind.widgets) {
+      if (_drag == _DragKind.scrub) return;
+      final shift = start < 0 ? -start : 0;
+      widget.onOverlayTiming?.call(item, start + shift, end + shift);
+      return;
+    }
+    if (_isSound(_dragTrack)) {
+      switch (_drag) {
+        case _DragKind.trimStart:
+          widget.onAudioTrim?.call(item, true, start - item.startUs);
+        case _DragKind.trimEnd:
+          widget.onAudioTrim?.call(item, false, end - item.endUs);
+        case _DragKind.move:
+          final track = widget.tracks[_dragTrack];
+          widget.onAudioMove?.call(item, start < 0 ? 0 : start, track);
+        case _DragKind.scrub ||
+            _DragKind.keyframe ||
+            _DragKind.pan ||
+            _DragKind.range ||
+            _DragKind.rangeStart ||
+            _DragKind.rangeEnd:
+          break;
+      }
+      return;
+    }
     switch (_drag) {
       case _DragKind.trimStart:
         widget.onTrim?.call(item, true, start - item.startUs);
@@ -164,7 +514,12 @@ class _TimelineViewState extends State<TimelineView> {
               (other.startUs + other.endUs) ~/ 2 < centre;
         }).length;
         if (to != items.indexOf(item)) widget.onMove?.call(item, to);
-      case _DragKind.scrub:
+      case _DragKind.scrub ||
+          _DragKind.keyframe ||
+          _DragKind.pan ||
+          _DragKind.range ||
+          _DragKind.rangeStart ||
+          _DragKind.rangeEnd:
         break;
     }
   }
@@ -178,14 +533,33 @@ class _TimelineViewState extends State<TimelineView> {
 
   void _tap(TapUpDetails details) {
     final position = details.localPosition;
-    final index = _layout.trackAt(position.dy, widget.tracks.length);
+    if (widget.rangeUs != null) widget.onRange?.call(null);
+    if (position.dx < _current.headerWidth) {
+      final index = _current.trackAt(position.dy, widget.tracks.length);
+      if (index != null) {
+        widget.onTrackMenu?.call(index, details.globalPosition);
+      }
+      return;
+    }
+    final index = _current.trackAt(position.dy, widget.tracks.length);
     if (index == null) {
       _scrub(position.dx);
       return;
     }
-    final item = _layout.itemAt(
-      widget.tracks[index],
-      _layout.timeForX(position.dx),
+    final time = _layout.timeForX(position.dx);
+    final track = widget.tracks[index];
+    for (final selected in track.items) {
+      if (selected.id != _selectedId) continue;
+      final key = _keyframeNear(selected, time);
+      if (key != null) {
+        widget.onKeyframeTap?.call(selected, key);
+        return;
+      }
+    }
+    final item = _current.itemAt(
+      track,
+      time,
+      lane: _current.laneAt(position.dy, index, track.lanes),
     );
     setState(() => _selectedId = item?.id);
     widget.onSelect?.call(item);
@@ -193,24 +567,57 @@ class _TimelineViewState extends State<TimelineView> {
 
   void _onPointerSignal(PointerSignalEvent event) {
     if (event is! PointerScrollEvent) return;
-    final factor = 1 - event.scrollDelta.dy * _wheelZoomSpeed;
-    setState(() => _layout = _layout.zoomed(factor, event.localPosition.dx));
+    final keys = HardwareKeyboard.instance;
+    final zooming = keys.isMetaPressed || keys.isControlPressed;
+    final overflow = _current.maxScrollY(widget.tracks.length, _viewportHeight);
+    if (event.scrollDelta.dx != 0 && !zooming) {
+      final deltaUs = event.scrollDelta.dx / _layout.pixelsPerSecond * 1e6;
+      final next = (_layout.scrollUs + deltaUs).round();
+      setState(() => _layout = _layout.copyWith(scrollUs: next < 0 ? 0 : next));
+    } else if (overflow > 0 && !zooming) {
+      _scrollBy(event.scrollDelta.dy);
+    } else {
+      final factor = 1 - event.scrollDelta.dy * _wheelZoomSpeed;
+      setState(() => _layout = _layout.zoomed(factor, event.localPosition.dx));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, box) {
+        _viewportHeight = box.maxHeight;
+        return _gestures(context);
+      },
+    );
+  }
+
+  Widget _gestures(BuildContext context) {
     return Listener(
       // Edits use raw pointers: the scale gesture only starts after 36 pixels, far too much
       // for a precise trim.
       onPointerDown: _pointerDown,
       onPointerMove: (event) {
-        if (_drag != _DragKind.scrub) _updateDrag(event.localPosition.dx);
+        final headerY = _headerDragY;
+        if (headerY != null) {
+          _scrollBy(headerY - event.localPosition.dy);
+          _headerDragY = event.localPosition.dy;
+        } else if (_drag == _DragKind.pan) {
+          _pan(event.localPosition);
+        } else if (_isRangeDrag) {
+          _dragRange(event.localPosition.dx);
+        } else if (_drag != _DragKind.scrub) {
+          _updateDrag(event.localPosition.dx, event.localPosition.dy);
+        }
       },
       onPointerUp: _pointerGone,
       onPointerCancel: _pointerGone,
       onPointerSignal: _onPointerSignal,
       child: GestureDetector(
         onTapUp: _tap,
+        onLongPressStart: _rangeStart,
+        onLongPressMoveUpdate: _rangeMove,
+        onLongPressEnd: (_) => _rangeAnchor = null,
         onScaleStart: (_) => _pinchStart = _layout,
         onScaleUpdate: (details) {
           final start = _pinchStart;
@@ -230,23 +637,34 @@ class _TimelineViewState extends State<TimelineView> {
               child: CustomPaint(
                 key: TimelineView.tracksKey,
                 painter: TimelinePainter(
-                  layout: _layout,
+                  layout: _current,
                   tracks: widget.tracks,
                   durationUs: widget.durationUs,
                   selectedId: _selectedId,
                   textDirection: Directionality.of(context),
                   dragPreview: _dragPreview,
+                  filmstrips: widget.filmstrips,
+                  waveforms: widget.waveforms,
+                  rangeUs: widget.rangeUs,
+                  selectedKeyframe: widget.selectedKeyframe,
+                  keyframeDrag: _keyframeDrag,
                 ),
               ),
             ),
             RepaintBoundary(
               child: CustomPaint(
                 painter: PlayheadPainter(
-                  layout: _layout,
+                  layout: _current,
                   playheadUs: widget.playheadUs,
                 ),
               ),
             ),
+            if (!widget.collapsed)
+              Positioned(
+                right: ShortedSpace.s,
+                bottom: ShortedSpace.s,
+                child: _controls(context),
+              ),
           ],
         ),
       ),

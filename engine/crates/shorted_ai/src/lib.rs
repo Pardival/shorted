@@ -2,6 +2,11 @@
 
 #![deny(unsafe_op_in_unsafe_fn)]
 
+pub mod plan;
+pub mod prompt;
+pub mod providers;
+pub mod speech;
+
 /// Name of this crate, used by the workspace smoke tests.
 pub const CRATE_NAME: &str = "shorted_ai";
 

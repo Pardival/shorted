@@ -86,6 +86,10 @@ pub enum Command {
         id: Id,
         crop: Crop,
     },
+    SetImageMotion {
+        id: Id,
+        motion: Option<KenBurns>,
+    },
     SetColor {
         id: Id,
         color: ColorAdjust,
@@ -130,6 +134,14 @@ pub enum Command {
     SetDucking {
         id: Id,
         ducking: Option<Ducking>,
+    },
+    SetAudioLoop {
+        id: Id,
+        looped: bool,
+    },
+    SetAudioRole {
+        id: Id,
+        role: AudioRole,
     },
     SetClipAudio {
         id: Id,
@@ -196,6 +208,11 @@ pub enum Command {
     UpdateOverlayTransform {
         id: Id,
         base: Transform,
+    },
+    /// A shape's fill, or a picture's tint; `None` gives a picture its own colours back.
+    SetOverlayColor {
+        id: Id,
+        color: Option<Color>,
     },
     SetOverlayTiming {
         id: Id,
@@ -543,6 +560,7 @@ fn mutate(command: &Command, project: &mut Project) -> Result<Command, ModelErro
         }
         SetSpeed { id, speed } => edit_clip(project, id, |clip| clip.speed = speed)?,
         SetCrop { id, crop } => edit_clip(project, id, |clip| clip.crop = crop)?,
+        SetImageMotion { id, motion } => edit_clip(project, id, |clip| clip.image_motion = motion)?,
         SetColor { id, color } => edit_clip(project, id, |clip| clip.color = color)?,
 
         SetTransition {
@@ -616,6 +634,8 @@ fn mutate(command: &Command, project: &mut Project) -> Result<Command, ModelErro
             item.source_out_us = source_out_us;
         })?,
         SetVolume { id, volume } => edit_audio(project, id, |item| item.volume = volume)?,
+        SetAudioLoop { id, looped } => edit_audio(project, id, |item| item.loop_ = looped)?,
+        SetAudioRole { id, role } => edit_audio(project, id, |item| item.role = role)?,
         SetFades {
             id,
             fade_in_us,
@@ -744,6 +764,15 @@ fn mutate(command: &Command, project: &mut Project) -> Result<Command, ModelErro
             inverse
         }
         UpdateOverlayTransform { id, base } => edit_overlay(project, id, |o| o.base = base)?,
+        SetOverlayColor { id, color } => edit_overlay(project, id, |o| match &mut o.kind {
+            OverlayKind::Shape { fill, .. } => {
+                if let Some(color) = color {
+                    *fill = color;
+                }
+            }
+            OverlayKind::Image { .. } | OverlayKind::AnimatedImage { .. } => o.tint = color,
+            OverlayKind::Video { .. } | OverlayKind::Text { .. } => {}
+        })?,
         SetOverlayTiming {
             id,
             start_us,

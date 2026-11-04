@@ -1,10 +1,18 @@
 //! Public API exposed to Dart. Generated bindings live in `app/lib/bridge/`.
 
+pub mod ai;
+pub mod arrange;
+pub mod audio;
+pub mod brand_kit;
 pub mod clips;
 pub mod export;
+pub mod library;
+pub mod look;
 pub mod media;
+pub mod overlays;
 pub mod preview;
 pub mod projects;
+pub mod transcribe;
 
 use std::path::Path;
 use std::thread;

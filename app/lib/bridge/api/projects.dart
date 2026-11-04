@@ -5,12 +5,17 @@
 
 import '../error.dart';
 import '../frb_generated.dart';
+import 'audio.dart';
+import 'look.dart';
 import 'media.dart';
+import 'overlays.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `active_folder`, `close_active`, `lock`, `now`, `on_command_thread`, `parse_id`, `save_channel`, `summary`, `track_view`, `view_of`, `with_active`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `clone`, `eq`
+import 'transcribe.dart';
+
+// These functions are ignored because they are not marked as `pub`: `active_folder`, `caption_items`, `close_active`, `lock`, `now`, `on_command_thread`, `parse_id`, `save_channel`, `summary`, `track_view`, `view_of`, `with_active`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `eq`, `eq`
 
 /// The save state of the open project, for "Saved / Saving…". One listener at a time.
 Stream<SaveStateView> saveEvents() =>
@@ -45,6 +50,26 @@ Future<String> duplicateProject({
   title: title,
 );
 
+/// Writes a project, closed first if open, as one `.shorted` file at `path` (FR-PRJ-06).
+Future<void> exportProjectBundle({
+  required String root,
+  required String id,
+  required String path,
+}) => RustLib.instance.api.crateApiProjectsExportProjectBundle(
+  root: root,
+  id: id,
+  path: path,
+);
+
+/// Adds the project of a `.shorted` file as a new project, and returns its id.
+Future<String> importProjectBundle({
+  required String root,
+  required String path,
+}) => RustLib.instance.api.crateApiProjectsImportProjectBundle(
+  root: root,
+  path: path,
+);
+
 Future<void> trashProject({required String root, required String id}) =>
     RustLib.instance.api.crateApiProjectsTrashProject(root: root, id: id);
 
@@ -64,6 +89,14 @@ Future<void> renameProject({
 
 Future<ProjectView> projectView() =>
     RustLib.instance.api.crateApiProjectsProjectView();
+
+/// The open project's version history, newest first (FR-PRJ-04).
+Future<List<VersionView>> versionHistory() =>
+    RustLib.instance.api.crateApiProjectsVersionHistory();
+
+/// Puts a version back as one undoable edit; the present is kept as a version first.
+Future<ProjectView> restoreVersion({required String name}) =>
+    RustLib.instance.api.crateApiProjectsRestoreVersion(name: name);
 
 Future<ProjectView> undo() => RustLib.instance.api.crateApiProjectsUndo();
 
@@ -105,6 +138,13 @@ class ProjectView {
   final bool canRedo;
   final List<TrackView> tracks;
   final List<MediaItemView> media;
+  final SoundView sound;
+  final LookView look;
+  final List<TranscriptView> transcripts;
+  final CaptionsView captions;
+
+  /// Bottom first.
+  final List<OverlayView> overlays;
 
   const ProjectView({
     required this.id,
@@ -114,6 +154,11 @@ class ProjectView {
     required this.canRedo,
     required this.tracks,
     required this.media,
+    required this.sound,
+    required this.look,
+    required this.transcripts,
+    required this.captions,
+    required this.overlays,
   });
 
   @override
@@ -124,7 +169,12 @@ class ProjectView {
       canUndo.hashCode ^
       canRedo.hashCode ^
       tracks.hashCode ^
-      media.hashCode;
+      media.hashCode ^
+      sound.hashCode ^
+      look.hashCode ^
+      transcripts.hashCode ^
+      captions.hashCode ^
+      overlays.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -137,7 +187,12 @@ class ProjectView {
           canUndo == other.canUndo &&
           canRedo == other.canRedo &&
           tracks == other.tracks &&
-          media == other.media;
+          media == other.media &&
+          sound == other.sound &&
+          look == other.look &&
+          transcripts == other.transcripts &&
+          captions == other.captions &&
+          overlays == other.overlays;
 }
 
 enum SaveStateView { saving, saved, failed }
@@ -147,14 +202,33 @@ class TrackItemView {
   final PlatformInt64 startUs;
   final PlatformInt64 endUs;
 
+  /// Set for clips, so that their filmstrip can follow trims and speed.
+  final String? mediaId;
+  final PlatformInt64 sourceInUs;
+  final double speed;
+
+  /// Set for clips made from a still image.
+  final bool? slowZoom;
+
   const TrackItemView({
     required this.id,
     required this.startUs,
     required this.endUs,
+    this.mediaId,
+    required this.sourceInUs,
+    required this.speed,
+    this.slowZoom,
   });
 
   @override
-  int get hashCode => id.hashCode ^ startUs.hashCode ^ endUs.hashCode;
+  int get hashCode =>
+      id.hashCode ^
+      startUs.hashCode ^
+      endUs.hashCode ^
+      mediaId.hashCode ^
+      sourceInUs.hashCode ^
+      speed.hashCode ^
+      slowZoom.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -163,22 +237,56 @@ class TrackItemView {
           runtimeType == other.runtimeType &&
           id == other.id &&
           startUs == other.startUs &&
-          endUs == other.endUs;
+          endUs == other.endUs &&
+          mediaId == other.mediaId &&
+          sourceInUs == other.sourceInUs &&
+          speed == other.speed &&
+          slowZoom == other.slowZoom;
 }
 
-enum TrackKindView { widgets, video, captions, voiceOver, audio }
+enum TrackKindView {
+  widgets,
+  video,
+
+  /// Each clip's own sound, on its own row under the video, linked to its clip.
+  originalSound,
+  captions,
+  voiceOver,
+  audio,
+}
 
 class TrackView {
   final TrackKindView kind;
 
   /// Set for user audio tracks; the others get their name from the app's translations.
   final String? name;
+
+  /// Set for user audio tracks.
+  final String? id;
+  final bool muted;
+  final bool locked;
+  final bool hidden;
   final List<TrackItemView> items;
 
-  const TrackView({required this.kind, this.name, required this.items});
+  const TrackView({
+    required this.kind,
+    this.name,
+    this.id,
+    required this.muted,
+    required this.locked,
+    required this.hidden,
+    required this.items,
+  });
 
   @override
-  int get hashCode => kind.hashCode ^ name.hashCode ^ items.hashCode;
+  int get hashCode =>
+      kind.hashCode ^
+      name.hashCode ^
+      id.hashCode ^
+      muted.hashCode ^
+      locked.hashCode ^
+      hidden.hashCode ^
+      items.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -187,5 +295,36 @@ class TrackView {
           runtimeType == other.runtimeType &&
           kind == other.kind &&
           name == other.name &&
+          id == other.id &&
+          muted == other.muted &&
+          locked == other.locked &&
+          hidden == other.hidden &&
           items == other.items;
+}
+
+enum VersionReasonView { activity, beforeAi, beforeRestore }
+
+class VersionView {
+  /// What `restore_version` takes.
+  final String name;
+  final PlatformInt64 savedAtMs;
+  final VersionReasonView reason;
+
+  const VersionView({
+    required this.name,
+    required this.savedAtMs,
+    required this.reason,
+  });
+
+  @override
+  int get hashCode => name.hashCode ^ savedAtMs.hashCode ^ reason.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is VersionView &&
+          runtimeType == other.runtimeType &&
+          name == other.name &&
+          savedAtMs == other.savedAtMs &&
+          reason == other.reason;
 }

@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shorted/bridge/error.dart';
 import 'package:shorted/bridge/runtime.dart';
 import 'package:shorted/design_system/theme.dart';
+import 'package:shorted/design_system/task_progress.dart';
 import 'package:shorted/features/export/export_panel.dart';
 import 'package:shorted/features/project/project_providers.dart';
 import 'package:shorted/l10n/generated/app_localizations.dart';
@@ -47,11 +48,6 @@ void main() {
     expect(find.text('This short is over the 2:00 limit.'), findsOneWidget);
   });
 
-  testWidgets('the panel says sound is not exported', (tester) async {
-    await pump(tester, 4000000);
-    expect(find.text('Sound is not exported yet.'), findsOneWidget);
-  });
-
   testWidgets('settings reach the engine, progress shows, cancel works', (
     tester,
   ) async {
@@ -67,6 +63,7 @@ void main() {
     gateway.exportEvents.add(const TaskEvent.progress(fraction: 0.5));
     await tester.pump();
     await tester.pump();
+    await tester.pump(taskInlineAfter);
     expect(find.text('Exporting 50 %'), findsOneWidget);
 
     await tester.tap(find.text('Cancel export'));
@@ -75,6 +72,15 @@ void main() {
     await tester.pump();
     await tester.pump();
     expect(find.text('Export video'), findsOneWidget);
+  });
+
+  testWidgets('4K is offered where the encoder takes it', (tester) async {
+    final gateway = await pump(tester, 4000000);
+    await tester.tap(find.text('4K'));
+    await tester.pump();
+    await tester.tap(find.text('Export video'));
+    await tester.pump();
+    expect(gateway.exports.single, '/out/short.mp4 2160 30');
   });
 
   testWidgets('a failure gives a human message', (tester) async {

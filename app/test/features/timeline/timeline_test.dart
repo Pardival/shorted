@@ -1,9 +1,11 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shorted/design_system/theme.dart';
 import 'package:shorted/features/timeline/timeline_layout.dart';
 import 'package:shorted/features/timeline/timeline_view.dart';
+import 'package:shorted/l10n/generated/app_localizations.dart';
 
 const layout = TimelineLayout(
   pixelsPerSecond: 100,
@@ -20,10 +22,13 @@ List<TimelineItem> items(int count) => [
 
 Widget harness(Widget child) => MaterialApp(
   theme: shortedTheme(),
+  localizationsDelegates: AppLocalizations.localizationsDelegates,
+  supportedLocales: AppLocalizations.supportedLocales,
   home: Scaffold(body: SizedBox(width: 800, height: 200, child: child)),
 );
 
 void main() {
+  scrollingGeometry();
   test('time and pixels convert both ways', () {
     expect(layout.xForTime(2000000), 250);
     expect(layout.timeForX(250), 2000000);
@@ -53,6 +58,114 @@ void main() {
     expect(found.map((item) => item.id), ['2', '3']);
     expect(TimelineLayout.visible(items(3), 9000000, 10000000), isEmpty);
     expect(TimelineLayout.visible(const [], 0, 1), isEmpty);
+  });
+
+  test('overlapping overlays are all found, the latest on top', () {
+    const long = TimelineItem(id: 'long', startUs: 0, endUs: 9000000);
+    const short = TimelineItem(id: 'short', startUs: 1000000, endUs: 2000000);
+    const late = TimelineItem(id: 'late', startUs: 5000000, endUs: 6000000);
+    const track = TimelineTrack(
+      kind: TrackKind.widgets,
+      label: 'W',
+      items: [long, short, late],
+    );
+    final found = TimelineLayout.visible(
+      track.items,
+      3000000,
+      4000000,
+      overlapping: true,
+    );
+    expect(found.map((item) => item.id), ['long']);
+    expect(layout.itemAt(track, 1500000)?.id, 'short');
+    expect(layout.itemAt(track, 7000000)?.id, 'long');
+  });
+
+  testWidgets('an overlay is moved in time, and a locked one stays', (
+    tester,
+  ) async {
+    final playhead = ValueNotifier<int>(0);
+    addTearDown(playhead.dispose);
+    final timings = <String>[];
+    Widget timeline({required bool locked}) => harness(
+      TimelineView(
+        tracks: [
+          TimelineTrack(
+            kind: TrackKind.widgets,
+            label: 'W',
+            items: [
+              TimelineItem(
+                id: 'o',
+                startUs: 1000000,
+                endUs: 2000000,
+                locked: locked,
+                animated: true,
+              ),
+            ],
+          ),
+        ],
+        durationUs: 4000000,
+        playheadUs: playhead,
+        selectedId: 'o',
+        onOverlayTiming: (item, start, end) =>
+            timings.add('${item.id} $start $end'),
+      ),
+    );
+    await tester.pumpWidget(timeline(locked: false));
+    final origin = tester.getTopLeft(find.byType(TimelineView));
+    // 1 s to 2 s spans x = 128 to 168 at the default 40 px/s.
+    await tester.dragFrom(origin + const Offset(148, 40), const Offset(40, 0));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(timings, ['o 2000000 3000000']);
+
+    await tester.pumpWidget(timeline(locked: true));
+    await tester.dragFrom(origin + const Offset(148, 40), const Offset(40, 0));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(timings, hasLength(1));
+  });
+
+  testWidgets('a keyframe diamond is tapped or dragged in time', (
+    tester,
+  ) async {
+    final playhead = ValueNotifier<int>(0);
+    addTearDown(playhead.dispose);
+    final taps = <String>[];
+    final moves = <String>[];
+    await tester.pumpWidget(
+      harness(
+        TimelineView(
+          tracks: const [
+            TimelineTrack(
+              kind: TrackKind.widgets,
+              label: 'W',
+              items: [
+                TimelineItem(
+                  id: 'o',
+                  startUs: 0,
+                  endUs: 4000000,
+                  keyframes: [1000000, 3000000],
+                ),
+              ],
+            ),
+          ],
+          durationUs: 4000000,
+          playheadUs: playhead,
+          selectedId: 'o',
+          onKeyframeTap: (item, time) => taps.add('${item.id} $time'),
+          onKeyframeMove: (item, from, to) =>
+              moves.add('${item.id} $from ${(to / 1e5).round() * 100000}'),
+          onOverlayTiming: (item, start, end) => moves.add('timing'),
+        ),
+      ),
+    );
+    final origin = tester.getTopLeft(find.byType(TimelineView));
+    // 1 s is x = 88 + 40 at the default 40 px/s.
+    await tester.tapAt(origin + const Offset(129, 40));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(taps, ['o 1000000']);
+
+    await tester.dragFrom(origin + const Offset(128, 40), const Offset(40, 0));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(moves, ['o 1000000 2000000']);
   });
 
   test('tracks are found from y', () {
@@ -169,6 +282,99 @@ void main() {
     await gesture.up();
   });
 
+  testWidgets('a part is selected with the mouse in two steps, ends move', (
+    tester,
+  ) async {
+    final playhead = ValueNotifier<int>(0);
+    addTearDown(playhead.dispose);
+    (int, int)? range;
+    late StateSetter rebuild;
+    await tester.pumpWidget(
+      harness(
+        StatefulBuilder(
+          builder: (context, setState) {
+            rebuild = setState;
+            return TimelineView(
+              tracks: [
+                TimelineTrack(
+                  kind: TrackKind.video,
+                  label: 'V',
+                  items: items(4),
+                ),
+              ],
+              durationUs: 4000000,
+              playheadUs: playhead,
+              rangeUs: range,
+              onRange: (next) => rebuild(() => range = next),
+            );
+          },
+        ),
+      ),
+    );
+    await tester.tap(find.byTooltip('Select a part'));
+    await tester.pump();
+    final origin = tester.getTopLeft(find.byType(TimelineView));
+    // 88 px of headers, 40 px a second.
+    final mouse = await tester.startGesture(
+      origin + const Offset(128, 40),
+      kind: PointerDeviceKind.mouse,
+    );
+    await mouse.moveTo(origin + const Offset(208, 40));
+    await mouse.up();
+    await tester.pump();
+    expect(range!.$1, closeTo(1000000, 30000));
+    expect(range!.$2, closeTo(3000000, 30000));
+
+    final edge = await tester.startGesture(
+      origin + const Offset(208, 10),
+      kind: PointerDeviceKind.mouse,
+    );
+    await edge.moveTo(origin + const Offset(168, 10));
+    await edge.up();
+    await tester.pump();
+    expect(range!.$2, closeTo(2000000, 30000));
+  });
+
+  testWidgets('a mouse drag on the tracks moves the view; buttons zoom', (
+    tester,
+  ) async {
+    final playhead = ValueNotifier<int>(0);
+    addTearDown(playhead.dispose);
+    await tester.pumpWidget(
+      harness(
+        TimelineView(
+          tracks: [
+            TimelineTrack(kind: TrackKind.video, label: 'V', items: items(60)),
+          ],
+          durationUs: 60000000,
+          playheadUs: playhead,
+        ),
+      ),
+    );
+    final origin = tester.getTopLeft(find.byType(TimelineView));
+    final mouse = await tester.startGesture(
+      origin + const Offset(400, 40),
+      kind: PointerDeviceKind.mouse,
+    );
+    await mouse.moveBy(const Offset(-200, 0));
+    await mouse.up();
+    await tester.pump();
+    expect(playhead.value, 0, reason: 'panning does not scrub');
+    final tracks = find.byKey(TimelineView.tracksKey);
+    final painter = tester.widget<CustomPaint>(tracks).painter! as dynamic;
+    expect(painter.layout.scrollUs, closeTo(5000000, 100000));
+
+    await tester.tap(find.byTooltip('Zoom in'));
+    await tester.pump();
+    final zoomed = tester.widget<CustomPaint>(tracks).painter! as dynamic;
+    expect(zoomed.layout.pixelsPerSecond, closeTo(60, 0.1));
+    await tester.tap(find.byTooltip('Show everything'));
+    await tester.pump();
+    final fitted = tester.widget<CustomPaint>(tracks).painter! as dynamic;
+    expect(fitted.layout.scrollUs, 0);
+    expect(fitted.layout.pixelsPerSecond, lessThan(15));
+  });
+
   testWidgets('tapping an item selects it, tapping empty space clears', (
     tester,
   ) async {
@@ -192,5 +398,35 @@ void main() {
     await tester.tapAt(origin + const Offset(700, 40));
     await tester.pump(const Duration(milliseconds: 400));
     expect(selected, ['0', null]);
+  });
+}
+
+void scrollingGeometry() {
+  const layout = TimelineLayout(
+    pixelsPerSecond: 40,
+    scrollUs: 0,
+    headerWidth: 88,
+    rulerHeight: 20,
+    trackHeight: 30,
+    scrollY: 40,
+    pinnedIndex: 1,
+  );
+  test('tracks scroll under a pinned Video track', () {
+    expect(layout.topOfTrack(1), 20);
+    expect(layout.topOfTrack(3), 70);
+    expect(layout.trackAt(25, 5), 1);
+    expect(layout.trackAt(75, 5), 3);
+    expect(layout.maxScrollY(5, 100), 70);
+    expect(layout.maxScrollY(2, 100), 0);
+  });
+  test('collapsed tracks are the video and thin strips', () {
+    final collapsed = layout.copyWith(collapsed: true);
+    expect(collapsed.heightOfTrack(1), 30);
+    expect(collapsed.heightOfTrack(0), 6);
+    expect(collapsed.topOfTrack(1), 20);
+    expect(collapsed.topOfTrack(0), 50);
+    expect(collapsed.topOfTrack(2), 56);
+    expect(collapsed.maxScrollY(5, 40), 0);
+    expect(collapsed.trackAt(52, 5), 0);
   });
 }

@@ -4,11 +4,19 @@
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
 import 'api.dart';
+import 'api/ai.dart';
+import 'api/arrange.dart';
+import 'api/audio.dart';
+import 'api/brand_kit.dart';
 import 'api/clips.dart';
 import 'api/export.dart';
+import 'api/library.dart';
+import 'api/look.dart';
 import 'api/media.dart';
+import 'api/overlays.dart';
 import 'api/preview.dart';
 import 'api/projects.dart';
+import 'api/transcribe.dart';
 
 import 'dart:async';
 import 'dart:convert';
@@ -77,7 +85,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => -432345265;
+  int get rustContentHash => -1557138072;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -94,9 +102,79 @@ abstract class RustLibApi extends BaseApi {
     required PlatformInt64 right,
   });
 
+  Future<ProjectView> crateApiAudioAddAudio({
+    required String mediaId,
+    required AudioRoleView role,
+    required PlatformInt64 startUs,
+  });
+
+  Future<ProjectView> crateApiAudioAddAudioTrack();
+
+  Future<ProjectView> crateApiBrandKitAddBrandAsset({
+    required String root,
+    required String id,
+    required PlatformInt64 atUs,
+    double? x,
+    double? y,
+  });
+
+  Future<ProjectView> crateApiLibraryAddLibraryItem({
+    required String name,
+    required PlatformInt64 atUs,
+    double? x,
+    double? y,
+  });
+
+  Future<ProjectView> crateApiOverlaysAddShape({
+    required ShapeKindView shape,
+    required PlatformInt64 atUs,
+  });
+
+  Future<ProjectView> crateApiOverlaysAddText({
+    required String content,
+    required PlatformInt64 atUs,
+  });
+
+  bool crateApiArrangeAiArrangementFellBack();
+
+  bool crateApiArrangeAiConsentRemembered({
+    required String root,
+    required String projectId,
+  });
+
+  Future<AiSettingsView> crateApiAiAiSettings({required String root});
+
+  Stream<TaskEvent> crateApiArrangeAnalyseForArrange();
+
+  Future<ArrangeReviewView> crateApiArrangeApplyArrangement();
+
+  Future<List<BrandAssetView>> crateApiBrandKitBrandKit({required String root});
+
+  PictureView? crateApiBrandKitBrandThumbnail({
+    required String root,
+    required String id,
+    required int size,
+  });
+
+  Future<BigInt> crateApiMediaCacheBytes({required String root});
+
   void crateApiCancelTask({required BigInt taskId});
 
+  Future<CaptionHitView?> crateApiTranscribeCaptionWordAt({
+    required PlatformInt64 timeUs,
+    required double x,
+    required double y,
+  });
+
+  Future<void> crateApiMediaClearCaches({required String root});
+
+  Future<ProjectView> crateApiOverlaysClearPath({required String id});
+
   Future<void> crateApiProjectsCloseProject();
+
+  Future<ProjectView> crateApiMediaCollectMedia();
+
+  Future<ProjectView> crateApiClipsCommitCrop({required String id});
 
   Stream<BigInt> crateApiCounterStream({required int intervalMs});
 
@@ -105,9 +183,50 @@ abstract class RustLibApi extends BaseApi {
     required String title,
   });
 
+  Future<ProjectView> crateApiTranscribeCurrentView();
+
+  String crateApiAiDefaultAiModel({required AiProviderView provider});
+
+  Future<ProjectView> crateApiAudioDeleteAudio({required String id});
+
+  Future<void> crateApiBrandKitDeleteBrandAsset({
+    required String root,
+    required String id,
+  });
+
   Future<ProjectView> crateApiClipsDeleteClip({required String id});
 
+  Future<ProjectView> crateApiOverlaysDeleteOverlay({required String id});
+
+  Future<ProjectView> crateApiOverlaysDeleteOverlays({
+    required List<String> ids,
+  });
+
+  Future<ProjectView> crateApiOverlaysDeletePathPoint({
+    required String id,
+    required int index,
+  });
+
+  Future<ProjectView> crateApiClipsDeleteRange({
+    required PlatformInt64 startUs,
+    required PlatformInt64 endUs,
+  });
+
+  Future<void> crateApiTranscribeDeleteSpeechModel({required String root});
+
+  Future<ProjectView> crateApiAudioDetachClipSound({required String clipId});
+
+  Stream<TaskEvent> crateApiTranscribeDownloadSpeechModel({
+    required String root,
+  });
+
   Future<ProjectView> crateApiClipsDuplicateClip({required String id});
+
+  Future<ProjectView> crateApiOverlaysDuplicateOverlay({required String id});
+
+  Future<ProjectView> crateApiOverlaysDuplicateOverlays({
+    required List<String> ids,
+  });
 
   Future<String> crateApiProjectsDuplicateProject({
     required String root,
@@ -115,17 +234,75 @@ abstract class RustLibApi extends BaseApi {
     required String title,
   });
 
+  Future<ProjectView> crateApiTranscribeEditWord({
+    String? clipId,
+    String? audioId,
+    required String segment,
+    required int word,
+    required String text,
+  });
+
   String crateApiEngineVersion();
 
   ErrorCode? crateApiExportExportBlocked({required PlatformInt64 durationUs});
+
+  Future<void> crateApiProjectsExportProjectBundle({
+    required String root,
+    required String id,
+    required String path,
+  });
+
+  PlatformInt64 crateApiExportExportSizeEstimate({
+    required ExportSettings settings,
+    required PlatformInt64 durationUs,
+  });
+
+  bool crateApiExportExportSupports4K();
+
+  Future<AiSettingsView> crateApiAiForgetAiKey({required String root});
+
+  bool crateApiArrangeHasPendingArrangement();
+
+  Future<ProjectView> crateApiTranscribeHideSegment({
+    String? clipId,
+    String? audioId,
+    required String segment,
+    required bool hidden,
+  });
+
+  Future<List<ImportOutcome>> crateApiBrandKitImportBrandAssets({
+    required String root,
+    required List<String> paths,
+  });
 
   Future<List<ImportOutcome>> crateApiMediaImportFiles({
     required List<String> paths,
   });
 
+  Future<String> crateApiProjectsImportProjectBundle({
+    required String root,
+    required String path,
+  });
+
   Future<void> crateApiInitApp();
 
   Future<void> crateApiInitEngine({required String logDir});
+
+  Future<ProjectView> crateApiOverlaysKeyOverlayTransform({
+    required String id,
+    required PlatformInt64 timeUs,
+    required TransformView transform,
+  });
+
+  List<LibraryItemView> crateApiLibraryLibraryItems({
+    required String query,
+    String? category,
+  });
+
+  PictureView? crateApiLibraryLibraryThumbnail({
+    required String name,
+    required int size,
+  });
 
   Future<List<ProjectSummary>> crateApiProjectsListProjects({
     required String root,
@@ -135,9 +312,50 @@ abstract class RustLibApi extends BaseApi {
     required String root,
   });
 
+  Stream<ThumbnailView> crateApiMediaMediaFilmstrip({required String mediaId});
+
+  Future<Uint8List> crateApiAudioMediaPeaks({required String mediaId});
+
+  Future<ProjectView> crateApiAudioMoveAudio({
+    required String id,
+    required PlatformInt64 startUs,
+    String? trackId,
+  });
+
   Future<ProjectView> crateApiClipsMoveClip({
     required String id,
     required int to,
+  });
+
+  void crateApiClipsMoveCrop({
+    required String id,
+    required double dx,
+    required double dy,
+    required double zoomBy,
+  });
+
+  Future<ProjectView> crateApiOverlaysMoveKeyframes({
+    required String id,
+    required PlatformInt64 fromUs,
+    required PlatformInt64 toUs,
+  });
+
+  Future<ProjectView> crateApiOverlaysMoveOverlays({
+    required List<String> ids,
+    required double dx,
+    required double dy,
+  });
+
+  Future<ProjectView> crateApiOverlaysMovePathPoint({
+    required String id,
+    required int index,
+    required double x,
+    required double y,
+  });
+
+  Future<ProjectView> crateApiClipsMuteRange({
+    required PlatformInt64 startUs,
+    required PlatformInt64 endUs,
   });
 
   Future<void> crateApiProjectsOpenProject({
@@ -145,17 +363,60 @@ abstract class RustLibApi extends BaseApi {
     required String id,
   });
 
+  bool crateApiTranscribeOpenaiTranscriptionReady();
+
+  List<OverlayBoxView> crateApiOverlaysOverlayBoxes({
+    required PlatformInt64 timeUs,
+  });
+
+  TransformView? crateApiOverlaysOverlayTransformAt({
+    required String id,
+    required PlatformInt64 timeUs,
+  });
+
+  List<PathPointView> crateApiOverlaysPathCurve({required String id});
+
   Future<ProjectView> crateApiMediaPlaceClips({required List<String> mediaIds});
 
+  Future<AiPayloadView> crateApiArrangePrepareAiArrangement({
+    required String root,
+    required String language,
+    String? instruction,
+  });
+
+  PresetSampleView crateApiOverlaysPresetSample({
+    required PresetKindView kind,
+    required AnimSlotView slot,
+    required double progress,
+  });
+
   bool crateApiPreviewPreviewIsPlaying();
+
+  void crateApiOverlaysPreviewOverlayKey({
+    required String id,
+    required PlatformInt64 timeUs,
+    required TransformView transform,
+  });
+
+  void crateApiOverlaysPreviewOverlayTransform({
+    required String id,
+    required TransformView transform,
+  });
 
   void crateApiPreviewPreviewPause();
 
   void crateApiPreviewPreviewPlay();
 
+  void crateApiPreviewPreviewPlayAt({required double rate});
+
   PlatformInt64 crateApiPreviewPreviewPositionUs();
 
   void crateApiPreviewPreviewSeek({required PlatformInt64 timeUs});
+
+  Future<ThumbnailView?> crateApiMediaProjectCover({
+    required String root,
+    required String id,
+  });
 
   Future<ProjectView> crateApiProjectsProjectView();
 
@@ -166,18 +427,191 @@ abstract class RustLibApi extends BaseApi {
     required String path,
   });
 
+  Future<void> crateApiArrangeRememberAiConsent({
+    required String root,
+    required String projectId,
+  });
+
+  Future<ProjectView> crateApiAudioRemoveAudioTrack({required String id});
+
+  Future<ProjectView> crateApiOverlaysRemoveKeyframesAt({
+    required String id,
+    required PlatformInt64 timeUs,
+  });
+
+  Future<ProjectView> crateApiAudioRenameAudioTrack({
+    required String id,
+    required String name,
+  });
+
   Future<void> crateApiProjectsRenameProject({
     required String root,
     required String id,
     required String title,
   });
 
+  Future<ProjectView> crateApiAudioReorderAudioTrack({
+    required String id,
+    required int to,
+  });
+
+  Future<ProjectView> crateApiClipsResetCrop({required String id});
+
   Future<void> crateApiProjectsRestoreProject({
     required String root,
     required String id,
   });
 
+  Future<ProjectView> crateApiProjectsRestoreVersion({required String name});
+
+  Future<AiSettingsView> crateApiAiSaveAiSettings({
+    required String root,
+    required AiProviderView provider,
+    required String model,
+    required String baseUrl,
+    String? key,
+  });
+
   Stream<SaveStateView> crateApiProjectsSaveEvents();
+
+  Future<void> crateApiTranscribeSaveOpenaiKey({required String key});
+
+  Stream<TaskEvent> crateApiArrangeSendAiArrangement();
+
+  Future<ProjectView> crateApiAudioSetAudioLoop({
+    required String id,
+    required bool looped,
+  });
+
+  Future<ProjectView> crateApiAudioSetAudioRole({
+    required String id,
+    required AudioRoleView role,
+  });
+
+  Future<ProjectView> crateApiAudioSetAudioSound({
+    required String id,
+    required double volume,
+    required PlatformInt64 fadeInUs,
+    required PlatformInt64 fadeOutUs,
+  });
+
+  Future<ProjectView> crateApiTranscribeSetCaptionAnimation({
+    required CaptionAnimationView animation,
+  });
+
+  Future<ProjectView> crateApiTranscribeSetCaptionPreset({
+    required CaptionPresetView preset,
+  });
+
+  Future<ProjectView> crateApiTranscribeSetCaptionStyle({
+    required String font,
+    required double size,
+    required bool uppercase,
+    required String color,
+    required String emphasisColor,
+    required double anchor,
+  });
+
+  Future<ProjectView> crateApiTranscribeSetCaptionsEnabled({
+    required bool enabled,
+  });
+
+  Future<ProjectView> crateApiLookSetClipColor({
+    required String id,
+    required double brightness,
+    required double contrast,
+    required double saturation,
+  });
+
+  Future<ProjectView> crateApiAudioSetClipSound({
+    required String id,
+    required double volume,
+    required bool muted,
+    required PlatformInt64 fadeInUs,
+    required PlatformInt64 fadeOutUs,
+  });
+
+  Future<ProjectView> crateApiLookSetClipSpeed({
+    required String id,
+    required double speed,
+  });
+
+  Future<ProjectView> crateApiAudioSetDucking({
+    required String id,
+    double? strength,
+  });
+
+  Future<ProjectView> crateApiOverlaysSetKeyframeEasing({
+    required String id,
+    required PlatformInt64 timeUs,
+    required EasingView easing,
+  });
+
+  Future<ProjectView> crateApiOverlaysSetOverlayColor({
+    required String id,
+    String? color,
+  });
+
+  Future<ProjectView> crateApiOverlaysSetOverlayFlags({
+    required String id,
+    required bool locked,
+    required bool hidden,
+  });
+
+  Future<ProjectView> crateApiOverlaysSetOverlayTiming({
+    required String id,
+    required PlatformInt64 startUs,
+    required PlatformInt64 endUs,
+  });
+
+  Future<ProjectView> crateApiOverlaysSetOverlayTransform({
+    required String id,
+    required TransformView transform,
+  });
+
+  Future<ProjectView> crateApiOverlaysSetPathOptions({
+    required String id,
+    required double smoothing,
+    required bool orientToPath,
+  });
+
+  Future<ProjectView> crateApiOverlaysSetPresetAnim({
+    required String id,
+    required AnimSlotView slot,
+    PresetKindView? kind,
+    required PlatformInt64 durationUs,
+  });
+
+  Future<ProjectView> crateApiOverlaysSetRecordedPath({
+    required String id,
+    required List<PathPointView> samples,
+  });
+
+  Future<ProjectView> crateApiOverlaysSetText({
+    required String id,
+    required TextElementView text,
+  });
+
+  Future<ProjectView> crateApiAudioSetTrackFlags({
+    required TrackKindView kind,
+    String? id,
+    required bool muted,
+    required bool locked,
+    required bool hidden,
+  });
+
+  Future<ProjectView> crateApiLookSetTransitionForAll({
+    required TransitionKindView kind,
+  });
+
+  Future<ProjectView> crateApiOverlaysShiftOverlayLayer({
+    required String id,
+    required bool forward,
+  });
+
+  ModelView crateApiTranscribeSpeechModel({required String root});
+
+  Future<ProjectView> crateApiClipsSplitAllAt({required PlatformInt64 timeUs});
 
   Future<ProjectView> crateApiClipsSplitClip({
     required String id,
@@ -191,9 +625,41 @@ abstract class RustLibApi extends BaseApi {
     required ExportSettings settings,
   });
 
+  Future<void> crateApiAudioStartVoiceOver();
+
+  Future<ProjectView> crateApiAudioStopVoiceOver({
+    required PlatformInt64 startUs,
+  });
+
+  Future<ProjectView> crateApiOverlaysStretchPath({
+    required String id,
+    required PlatformInt64 lengthUs,
+  });
+
+  Future<void> crateApiAiTestAiConnection({required String root});
+
+  Future<ProjectView> crateApiTranscribeToggleEmphasis({
+    String? clipId,
+    String? audioId,
+    required String segment,
+    required int word,
+  });
+
+  Future<ProjectView> crateApiClipsToggleSlowZoom({required String id});
+
+  Stream<TaskEvent> crateApiTranscribeTranscribeProject({required String root});
+
+  Stream<TaskEvent> crateApiTranscribeTranscribeWithOpenai();
+
   Future<void> crateApiProjectsTrashProject({
     required String root,
     required String id,
+  });
+
+  Future<ProjectView> crateApiAudioTrimAudio({
+    required String id,
+    required bool start,
+    required PlatformInt64 deltaUs,
   });
 
   Future<ProjectView> crateApiClipsTrimClip({
@@ -203,6 +669,14 @@ abstract class RustLibApi extends BaseApi {
   });
 
   Future<ProjectView> crateApiProjectsUndo();
+
+  Future<ProjectView> crateApiArrangeUndoArrangement();
+
+  Future<List<VersionView>> crateApiProjectsVersionHistory();
+
+  double crateApiAudioVoiceLevel();
+
+  Future<void> crateApiTranscribeWriteSrt({required String path});
 }
 
 class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
@@ -246,13 +720,452 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "add", argNames: ["left", "right"]);
 
   @override
+  Future<ProjectView> crateApiAudioAddAudio({
+    required String mediaId,
+    required AudioRoleView role,
+    required PlatformInt64 startUs,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(mediaId, serializer);
+          sse_encode_audio_role_view(role, serializer);
+          sse_encode_i_64(startUs, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 2,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiAudioAddAudioConstMeta,
+        argValues: [mediaId, role, startUs],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAudioAddAudioConstMeta => const TaskConstMeta(
+    debugName: "add_audio",
+    argNames: ["mediaId", "role", "startUs"],
+  );
+
+  @override
+  Future<ProjectView> crateApiAudioAddAudioTrack() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 3,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiAudioAddAudioTrackConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAudioAddAudioTrackConstMeta =>
+      const TaskConstMeta(debugName: "add_audio_track", argNames: []);
+
+  @override
+  Future<ProjectView> crateApiBrandKitAddBrandAsset({
+    required String root,
+    required String id,
+    required PlatformInt64 atUs,
+    double? x,
+    double? y,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(root, serializer);
+          sse_encode_String(id, serializer);
+          sse_encode_i_64(atUs, serializer);
+          sse_encode_opt_box_autoadd_f_32(x, serializer);
+          sse_encode_opt_box_autoadd_f_32(y, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 4,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiBrandKitAddBrandAssetConstMeta,
+        argValues: [root, id, atUs, x, y],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiBrandKitAddBrandAssetConstMeta =>
+      const TaskConstMeta(
+        debugName: "add_brand_asset",
+        argNames: ["root", "id", "atUs", "x", "y"],
+      );
+
+  @override
+  Future<ProjectView> crateApiLibraryAddLibraryItem({
+    required String name,
+    required PlatformInt64 atUs,
+    double? x,
+    double? y,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(name, serializer);
+          sse_encode_i_64(atUs, serializer);
+          sse_encode_opt_box_autoadd_f_32(x, serializer);
+          sse_encode_opt_box_autoadd_f_32(y, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 5,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiLibraryAddLibraryItemConstMeta,
+        argValues: [name, atUs, x, y],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiLibraryAddLibraryItemConstMeta =>
+      const TaskConstMeta(
+        debugName: "add_library_item",
+        argNames: ["name", "atUs", "x", "y"],
+      );
+
+  @override
+  Future<ProjectView> crateApiOverlaysAddShape({
+    required ShapeKindView shape,
+    required PlatformInt64 atUs,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_shape_kind_view(shape, serializer);
+          sse_encode_i_64(atUs, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 6,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiOverlaysAddShapeConstMeta,
+        argValues: [shape, atUs],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiOverlaysAddShapeConstMeta =>
+      const TaskConstMeta(debugName: "add_shape", argNames: ["shape", "atUs"]);
+
+  @override
+  Future<ProjectView> crateApiOverlaysAddText({
+    required String content,
+    required PlatformInt64 atUs,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(content, serializer);
+          sse_encode_i_64(atUs, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 7,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiOverlaysAddTextConstMeta,
+        argValues: [content, atUs],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiOverlaysAddTextConstMeta =>
+      const TaskConstMeta(debugName: "add_text", argNames: ["content", "atUs"]);
+
+  @override
+  bool crateApiArrangeAiArrangementFellBack() {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_bool,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiArrangeAiArrangementFellBackConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiArrangeAiArrangementFellBackConstMeta =>
+      const TaskConstMeta(debugName: "ai_arrangement_fell_back", argNames: []);
+
+  @override
+  bool crateApiArrangeAiConsentRemembered({
+    required String root,
+    required String projectId,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(root, serializer);
+          sse_encode_String(projectId, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 9)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_bool,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiArrangeAiConsentRememberedConstMeta,
+        argValues: [root, projectId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiArrangeAiConsentRememberedConstMeta =>
+      const TaskConstMeta(
+        debugName: "ai_consent_remembered",
+        argNames: ["root", "projectId"],
+      );
+
+  @override
+  Future<AiSettingsView> crateApiAiAiSettings({required String root}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(root, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 10,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_ai_settings_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiAiAiSettingsConstMeta,
+        argValues: [root],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAiAiSettingsConstMeta =>
+      const TaskConstMeta(debugName: "ai_settings", argNames: ["root"]);
+
+  @override
+  Stream<TaskEvent> crateApiArrangeAnalyseForArrange() {
+    final events = RustStreamSink<TaskEvent>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_StreamSink_task_event_Sse(events, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 11,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: null,
+          ),
+          constMeta: kCrateApiArrangeAnalyseForArrangeConstMeta,
+          argValues: [events],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return events.stream;
+  }
+
+  TaskConstMeta get kCrateApiArrangeAnalyseForArrangeConstMeta =>
+      const TaskConstMeta(
+        debugName: "analyse_for_arrange",
+        argNames: ["events"],
+      );
+
+  @override
+  Future<ArrangeReviewView> crateApiArrangeApplyArrangement() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 12,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_arrange_review_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiArrangeApplyArrangementConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiArrangeApplyArrangementConstMeta =>
+      const TaskConstMeta(debugName: "apply_arrangement", argNames: []);
+
+  @override
+  Future<List<BrandAssetView>> crateApiBrandKitBrandKit({
+    required String root,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(root, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 13,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_brand_asset_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiBrandKitBrandKitConstMeta,
+        argValues: [root],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiBrandKitBrandKitConstMeta =>
+      const TaskConstMeta(debugName: "brand_kit", argNames: ["root"]);
+
+  @override
+  PictureView? crateApiBrandKitBrandThumbnail({
+    required String root,
+    required String id,
+    required int size,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(root, serializer);
+          sse_encode_String(id, serializer);
+          sse_encode_u_32(size, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_box_autoadd_picture_view,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiBrandKitBrandThumbnailConstMeta,
+        argValues: [root, id, size],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiBrandKitBrandThumbnailConstMeta =>
+      const TaskConstMeta(
+        debugName: "brand_thumbnail",
+        argNames: ["root", "id", "size"],
+      );
+
+  @override
+  Future<BigInt> crateApiMediaCacheBytes({required String root}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(root, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 15,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_u_64,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiMediaCacheBytesConstMeta,
+        argValues: [root],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiMediaCacheBytesConstMeta =>
+      const TaskConstMeta(debugName: "cache_bytes", argNames: ["root"]);
+
+  @override
   void crateApiCancelTask({required BigInt taskId}) {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_u_64(taskId, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 2)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 16)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -269,6 +1182,99 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "cancel_task", argNames: ["taskId"]);
 
   @override
+  Future<CaptionHitView?> crateApiTranscribeCaptionWordAt({
+    required PlatformInt64 timeUs,
+    required double x,
+    required double y,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_i_64(timeUs, serializer);
+          sse_encode_f_64(x, serializer);
+          sse_encode_f_64(y, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 17,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_box_autoadd_caption_hit_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiTranscribeCaptionWordAtConstMeta,
+        argValues: [timeUs, x, y],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTranscribeCaptionWordAtConstMeta =>
+      const TaskConstMeta(
+        debugName: "caption_word_at",
+        argNames: ["timeUs", "x", "y"],
+      );
+
+  @override
+  Future<void> crateApiMediaClearCaches({required String root}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(root, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 18,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiMediaClearCachesConstMeta,
+        argValues: [root],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiMediaClearCachesConstMeta =>
+      const TaskConstMeta(debugName: "clear_caches", argNames: ["root"]);
+
+  @override
+  Future<ProjectView> crateApiOverlaysClearPath({required String id}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 19,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiOverlaysClearPathConstMeta,
+        argValues: [id],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiOverlaysClearPathConstMeta =>
+      const TaskConstMeta(debugName: "clear_path", argNames: ["id"]);
+
+  @override
   Future<void> crateApiProjectsCloseProject() {
     return handler.executeNormal(
       NormalTask(
@@ -277,7 +1283,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 3,
+            funcId: 20,
             port: port_,
           );
         },
@@ -296,6 +1302,61 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "close_project", argNames: []);
 
   @override
+  Future<ProjectView> crateApiMediaCollectMedia() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 21,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiMediaCollectMediaConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiMediaCollectMediaConstMeta =>
+      const TaskConstMeta(debugName: "collect_media", argNames: []);
+
+  @override
+  Future<ProjectView> crateApiClipsCommitCrop({required String id}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 22,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiClipsCommitCropConstMeta,
+        argValues: [id],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiClipsCommitCropConstMeta =>
+      const TaskConstMeta(debugName: "commit_crop", argNames: ["id"]);
+
+  @override
   Stream<BigInt> crateApiCounterStream({required int intervalMs}) {
     final sink = RustStreamSink<BigInt>();
     unawaited(
@@ -308,7 +1369,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 4,
+              funcId: 23,
               port: port_,
             );
           },
@@ -344,7 +1405,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 5,
+            funcId: 24,
             port: port_,
           );
         },
@@ -366,6 +1427,121 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<ProjectView> crateApiTranscribeCurrentView() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 25,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiTranscribeCurrentViewConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTranscribeCurrentViewConstMeta =>
+      const TaskConstMeta(debugName: "current_view", argNames: []);
+
+  @override
+  String crateApiAiDefaultAiModel({required AiProviderView provider}) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_ai_provider_view(provider, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 26)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiAiDefaultAiModelConstMeta,
+        argValues: [provider],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAiDefaultAiModelConstMeta => const TaskConstMeta(
+    debugName: "default_ai_model",
+    argNames: ["provider"],
+  );
+
+  @override
+  Future<ProjectView> crateApiAudioDeleteAudio({required String id}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 27,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiAudioDeleteAudioConstMeta,
+        argValues: [id],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAudioDeleteAudioConstMeta =>
+      const TaskConstMeta(debugName: "delete_audio", argNames: ["id"]);
+
+  @override
+  Future<void> crateApiBrandKitDeleteBrandAsset({
+    required String root,
+    required String id,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(root, serializer);
+          sse_encode_String(id, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 28,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiBrandKitDeleteBrandAssetConstMeta,
+        argValues: [root, id],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiBrandKitDeleteBrandAssetConstMeta =>
+      const TaskConstMeta(
+        debugName: "delete_brand_asset",
+        argNames: ["root", "id"],
+      );
+
+  @override
   Future<ProjectView> crateApiClipsDeleteClip({required String id}) {
     return handler.executeNormal(
       NormalTask(
@@ -375,7 +1551,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 6,
+            funcId: 29,
             port: port_,
           );
         },
@@ -394,6 +1570,227 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "delete_clip", argNames: ["id"]);
 
   @override
+  Future<ProjectView> crateApiOverlaysDeleteOverlay({required String id}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 30,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiOverlaysDeleteOverlayConstMeta,
+        argValues: [id],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiOverlaysDeleteOverlayConstMeta =>
+      const TaskConstMeta(debugName: "delete_overlay", argNames: ["id"]);
+
+  @override
+  Future<ProjectView> crateApiOverlaysDeleteOverlays({
+    required List<String> ids,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_String(ids, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 31,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiOverlaysDeleteOverlaysConstMeta,
+        argValues: [ids],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiOverlaysDeleteOverlaysConstMeta =>
+      const TaskConstMeta(debugName: "delete_overlays", argNames: ["ids"]);
+
+  @override
+  Future<ProjectView> crateApiOverlaysDeletePathPoint({
+    required String id,
+    required int index,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_u_32(index, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 32,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiOverlaysDeletePathPointConstMeta,
+        argValues: [id, index],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiOverlaysDeletePathPointConstMeta =>
+      const TaskConstMeta(
+        debugName: "delete_path_point",
+        argNames: ["id", "index"],
+      );
+
+  @override
+  Future<ProjectView> crateApiClipsDeleteRange({
+    required PlatformInt64 startUs,
+    required PlatformInt64 endUs,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_i_64(startUs, serializer);
+          sse_encode_i_64(endUs, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 33,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiClipsDeleteRangeConstMeta,
+        argValues: [startUs, endUs],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiClipsDeleteRangeConstMeta => const TaskConstMeta(
+    debugName: "delete_range",
+    argNames: ["startUs", "endUs"],
+  );
+
+  @override
+  Future<void> crateApiTranscribeDeleteSpeechModel({required String root}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(root, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 34,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiTranscribeDeleteSpeechModelConstMeta,
+        argValues: [root],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTranscribeDeleteSpeechModelConstMeta =>
+      const TaskConstMeta(debugName: "delete_speech_model", argNames: ["root"]);
+
+  @override
+  Future<ProjectView> crateApiAudioDetachClipSound({required String clipId}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(clipId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 35,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiAudioDetachClipSoundConstMeta,
+        argValues: [clipId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAudioDetachClipSoundConstMeta =>
+      const TaskConstMeta(debugName: "detach_clip_sound", argNames: ["clipId"]);
+
+  @override
+  Stream<TaskEvent> crateApiTranscribeDownloadSpeechModel({
+    required String root,
+  }) {
+    final events = RustStreamSink<TaskEvent>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_String(root, serializer);
+            sse_encode_StreamSink_task_event_Sse(events, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 36,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: null,
+          ),
+          constMeta: kCrateApiTranscribeDownloadSpeechModelConstMeta,
+          argValues: [root, events],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return events.stream;
+  }
+
+  TaskConstMeta get kCrateApiTranscribeDownloadSpeechModelConstMeta =>
+      const TaskConstMeta(
+        debugName: "download_speech_model",
+        argNames: ["root", "events"],
+      );
+
+  @override
   Future<ProjectView> crateApiClipsDuplicateClip({required String id}) {
     return handler.executeNormal(
       NormalTask(
@@ -403,7 +1800,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 7,
+            funcId: 37,
             port: port_,
           );
         },
@@ -422,6 +1819,64 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "duplicate_clip", argNames: ["id"]);
 
   @override
+  Future<ProjectView> crateApiOverlaysDuplicateOverlay({required String id}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 38,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiOverlaysDuplicateOverlayConstMeta,
+        argValues: [id],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiOverlaysDuplicateOverlayConstMeta =>
+      const TaskConstMeta(debugName: "duplicate_overlay", argNames: ["id"]);
+
+  @override
+  Future<ProjectView> crateApiOverlaysDuplicateOverlays({
+    required List<String> ids,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_String(ids, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 39,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiOverlaysDuplicateOverlaysConstMeta,
+        argValues: [ids],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiOverlaysDuplicateOverlaysConstMeta =>
+      const TaskConstMeta(debugName: "duplicate_overlays", argNames: ["ids"]);
+
+  @override
   Future<String> crateApiProjectsDuplicateProject({
     required String root,
     required String id,
@@ -437,7 +1892,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 8,
+            funcId: 40,
             port: port_,
           );
         },
@@ -459,12 +1914,52 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<ProjectView> crateApiTranscribeEditWord({
+    String? clipId,
+    String? audioId,
+    required String segment,
+    required int word,
+    required String text,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_opt_String(clipId, serializer);
+          sse_encode_opt_String(audioId, serializer);
+          sse_encode_String(segment, serializer);
+          sse_encode_u_32(word, serializer);
+          sse_encode_String(text, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 41,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiTranscribeEditWordConstMeta,
+        argValues: [clipId, audioId, segment, word, text],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTranscribeEditWordConstMeta => const TaskConstMeta(
+    debugName: "edit_word",
+    argNames: ["clipId", "audioId", "segment", "word", "text"],
+  );
+
+  @override
   String crateApiEngineVersion() {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 9)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 42)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -487,7 +1982,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_i_64(durationUs, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 10)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 43)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_opt_box_autoadd_error_code,
@@ -507,6 +2002,219 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<void> crateApiProjectsExportProjectBundle({
+    required String root,
+    required String id,
+    required String path,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(root, serializer);
+          sse_encode_String(id, serializer);
+          sse_encode_String(path, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 44,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiProjectsExportProjectBundleConstMeta,
+        argValues: [root, id, path],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiProjectsExportProjectBundleConstMeta =>
+      const TaskConstMeta(
+        debugName: "export_project_bundle",
+        argNames: ["root", "id", "path"],
+      );
+
+  @override
+  PlatformInt64 crateApiExportExportSizeEstimate({
+    required ExportSettings settings,
+    required PlatformInt64 durationUs,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_box_autoadd_export_settings(settings, serializer);
+          sse_encode_i_64(durationUs, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 45)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_i_64,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiExportExportSizeEstimateConstMeta,
+        argValues: [settings, durationUs],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiExportExportSizeEstimateConstMeta =>
+      const TaskConstMeta(
+        debugName: "export_size_estimate",
+        argNames: ["settings", "durationUs"],
+      );
+
+  @override
+  bool crateApiExportExportSupports4K() {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 46)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_bool,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiExportExportSupports4KConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiExportExportSupports4KConstMeta =>
+      const TaskConstMeta(debugName: "export_supports_4k", argNames: []);
+
+  @override
+  Future<AiSettingsView> crateApiAiForgetAiKey({required String root}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(root, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 47,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_ai_settings_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiAiForgetAiKeyConstMeta,
+        argValues: [root],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAiForgetAiKeyConstMeta =>
+      const TaskConstMeta(debugName: "forget_ai_key", argNames: ["root"]);
+
+  @override
+  bool crateApiArrangeHasPendingArrangement() {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 48)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_bool,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiArrangeHasPendingArrangementConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiArrangeHasPendingArrangementConstMeta =>
+      const TaskConstMeta(debugName: "has_pending_arrangement", argNames: []);
+
+  @override
+  Future<ProjectView> crateApiTranscribeHideSegment({
+    String? clipId,
+    String? audioId,
+    required String segment,
+    required bool hidden,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_opt_String(clipId, serializer);
+          sse_encode_opt_String(audioId, serializer);
+          sse_encode_String(segment, serializer);
+          sse_encode_bool(hidden, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 49,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiTranscribeHideSegmentConstMeta,
+        argValues: [clipId, audioId, segment, hidden],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTranscribeHideSegmentConstMeta =>
+      const TaskConstMeta(
+        debugName: "hide_segment",
+        argNames: ["clipId", "audioId", "segment", "hidden"],
+      );
+
+  @override
+  Future<List<ImportOutcome>> crateApiBrandKitImportBrandAssets({
+    required String root,
+    required List<String> paths,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(root, serializer);
+          sse_encode_list_String(paths, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 50,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_import_outcome,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiBrandKitImportBrandAssetsConstMeta,
+        argValues: [root, paths],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiBrandKitImportBrandAssetsConstMeta =>
+      const TaskConstMeta(
+        debugName: "import_brand_assets",
+        argNames: ["root", "paths"],
+      );
+
+  @override
   Future<List<ImportOutcome>> crateApiMediaImportFiles({
     required List<String> paths,
   }) {
@@ -518,7 +2226,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 11,
+            funcId: 51,
             port: port_,
           );
         },
@@ -537,6 +2245,41 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "import_files", argNames: ["paths"]);
 
   @override
+  Future<String> crateApiProjectsImportProjectBundle({
+    required String root,
+    required String path,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(root, serializer);
+          sse_encode_String(path, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 52,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiProjectsImportProjectBundleConstMeta,
+        argValues: [root, path],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiProjectsImportProjectBundleConstMeta =>
+      const TaskConstMeta(
+        debugName: "import_project_bundle",
+        argNames: ["root", "path"],
+      );
+
+  @override
   Future<void> crateApiInitApp() {
     return handler.executeNormal(
       NormalTask(
@@ -545,7 +2288,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 12,
+            funcId: 53,
             port: port_,
           );
         },
@@ -573,7 +2316,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 13,
+            funcId: 54,
             port: port_,
           );
         },
@@ -592,6 +2335,103 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "init_engine", argNames: ["logDir"]);
 
   @override
+  Future<ProjectView> crateApiOverlaysKeyOverlayTransform({
+    required String id,
+    required PlatformInt64 timeUs,
+    required TransformView transform,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_i_64(timeUs, serializer);
+          sse_encode_box_autoadd_transform_view(transform, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 55,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiOverlaysKeyOverlayTransformConstMeta,
+        argValues: [id, timeUs, transform],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiOverlaysKeyOverlayTransformConstMeta =>
+      const TaskConstMeta(
+        debugName: "key_overlay_transform",
+        argNames: ["id", "timeUs", "transform"],
+      );
+
+  @override
+  List<LibraryItemView> crateApiLibraryLibraryItems({
+    required String query,
+    String? category,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(query, serializer);
+          sse_encode_opt_String(category, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 56)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_library_item_view,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiLibraryLibraryItemsConstMeta,
+        argValues: [query, category],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiLibraryLibraryItemsConstMeta =>
+      const TaskConstMeta(
+        debugName: "library_items",
+        argNames: ["query", "category"],
+      );
+
+  @override
+  PictureView? crateApiLibraryLibraryThumbnail({
+    required String name,
+    required int size,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(name, serializer);
+          sse_encode_u_32(size, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 57)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_box_autoadd_picture_view,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiLibraryLibraryThumbnailConstMeta,
+        argValues: [name, size],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiLibraryLibraryThumbnailConstMeta =>
+      const TaskConstMeta(
+        debugName: "library_thumbnail",
+        argNames: ["name", "size"],
+      );
+
+  @override
   Future<List<ProjectSummary>> crateApiProjectsListProjects({
     required String root,
   }) {
@@ -603,7 +2443,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 14,
+            funcId: 58,
             port: port_,
           );
         },
@@ -633,7 +2473,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 15,
+            funcId: 59,
             port: port_,
           );
         },
@@ -652,6 +2492,106 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "list_trash", argNames: ["root"]);
 
   @override
+  Stream<ThumbnailView> crateApiMediaMediaFilmstrip({required String mediaId}) {
+    final sink = RustStreamSink<ThumbnailView>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_String(mediaId, serializer);
+            sse_encode_StreamSink_thumbnail_view_Sse(sink, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 60,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: null,
+          ),
+          constMeta: kCrateApiMediaMediaFilmstripConstMeta,
+          argValues: [mediaId, sink],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return sink.stream;
+  }
+
+  TaskConstMeta get kCrateApiMediaMediaFilmstripConstMeta =>
+      const TaskConstMeta(
+        debugName: "media_filmstrip",
+        argNames: ["mediaId", "sink"],
+      );
+
+  @override
+  Future<Uint8List> crateApiAudioMediaPeaks({required String mediaId}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(mediaId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 61,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_prim_u_8_strict,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiAudioMediaPeaksConstMeta,
+        argValues: [mediaId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAudioMediaPeaksConstMeta =>
+      const TaskConstMeta(debugName: "media_peaks", argNames: ["mediaId"]);
+
+  @override
+  Future<ProjectView> crateApiAudioMoveAudio({
+    required String id,
+    required PlatformInt64 startUs,
+    String? trackId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_i_64(startUs, serializer);
+          sse_encode_opt_String(trackId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 62,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiAudioMoveAudioConstMeta,
+        argValues: [id, startUs, trackId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAudioMoveAudioConstMeta => const TaskConstMeta(
+    debugName: "move_audio",
+    argNames: ["id", "startUs", "trackId"],
+  );
+
+  @override
   Future<ProjectView> crateApiClipsMoveClip({
     required String id,
     required int to,
@@ -665,7 +2605,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 16,
+            funcId: 63,
             port: port_,
           );
         },
@@ -684,6 +2624,186 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "move_clip", argNames: ["id", "to"]);
 
   @override
+  void crateApiClipsMoveCrop({
+    required String id,
+    required double dx,
+    required double dy,
+    required double zoomBy,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_f_32(dx, serializer);
+          sse_encode_f_32(dy, serializer);
+          sse_encode_f_32(zoomBy, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 64)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiClipsMoveCropConstMeta,
+        argValues: [id, dx, dy, zoomBy],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiClipsMoveCropConstMeta => const TaskConstMeta(
+    debugName: "move_crop",
+    argNames: ["id", "dx", "dy", "zoomBy"],
+  );
+
+  @override
+  Future<ProjectView> crateApiOverlaysMoveKeyframes({
+    required String id,
+    required PlatformInt64 fromUs,
+    required PlatformInt64 toUs,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_i_64(fromUs, serializer);
+          sse_encode_i_64(toUs, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 65,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiOverlaysMoveKeyframesConstMeta,
+        argValues: [id, fromUs, toUs],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiOverlaysMoveKeyframesConstMeta =>
+      const TaskConstMeta(
+        debugName: "move_keyframes",
+        argNames: ["id", "fromUs", "toUs"],
+      );
+
+  @override
+  Future<ProjectView> crateApiOverlaysMoveOverlays({
+    required List<String> ids,
+    required double dx,
+    required double dy,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_String(ids, serializer);
+          sse_encode_f_32(dx, serializer);
+          sse_encode_f_32(dy, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 66,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiOverlaysMoveOverlaysConstMeta,
+        argValues: [ids, dx, dy],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiOverlaysMoveOverlaysConstMeta =>
+      const TaskConstMeta(
+        debugName: "move_overlays",
+        argNames: ["ids", "dx", "dy"],
+      );
+
+  @override
+  Future<ProjectView> crateApiOverlaysMovePathPoint({
+    required String id,
+    required int index,
+    required double x,
+    required double y,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_u_32(index, serializer);
+          sse_encode_f_32(x, serializer);
+          sse_encode_f_32(y, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 67,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiOverlaysMovePathPointConstMeta,
+        argValues: [id, index, x, y],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiOverlaysMovePathPointConstMeta =>
+      const TaskConstMeta(
+        debugName: "move_path_point",
+        argNames: ["id", "index", "x", "y"],
+      );
+
+  @override
+  Future<ProjectView> crateApiClipsMuteRange({
+    required PlatformInt64 startUs,
+    required PlatformInt64 endUs,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_i_64(startUs, serializer);
+          sse_encode_i_64(endUs, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 68,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiClipsMuteRangeConstMeta,
+        argValues: [startUs, endUs],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiClipsMuteRangeConstMeta => const TaskConstMeta(
+    debugName: "mute_range",
+    argNames: ["startUs", "endUs"],
+  );
+
+  @override
   Future<void> crateApiProjectsOpenProject({
     required String root,
     required String id,
@@ -697,7 +2817,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 17,
+            funcId: 69,
             port: port_,
           );
         },
@@ -716,6 +2836,109 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "open_project", argNames: ["root", "id"]);
 
   @override
+  bool crateApiTranscribeOpenaiTranscriptionReady() {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 70)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_bool,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiTranscribeOpenaiTranscriptionReadyConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTranscribeOpenaiTranscriptionReadyConstMeta =>
+      const TaskConstMeta(
+        debugName: "openai_transcription_ready",
+        argNames: [],
+      );
+
+  @override
+  List<OverlayBoxView> crateApiOverlaysOverlayBoxes({
+    required PlatformInt64 timeUs,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_i_64(timeUs, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 71)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_overlay_box_view,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiOverlaysOverlayBoxesConstMeta,
+        argValues: [timeUs],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiOverlaysOverlayBoxesConstMeta =>
+      const TaskConstMeta(debugName: "overlay_boxes", argNames: ["timeUs"]);
+
+  @override
+  TransformView? crateApiOverlaysOverlayTransformAt({
+    required String id,
+    required PlatformInt64 timeUs,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_i_64(timeUs, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 72)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_box_autoadd_transform_view,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiOverlaysOverlayTransformAtConstMeta,
+        argValues: [id, timeUs],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiOverlaysOverlayTransformAtConstMeta =>
+      const TaskConstMeta(
+        debugName: "overlay_transform_at",
+        argNames: ["id", "timeUs"],
+      );
+
+  @override
+  List<PathPointView> crateApiOverlaysPathCurve({required String id}) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 73)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_path_point_view,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiOverlaysPathCurveConstMeta,
+        argValues: [id],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiOverlaysPathCurveConstMeta =>
+      const TaskConstMeta(debugName: "path_curve", argNames: ["id"]);
+
+  @override
   Future<ProjectView> crateApiMediaPlaceClips({
     required List<String> mediaIds,
   }) {
@@ -727,7 +2950,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 18,
+            funcId: 74,
             port: port_,
           );
         },
@@ -746,12 +2969,81 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "place_clips", argNames: ["mediaIds"]);
 
   @override
+  Future<AiPayloadView> crateApiArrangePrepareAiArrangement({
+    required String root,
+    required String language,
+    String? instruction,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(root, serializer);
+          sse_encode_String(language, serializer);
+          sse_encode_opt_String(instruction, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 75,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_ai_payload_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiArrangePrepareAiArrangementConstMeta,
+        argValues: [root, language, instruction],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiArrangePrepareAiArrangementConstMeta =>
+      const TaskConstMeta(
+        debugName: "prepare_ai_arrangement",
+        argNames: ["root", "language", "instruction"],
+      );
+
+  @override
+  PresetSampleView crateApiOverlaysPresetSample({
+    required PresetKindView kind,
+    required AnimSlotView slot,
+    required double progress,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_preset_kind_view(kind, serializer);
+          sse_encode_anim_slot_view(slot, serializer);
+          sse_encode_f_32(progress, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 76)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_preset_sample_view,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiOverlaysPresetSampleConstMeta,
+        argValues: [kind, slot, progress],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiOverlaysPresetSampleConstMeta =>
+      const TaskConstMeta(
+        debugName: "preset_sample",
+        argNames: ["kind", "slot", "progress"],
+      );
+
+  @override
   bool crateApiPreviewPreviewIsPlaying() {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 19)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 77)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_bool,
@@ -768,12 +3060,74 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "preview_is_playing", argNames: []);
 
   @override
+  void crateApiOverlaysPreviewOverlayKey({
+    required String id,
+    required PlatformInt64 timeUs,
+    required TransformView transform,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_i_64(timeUs, serializer);
+          sse_encode_box_autoadd_transform_view(transform, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 78)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiOverlaysPreviewOverlayKeyConstMeta,
+        argValues: [id, timeUs, transform],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiOverlaysPreviewOverlayKeyConstMeta =>
+      const TaskConstMeta(
+        debugName: "preview_overlay_key",
+        argNames: ["id", "timeUs", "transform"],
+      );
+
+  @override
+  void crateApiOverlaysPreviewOverlayTransform({
+    required String id,
+    required TransformView transform,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_box_autoadd_transform_view(transform, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 79)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiOverlaysPreviewOverlayTransformConstMeta,
+        argValues: [id, transform],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiOverlaysPreviewOverlayTransformConstMeta =>
+      const TaskConstMeta(
+        debugName: "preview_overlay_transform",
+        argNames: ["id", "transform"],
+      );
+
+  @override
   void crateApiPreviewPreviewPause() {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 20)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 80)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -795,7 +3149,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 21)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 81)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -812,12 +3166,35 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "preview_play", argNames: []);
 
   @override
+  void crateApiPreviewPreviewPlayAt({required double rate}) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_f_32(rate, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 82)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiPreviewPreviewPlayAtConstMeta,
+        argValues: [rate],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiPreviewPreviewPlayAtConstMeta =>
+      const TaskConstMeta(debugName: "preview_play_at", argNames: ["rate"]);
+
+  @override
   PlatformInt64 crateApiPreviewPreviewPositionUs() {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 22)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 83)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_i_64,
@@ -840,7 +3217,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_i_64(timeUs, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 23)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 84)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -857,6 +3234,38 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "preview_seek", argNames: ["timeUs"]);
 
   @override
+  Future<ThumbnailView?> crateApiMediaProjectCover({
+    required String root,
+    required String id,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(root, serializer);
+          sse_encode_String(id, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 85,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_box_autoadd_thumbnail_view,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiMediaProjectCoverConstMeta,
+        argValues: [root, id],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiMediaProjectCoverConstMeta =>
+      const TaskConstMeta(debugName: "project_cover", argNames: ["root", "id"]);
+
+  @override
   Future<ProjectView> crateApiProjectsProjectView() {
     return handler.executeNormal(
       NormalTask(
@@ -865,7 +3274,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 24,
+            funcId: 86,
             port: port_,
           );
         },
@@ -892,7 +3301,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 25,
+            funcId: 87,
             port: port_,
           );
         },
@@ -924,7 +3333,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 26,
+            funcId: 88,
             port: port_,
           );
         },
@@ -943,6 +3352,139 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "relink_media", argNames: ["id", "path"]);
 
   @override
+  Future<void> crateApiArrangeRememberAiConsent({
+    required String root,
+    required String projectId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(root, serializer);
+          sse_encode_String(projectId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 89,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiArrangeRememberAiConsentConstMeta,
+        argValues: [root, projectId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiArrangeRememberAiConsentConstMeta =>
+      const TaskConstMeta(
+        debugName: "remember_ai_consent",
+        argNames: ["root", "projectId"],
+      );
+
+  @override
+  Future<ProjectView> crateApiAudioRemoveAudioTrack({required String id}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 90,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiAudioRemoveAudioTrackConstMeta,
+        argValues: [id],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAudioRemoveAudioTrackConstMeta =>
+      const TaskConstMeta(debugName: "remove_audio_track", argNames: ["id"]);
+
+  @override
+  Future<ProjectView> crateApiOverlaysRemoveKeyframesAt({
+    required String id,
+    required PlatformInt64 timeUs,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_i_64(timeUs, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 91,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiOverlaysRemoveKeyframesAtConstMeta,
+        argValues: [id, timeUs],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiOverlaysRemoveKeyframesAtConstMeta =>
+      const TaskConstMeta(
+        debugName: "remove_keyframes_at",
+        argNames: ["id", "timeUs"],
+      );
+
+  @override
+  Future<ProjectView> crateApiAudioRenameAudioTrack({
+    required String id,
+    required String name,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_String(name, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 92,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiAudioRenameAudioTrackConstMeta,
+        argValues: [id, name],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAudioRenameAudioTrackConstMeta =>
+      const TaskConstMeta(
+        debugName: "rename_audio_track",
+        argNames: ["id", "name"],
+      );
+
+  @override
   Future<void> crateApiProjectsRenameProject({
     required String root,
     required String id,
@@ -958,7 +3500,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 27,
+            funcId: 93,
             port: port_,
           );
         },
@@ -980,6 +3522,69 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<ProjectView> crateApiAudioReorderAudioTrack({
+    required String id,
+    required int to,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_u_32(to, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 94,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiAudioReorderAudioTrackConstMeta,
+        argValues: [id, to],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAudioReorderAudioTrackConstMeta =>
+      const TaskConstMeta(
+        debugName: "reorder_audio_track",
+        argNames: ["id", "to"],
+      );
+
+  @override
+  Future<ProjectView> crateApiClipsResetCrop({required String id}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 95,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiClipsResetCropConstMeta,
+        argValues: [id],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiClipsResetCropConstMeta =>
+      const TaskConstMeta(debugName: "reset_crop", argNames: ["id"]);
+
+  @override
   Future<void> crateApiProjectsRestoreProject({
     required String root,
     required String id,
@@ -993,7 +3598,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 28,
+            funcId: 96,
             port: port_,
           );
         },
@@ -1015,6 +3620,74 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<ProjectView> crateApiProjectsRestoreVersion({required String name}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(name, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 97,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiProjectsRestoreVersionConstMeta,
+        argValues: [name],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiProjectsRestoreVersionConstMeta =>
+      const TaskConstMeta(debugName: "restore_version", argNames: ["name"]);
+
+  @override
+  Future<AiSettingsView> crateApiAiSaveAiSettings({
+    required String root,
+    required AiProviderView provider,
+    required String model,
+    required String baseUrl,
+    String? key,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(root, serializer);
+          sse_encode_ai_provider_view(provider, serializer);
+          sse_encode_String(model, serializer);
+          sse_encode_String(baseUrl, serializer);
+          sse_encode_opt_String(key, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 98,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_ai_settings_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiAiSaveAiSettingsConstMeta,
+        argValues: [root, provider, model, baseUrl, key],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAiSaveAiSettingsConstMeta => const TaskConstMeta(
+    debugName: "save_ai_settings",
+    argNames: ["root", "provider", "model", "baseUrl", "key"],
+  );
+
+  @override
   Stream<SaveStateView> crateApiProjectsSaveEvents() {
     final sink = RustStreamSink<SaveStateView>();
     unawaited(
@@ -1026,7 +3699,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 29,
+              funcId: 99,
               port: port_,
             );
           },
@@ -1047,6 +3720,957 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "save_events", argNames: ["sink"]);
 
   @override
+  Future<void> crateApiTranscribeSaveOpenaiKey({required String key}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(key, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 100,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiTranscribeSaveOpenaiKeyConstMeta,
+        argValues: [key],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTranscribeSaveOpenaiKeyConstMeta =>
+      const TaskConstMeta(debugName: "save_openai_key", argNames: ["key"]);
+
+  @override
+  Stream<TaskEvent> crateApiArrangeSendAiArrangement() {
+    final events = RustStreamSink<TaskEvent>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_StreamSink_task_event_Sse(events, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 101,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: null,
+          ),
+          constMeta: kCrateApiArrangeSendAiArrangementConstMeta,
+          argValues: [events],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return events.stream;
+  }
+
+  TaskConstMeta get kCrateApiArrangeSendAiArrangementConstMeta =>
+      const TaskConstMeta(
+        debugName: "send_ai_arrangement",
+        argNames: ["events"],
+      );
+
+  @override
+  Future<ProjectView> crateApiAudioSetAudioLoop({
+    required String id,
+    required bool looped,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_bool(looped, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 102,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiAudioSetAudioLoopConstMeta,
+        argValues: [id, looped],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAudioSetAudioLoopConstMeta => const TaskConstMeta(
+    debugName: "set_audio_loop",
+    argNames: ["id", "looped"],
+  );
+
+  @override
+  Future<ProjectView> crateApiAudioSetAudioRole({
+    required String id,
+    required AudioRoleView role,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_audio_role_view(role, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 103,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiAudioSetAudioRoleConstMeta,
+        argValues: [id, role],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAudioSetAudioRoleConstMeta => const TaskConstMeta(
+    debugName: "set_audio_role",
+    argNames: ["id", "role"],
+  );
+
+  @override
+  Future<ProjectView> crateApiAudioSetAudioSound({
+    required String id,
+    required double volume,
+    required PlatformInt64 fadeInUs,
+    required PlatformInt64 fadeOutUs,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_f_32(volume, serializer);
+          sse_encode_i_64(fadeInUs, serializer);
+          sse_encode_i_64(fadeOutUs, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 104,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiAudioSetAudioSoundConstMeta,
+        argValues: [id, volume, fadeInUs, fadeOutUs],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAudioSetAudioSoundConstMeta => const TaskConstMeta(
+    debugName: "set_audio_sound",
+    argNames: ["id", "volume", "fadeInUs", "fadeOutUs"],
+  );
+
+  @override
+  Future<ProjectView> crateApiTranscribeSetCaptionAnimation({
+    required CaptionAnimationView animation,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_caption_animation_view(animation, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 105,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiTranscribeSetCaptionAnimationConstMeta,
+        argValues: [animation],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTranscribeSetCaptionAnimationConstMeta =>
+      const TaskConstMeta(
+        debugName: "set_caption_animation",
+        argNames: ["animation"],
+      );
+
+  @override
+  Future<ProjectView> crateApiTranscribeSetCaptionPreset({
+    required CaptionPresetView preset,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_caption_preset_view(preset, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 106,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiTranscribeSetCaptionPresetConstMeta,
+        argValues: [preset],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTranscribeSetCaptionPresetConstMeta =>
+      const TaskConstMeta(
+        debugName: "set_caption_preset",
+        argNames: ["preset"],
+      );
+
+  @override
+  Future<ProjectView> crateApiTranscribeSetCaptionStyle({
+    required String font,
+    required double size,
+    required bool uppercase,
+    required String color,
+    required String emphasisColor,
+    required double anchor,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(font, serializer);
+          sse_encode_f_32(size, serializer);
+          sse_encode_bool(uppercase, serializer);
+          sse_encode_String(color, serializer);
+          sse_encode_String(emphasisColor, serializer);
+          sse_encode_f_32(anchor, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 107,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiTranscribeSetCaptionStyleConstMeta,
+        argValues: [font, size, uppercase, color, emphasisColor, anchor],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTranscribeSetCaptionStyleConstMeta =>
+      const TaskConstMeta(
+        debugName: "set_caption_style",
+        argNames: [
+          "font",
+          "size",
+          "uppercase",
+          "color",
+          "emphasisColor",
+          "anchor",
+        ],
+      );
+
+  @override
+  Future<ProjectView> crateApiTranscribeSetCaptionsEnabled({
+    required bool enabled,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_bool(enabled, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 108,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiTranscribeSetCaptionsEnabledConstMeta,
+        argValues: [enabled],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTranscribeSetCaptionsEnabledConstMeta =>
+      const TaskConstMeta(
+        debugName: "set_captions_enabled",
+        argNames: ["enabled"],
+      );
+
+  @override
+  Future<ProjectView> crateApiLookSetClipColor({
+    required String id,
+    required double brightness,
+    required double contrast,
+    required double saturation,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_f_32(brightness, serializer);
+          sse_encode_f_32(contrast, serializer);
+          sse_encode_f_32(saturation, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 109,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiLookSetClipColorConstMeta,
+        argValues: [id, brightness, contrast, saturation],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiLookSetClipColorConstMeta => const TaskConstMeta(
+    debugName: "set_clip_color",
+    argNames: ["id", "brightness", "contrast", "saturation"],
+  );
+
+  @override
+  Future<ProjectView> crateApiAudioSetClipSound({
+    required String id,
+    required double volume,
+    required bool muted,
+    required PlatformInt64 fadeInUs,
+    required PlatformInt64 fadeOutUs,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_f_32(volume, serializer);
+          sse_encode_bool(muted, serializer);
+          sse_encode_i_64(fadeInUs, serializer);
+          sse_encode_i_64(fadeOutUs, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 110,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiAudioSetClipSoundConstMeta,
+        argValues: [id, volume, muted, fadeInUs, fadeOutUs],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAudioSetClipSoundConstMeta => const TaskConstMeta(
+    debugName: "set_clip_sound",
+    argNames: ["id", "volume", "muted", "fadeInUs", "fadeOutUs"],
+  );
+
+  @override
+  Future<ProjectView> crateApiLookSetClipSpeed({
+    required String id,
+    required double speed,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_f_32(speed, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 111,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiLookSetClipSpeedConstMeta,
+        argValues: [id, speed],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiLookSetClipSpeedConstMeta => const TaskConstMeta(
+    debugName: "set_clip_speed",
+    argNames: ["id", "speed"],
+  );
+
+  @override
+  Future<ProjectView> crateApiAudioSetDucking({
+    required String id,
+    double? strength,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_opt_box_autoadd_f_32(strength, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 112,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiAudioSetDuckingConstMeta,
+        argValues: [id, strength],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAudioSetDuckingConstMeta => const TaskConstMeta(
+    debugName: "set_ducking",
+    argNames: ["id", "strength"],
+  );
+
+  @override
+  Future<ProjectView> crateApiOverlaysSetKeyframeEasing({
+    required String id,
+    required PlatformInt64 timeUs,
+    required EasingView easing,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_i_64(timeUs, serializer);
+          sse_encode_easing_view(easing, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 113,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiOverlaysSetKeyframeEasingConstMeta,
+        argValues: [id, timeUs, easing],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiOverlaysSetKeyframeEasingConstMeta =>
+      const TaskConstMeta(
+        debugName: "set_keyframe_easing",
+        argNames: ["id", "timeUs", "easing"],
+      );
+
+  @override
+  Future<ProjectView> crateApiOverlaysSetOverlayColor({
+    required String id,
+    String? color,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_opt_String(color, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 114,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiOverlaysSetOverlayColorConstMeta,
+        argValues: [id, color],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiOverlaysSetOverlayColorConstMeta =>
+      const TaskConstMeta(
+        debugName: "set_overlay_color",
+        argNames: ["id", "color"],
+      );
+
+  @override
+  Future<ProjectView> crateApiOverlaysSetOverlayFlags({
+    required String id,
+    required bool locked,
+    required bool hidden,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_bool(locked, serializer);
+          sse_encode_bool(hidden, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 115,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiOverlaysSetOverlayFlagsConstMeta,
+        argValues: [id, locked, hidden],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiOverlaysSetOverlayFlagsConstMeta =>
+      const TaskConstMeta(
+        debugName: "set_overlay_flags",
+        argNames: ["id", "locked", "hidden"],
+      );
+
+  @override
+  Future<ProjectView> crateApiOverlaysSetOverlayTiming({
+    required String id,
+    required PlatformInt64 startUs,
+    required PlatformInt64 endUs,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_i_64(startUs, serializer);
+          sse_encode_i_64(endUs, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 116,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiOverlaysSetOverlayTimingConstMeta,
+        argValues: [id, startUs, endUs],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiOverlaysSetOverlayTimingConstMeta =>
+      const TaskConstMeta(
+        debugName: "set_overlay_timing",
+        argNames: ["id", "startUs", "endUs"],
+      );
+
+  @override
+  Future<ProjectView> crateApiOverlaysSetOverlayTransform({
+    required String id,
+    required TransformView transform,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_box_autoadd_transform_view(transform, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 117,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiOverlaysSetOverlayTransformConstMeta,
+        argValues: [id, transform],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiOverlaysSetOverlayTransformConstMeta =>
+      const TaskConstMeta(
+        debugName: "set_overlay_transform",
+        argNames: ["id", "transform"],
+      );
+
+  @override
+  Future<ProjectView> crateApiOverlaysSetPathOptions({
+    required String id,
+    required double smoothing,
+    required bool orientToPath,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_f_32(smoothing, serializer);
+          sse_encode_bool(orientToPath, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 118,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiOverlaysSetPathOptionsConstMeta,
+        argValues: [id, smoothing, orientToPath],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiOverlaysSetPathOptionsConstMeta =>
+      const TaskConstMeta(
+        debugName: "set_path_options",
+        argNames: ["id", "smoothing", "orientToPath"],
+      );
+
+  @override
+  Future<ProjectView> crateApiOverlaysSetPresetAnim({
+    required String id,
+    required AnimSlotView slot,
+    PresetKindView? kind,
+    required PlatformInt64 durationUs,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_anim_slot_view(slot, serializer);
+          sse_encode_opt_box_autoadd_preset_kind_view(kind, serializer);
+          sse_encode_i_64(durationUs, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 119,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiOverlaysSetPresetAnimConstMeta,
+        argValues: [id, slot, kind, durationUs],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiOverlaysSetPresetAnimConstMeta =>
+      const TaskConstMeta(
+        debugName: "set_preset_anim",
+        argNames: ["id", "slot", "kind", "durationUs"],
+      );
+
+  @override
+  Future<ProjectView> crateApiOverlaysSetRecordedPath({
+    required String id,
+    required List<PathPointView> samples,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_list_path_point_view(samples, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 120,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiOverlaysSetRecordedPathConstMeta,
+        argValues: [id, samples],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiOverlaysSetRecordedPathConstMeta =>
+      const TaskConstMeta(
+        debugName: "set_recorded_path",
+        argNames: ["id", "samples"],
+      );
+
+  @override
+  Future<ProjectView> crateApiOverlaysSetText({
+    required String id,
+    required TextElementView text,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_box_autoadd_text_element_view(text, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 121,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiOverlaysSetTextConstMeta,
+        argValues: [id, text],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiOverlaysSetTextConstMeta =>
+      const TaskConstMeta(debugName: "set_text", argNames: ["id", "text"]);
+
+  @override
+  Future<ProjectView> crateApiAudioSetTrackFlags({
+    required TrackKindView kind,
+    String? id,
+    required bool muted,
+    required bool locked,
+    required bool hidden,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_track_kind_view(kind, serializer);
+          sse_encode_opt_String(id, serializer);
+          sse_encode_bool(muted, serializer);
+          sse_encode_bool(locked, serializer);
+          sse_encode_bool(hidden, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 122,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiAudioSetTrackFlagsConstMeta,
+        argValues: [kind, id, muted, locked, hidden],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAudioSetTrackFlagsConstMeta => const TaskConstMeta(
+    debugName: "set_track_flags",
+    argNames: ["kind", "id", "muted", "locked", "hidden"],
+  );
+
+  @override
+  Future<ProjectView> crateApiLookSetTransitionForAll({
+    required TransitionKindView kind,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_transition_kind_view(kind, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 123,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiLookSetTransitionForAllConstMeta,
+        argValues: [kind],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiLookSetTransitionForAllConstMeta =>
+      const TaskConstMeta(
+        debugName: "set_transition_for_all",
+        argNames: ["kind"],
+      );
+
+  @override
+  Future<ProjectView> crateApiOverlaysShiftOverlayLayer({
+    required String id,
+    required bool forward,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_bool(forward, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 124,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiOverlaysShiftOverlayLayerConstMeta,
+        argValues: [id, forward],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiOverlaysShiftOverlayLayerConstMeta =>
+      const TaskConstMeta(
+        debugName: "shift_overlay_layer",
+        argNames: ["id", "forward"],
+      );
+
+  @override
+  ModelView crateApiTranscribeSpeechModel({required String root}) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(root, serializer);
+          return pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 125,
+          )!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_model_view,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiTranscribeSpeechModelConstMeta,
+        argValues: [root],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTranscribeSpeechModelConstMeta =>
+      const TaskConstMeta(debugName: "speech_model", argNames: ["root"]);
+
+  @override
+  Future<ProjectView> crateApiClipsSplitAllAt({required PlatformInt64 timeUs}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_i_64(timeUs, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 126,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiClipsSplitAllAtConstMeta,
+        argValues: [timeUs],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiClipsSplitAllAtConstMeta =>
+      const TaskConstMeta(debugName: "split_all_at", argNames: ["timeUs"]);
+
+  @override
   Future<ProjectView> crateApiClipsSplitClip({
     required String id,
     required PlatformInt64 timeUs,
@@ -1060,7 +4684,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 30,
+            funcId: 127,
             port: port_,
           );
         },
@@ -1091,7 +4715,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 31,
+              funcId: 128,
               port: port_,
             );
           },
@@ -1130,7 +4754,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 32,
+              funcId: 129,
               port: port_,
             );
           },
@@ -1153,6 +4777,266 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   );
 
   @override
+  Future<void> crateApiAudioStartVoiceOver() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 130,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiAudioStartVoiceOverConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAudioStartVoiceOverConstMeta =>
+      const TaskConstMeta(debugName: "start_voice_over", argNames: []);
+
+  @override
+  Future<ProjectView> crateApiAudioStopVoiceOver({
+    required PlatformInt64 startUs,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_i_64(startUs, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 131,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiAudioStopVoiceOverConstMeta,
+        argValues: [startUs],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAudioStopVoiceOverConstMeta =>
+      const TaskConstMeta(debugName: "stop_voice_over", argNames: ["startUs"]);
+
+  @override
+  Future<ProjectView> crateApiOverlaysStretchPath({
+    required String id,
+    required PlatformInt64 lengthUs,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_i_64(lengthUs, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 132,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiOverlaysStretchPathConstMeta,
+        argValues: [id, lengthUs],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiOverlaysStretchPathConstMeta =>
+      const TaskConstMeta(
+        debugName: "stretch_path",
+        argNames: ["id", "lengthUs"],
+      );
+
+  @override
+  Future<void> crateApiAiTestAiConnection({required String root}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(root, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 133,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiAiTestAiConnectionConstMeta,
+        argValues: [root],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAiTestAiConnectionConstMeta =>
+      const TaskConstMeta(debugName: "test_ai_connection", argNames: ["root"]);
+
+  @override
+  Future<ProjectView> crateApiTranscribeToggleEmphasis({
+    String? clipId,
+    String? audioId,
+    required String segment,
+    required int word,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_opt_String(clipId, serializer);
+          sse_encode_opt_String(audioId, serializer);
+          sse_encode_String(segment, serializer);
+          sse_encode_u_32(word, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 134,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiTranscribeToggleEmphasisConstMeta,
+        argValues: [clipId, audioId, segment, word],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTranscribeToggleEmphasisConstMeta =>
+      const TaskConstMeta(
+        debugName: "toggle_emphasis",
+        argNames: ["clipId", "audioId", "segment", "word"],
+      );
+
+  @override
+  Future<ProjectView> crateApiClipsToggleSlowZoom({required String id}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 135,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiClipsToggleSlowZoomConstMeta,
+        argValues: [id],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiClipsToggleSlowZoomConstMeta =>
+      const TaskConstMeta(debugName: "toggle_slow_zoom", argNames: ["id"]);
+
+  @override
+  Stream<TaskEvent> crateApiTranscribeTranscribeProject({
+    required String root,
+  }) {
+    final events = RustStreamSink<TaskEvent>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_String(root, serializer);
+            sse_encode_StreamSink_task_event_Sse(events, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 136,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: null,
+          ),
+          constMeta: kCrateApiTranscribeTranscribeProjectConstMeta,
+          argValues: [root, events],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return events.stream;
+  }
+
+  TaskConstMeta get kCrateApiTranscribeTranscribeProjectConstMeta =>
+      const TaskConstMeta(
+        debugName: "transcribe_project",
+        argNames: ["root", "events"],
+      );
+
+  @override
+  Stream<TaskEvent> crateApiTranscribeTranscribeWithOpenai() {
+    final events = RustStreamSink<TaskEvent>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_StreamSink_task_event_Sse(events, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 137,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: null,
+          ),
+          constMeta: kCrateApiTranscribeTranscribeWithOpenaiConstMeta,
+          argValues: [events],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return events.stream;
+  }
+
+  TaskConstMeta get kCrateApiTranscribeTranscribeWithOpenaiConstMeta =>
+      const TaskConstMeta(
+        debugName: "transcribe_with_openai",
+        argNames: ["events"],
+      );
+
+  @override
   Future<void> crateApiProjectsTrashProject({
     required String root,
     required String id,
@@ -1166,7 +5050,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 33,
+            funcId: 138,
             port: port_,
           );
         },
@@ -1185,6 +5069,42 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "trash_project", argNames: ["root", "id"]);
 
   @override
+  Future<ProjectView> crateApiAudioTrimAudio({
+    required String id,
+    required bool start,
+    required PlatformInt64 deltaUs,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_bool(start, serializer);
+          sse_encode_i_64(deltaUs, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 139,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiAudioTrimAudioConstMeta,
+        argValues: [id, start, deltaUs],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAudioTrimAudioConstMeta => const TaskConstMeta(
+    debugName: "trim_audio",
+    argNames: ["id", "start", "deltaUs"],
+  );
+
+  @override
   Future<ProjectView> crateApiClipsTrimClip({
     required String id,
     required ClipEdge edge,
@@ -1200,7 +5120,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 34,
+            funcId: 140,
             port: port_,
           );
         },
@@ -1229,7 +5149,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 35,
+            funcId: 141,
             port: port_,
           );
         },
@@ -1246,6 +5166,114 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiProjectsUndoConstMeta =>
       const TaskConstMeta(debugName: "undo", argNames: []);
+
+  @override
+  Future<ProjectView> crateApiArrangeUndoArrangement() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 142,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiArrangeUndoArrangementConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiArrangeUndoArrangementConstMeta =>
+      const TaskConstMeta(debugName: "undo_arrangement", argNames: []);
+
+  @override
+  Future<List<VersionView>> crateApiProjectsVersionHistory() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 143,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_version_view,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiProjectsVersionHistoryConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiProjectsVersionHistoryConstMeta =>
+      const TaskConstMeta(debugName: "version_history", argNames: []);
+
+  @override
+  double crateApiAudioVoiceLevel() {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          return pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 144,
+          )!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_f_32,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiAudioVoiceLevelConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAudioVoiceLevelConstMeta =>
+      const TaskConstMeta(debugName: "voice_level", argNames: []);
+
+  @override
+  Future<void> crateApiTranscribeWriteSrt({required String path}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(path, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 145,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_engine_failure,
+        ),
+        constMeta: kCrateApiTranscribeWriteSrtConstMeta,
+        argValues: [path],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTranscribeWriteSrtConstMeta =>
+      const TaskConstMeta(debugName: "write_srt", argNames: ["path"]);
 
   @protected
   AnyhowException dco_decode_AnyhowException(dynamic raw) {
@@ -1268,6 +5296,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  RustStreamSink<ThumbnailView> dco_decode_StreamSink_thumbnail_view_Sse(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    throw UnimplementedError();
+  }
+
+  @protected
   RustStreamSink<BigInt> dco_decode_StreamSink_u_64_Sse(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     throw UnimplementedError();
@@ -1280,9 +5316,121 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  AiPayloadView dco_decode_ai_payload_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return AiPayloadView(
+      provider: dco_decode_String(arr[0]),
+      model: dco_decode_String(arr[1]),
+      url: dco_decode_String(arr[2]),
+      body: dco_decode_String(arr[3]),
+    );
+  }
+
+  @protected
+  AiProviderView dco_decode_ai_provider_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return AiProviderView.values[raw as int];
+  }
+
+  @protected
+  AiSettingsView dco_decode_ai_settings_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return AiSettingsView(
+      provider: dco_decode_opt_box_autoadd_ai_provider_view(arr[0]),
+      model: dco_decode_String(arr[1]),
+      baseUrl: dco_decode_String(arr[2]),
+      hasKey: dco_decode_bool(arr[3]),
+    );
+  }
+
+  @protected
+  AnimSlotView dco_decode_anim_slot_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return AnimSlotView.values[raw as int];
+  }
+
+  @protected
+  ArrangeReviewView dco_decode_arrange_review_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return ArrangeReviewView(
+      beforeUs: dco_decode_i_64(arr[0]),
+      afterUs: dco_decode_i_64(arr[1]),
+      summary: dco_decode_String(arr[2]),
+      decisions: dco_decode_list_decision_view(arr[3]),
+      uncertain: dco_decode_list_uncertain_view(arr[4]),
+      project: dco_decode_project_view(arr[5]),
+    );
+  }
+
+  @protected
+  AudioItemView dco_decode_audio_item_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    return AudioItemView(
+      id: dco_decode_String(arr[0]),
+      mediaId: dco_decode_String(arr[1]),
+      role: dco_decode_audio_role_view(arr[2]),
+      volume: dco_decode_f_32(arr[3]),
+      fadeInUs: dco_decode_i_64(arr[4]),
+      fadeOutUs: dco_decode_i_64(arr[5]),
+      looped: dco_decode_bool(arr[6]),
+      ducking: dco_decode_opt_box_autoadd_f_32(arr[7]),
+    );
+  }
+
+  @protected
+  AudioRoleView dco_decode_audio_role_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return AudioRoleView.values[raw as int];
+  }
+
+  @protected
+  AudioTrackView dco_decode_audio_track_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return AudioTrackView(
+      id: dco_decode_opt_String(arr[0]),
+      name: dco_decode_opt_String(arr[1]),
+      muted: dco_decode_bool(arr[2]),
+      items: dco_decode_list_audio_item_view(arr[3]),
+    );
+  }
+
+  @protected
   bool dco_decode_bool(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as bool;
+  }
+
+  @protected
+  AiProviderView dco_decode_box_autoadd_ai_provider_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_ai_provider_view(raw);
+  }
+
+  @protected
+  bool dco_decode_box_autoadd_bool(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as bool;
+  }
+
+  @protected
+  CaptionHitView dco_decode_box_autoadd_caption_hit_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_caption_hit_view(raw);
   }
 
   @protected
@@ -1298,9 +5446,189 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  double dco_decode_box_autoadd_f_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as double;
+  }
+
+  @protected
+  PathView dco_decode_box_autoadd_path_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_path_view(raw);
+  }
+
+  @protected
+  PictureView dco_decode_box_autoadd_picture_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_picture_view(raw);
+  }
+
+  @protected
+  PresetKindView dco_decode_box_autoadd_preset_kind_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_preset_kind_view(raw);
+  }
+
+  @protected
+  PresetView dco_decode_box_autoadd_preset_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_preset_view(raw);
+  }
+
+  @protected
+  TextElementView dco_decode_box_autoadd_text_element_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_text_element_view(raw);
+  }
+
+  @protected
+  ThumbnailView dco_decode_box_autoadd_thumbnail_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_thumbnail_view(raw);
+  }
+
+  @protected
+  TransformView dco_decode_box_autoadd_transform_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_transform_view(raw);
+  }
+
+  @protected
+  TransitionKindView dco_decode_box_autoadd_transition_kind_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_transition_kind_view(raw);
+  }
+
+  @protected
+  BrandAssetView dco_decode_brand_asset_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return BrandAssetView(
+      id: dco_decode_String(arr[0]),
+      name: dco_decode_String(arr[1]),
+      kind: dco_decode_brand_kind_view(arr[2]),
+    );
+  }
+
+  @protected
+  BrandKindView dco_decode_brand_kind_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return BrandKindView.values[raw as int];
+  }
+
+  @protected
+  CaptionAnimationView dco_decode_caption_animation_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return CaptionAnimationView.values[raw as int];
+  }
+
+  @protected
+  CaptionHitView dco_decode_caption_hit_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
+    return CaptionHitView(
+      clipId: dco_decode_opt_String(arr[0]),
+      audioId: dco_decode_opt_String(arr[1]),
+      segment: dco_decode_String(arr[2]),
+      word: dco_decode_u_32(arr[3]),
+      text: dco_decode_String(arr[4]),
+      left: dco_decode_f_64(arr[5]),
+      top: dco_decode_f_64(arr[6]),
+      width: dco_decode_f_64(arr[7]),
+      height: dco_decode_f_64(arr[8]),
+    );
+  }
+
+  @protected
+  CaptionPresetView dco_decode_caption_preset_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return CaptionPresetView.values[raw as int];
+  }
+
+  @protected
+  CaptionsView dco_decode_captions_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
+    return CaptionsView(
+      enabled: dco_decode_bool(arr[0]),
+      preset: dco_decode_caption_preset_view(arr[1]),
+      animation: dco_decode_caption_animation_view(arr[2]),
+      font: dco_decode_String(arr[3]),
+      size: dco_decode_f_32(arr[4]),
+      uppercase: dco_decode_bool(arr[5]),
+      color: dco_decode_String(arr[6]),
+      emphasisColor: dco_decode_String(arr[7]),
+      anchor: dco_decode_f_32(arr[8]),
+    );
+  }
+
+  @protected
   ClipEdge dco_decode_clip_edge(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return ClipEdge.values[raw as int];
+  }
+
+  @protected
+  ClipLookView dco_decode_clip_look_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return ClipLookView(
+      clipId: dco_decode_String(arr[0]),
+      speed: dco_decode_f_32(arr[1]),
+      brightness: dco_decode_f_32(arr[2]),
+      contrast: dco_decode_f_32(arr[3]),
+      saturation: dco_decode_f_32(arr[4]),
+    );
+  }
+
+  @protected
+  ClipSoundView dco_decode_clip_sound_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return ClipSoundView(
+      clipId: dco_decode_String(arr[0]),
+      volume: dco_decode_f_32(arr[1]),
+      muted: dco_decode_bool(arr[2]),
+      fadeInUs: dco_decode_i_64(arr[3]),
+      fadeOutUs: dco_decode_i_64(arr[4]),
+    );
+  }
+
+  @protected
+  DecisionKindView dco_decode_decision_kind_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return DecisionKindView.values[raw as int];
+  }
+
+  @protected
+  DecisionView dco_decode_decision_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return DecisionView(
+      clipId: dco_decode_String(arr[0]),
+      clipNumber: dco_decode_u_32(arr[1]),
+      kind: dco_decode_decision_kind_view(arr[2]),
+      reason: dco_decode_opt_String(arr[3]),
+      removedUs: dco_decode_i_64(arr[4]),
+    );
+  }
+
+  @protected
+  EasingView dco_decode_easing_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return EasingView.values[raw as int];
   }
 
   @protected
@@ -1328,6 +5656,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       width: dco_decode_u_32(arr[0]),
       fps: dco_decode_u_32(arr[1]),
     );
+  }
+
+  @protected
+  double dco_decode_f_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as double;
   }
 
   @protected
@@ -1361,9 +5695,69 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  KeyframeView dco_decode_keyframe_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return KeyframeView(
+      timeUs: dco_decode_i_64(arr[0]),
+      easing: dco_decode_easing_view(arr[1]),
+    );
+  }
+
+  @protected
+  LibraryItemView dco_decode_library_item_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return LibraryItemView(
+      name: dco_decode_String(arr[0]),
+      category: dco_decode_String(arr[1]),
+    );
+  }
+
+  @protected
   List<String> dco_decode_list_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_String).toList();
+  }
+
+  @protected
+  List<AudioItemView> dco_decode_list_audio_item_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_audio_item_view).toList();
+  }
+
+  @protected
+  List<AudioTrackView> dco_decode_list_audio_track_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_audio_track_view).toList();
+  }
+
+  @protected
+  List<BrandAssetView> dco_decode_list_brand_asset_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_brand_asset_view).toList();
+  }
+
+  @protected
+  List<ClipLookView> dco_decode_list_clip_look_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_clip_look_view).toList();
+  }
+
+  @protected
+  List<ClipSoundView> dco_decode_list_clip_sound_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_clip_sound_view).toList();
+  }
+
+  @protected
+  List<DecisionView> dco_decode_list_decision_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_decision_view).toList();
   }
 
   @protected
@@ -1373,9 +5767,39 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<KeyframeView> dco_decode_list_keyframe_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_keyframe_view).toList();
+  }
+
+  @protected
+  List<LibraryItemView> dco_decode_list_library_item_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_library_item_view).toList();
+  }
+
+  @protected
   List<MediaItemView> dco_decode_list_media_item_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_media_item_view).toList();
+  }
+
+  @protected
+  List<OverlayBoxView> dco_decode_list_overlay_box_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_overlay_box_view).toList();
+  }
+
+  @protected
+  List<OverlayView> dco_decode_list_overlay_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_overlay_view).toList();
+  }
+
+  @protected
+  List<PathPointView> dco_decode_list_path_point_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_path_point_view).toList();
   }
 
   @protected
@@ -1391,6 +5815,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<SegmentView> dco_decode_list_segment_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_segment_view).toList();
+  }
+
+  @protected
   List<TrackItemView> dco_decode_list_track_item_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_track_item_view).toList();
@@ -1400,6 +5830,42 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   List<TrackView> dco_decode_list_track_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_track_view).toList();
+  }
+
+  @protected
+  List<TranscriptView> dco_decode_list_transcript_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_transcript_view).toList();
+  }
+
+  @protected
+  List<UncertainView> dco_decode_list_uncertain_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_uncertain_view).toList();
+  }
+
+  @protected
+  List<VersionView> dco_decode_list_version_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_version_view).toList();
+  }
+
+  @protected
+  List<WordView> dco_decode_list_word_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_word_view).toList();
+  }
+
+  @protected
+  LookView dco_decode_look_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return LookView(
+      clips: dco_decode_list_clip_look_view(arr[0]),
+      transition: dco_decode_opt_box_autoadd_transition_kind_view(arr[1]),
+    );
   }
 
   @protected
@@ -1424,15 +5890,224 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ModelView dco_decode_model_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return ModelView(
+      ready: dco_decode_bool(arr[0]),
+      bytes: dco_decode_u_64(arr[1]),
+    );
+  }
+
+  @protected
   String? dco_decode_opt_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_String(raw);
   }
 
   @protected
+  AiProviderView? dco_decode_opt_box_autoadd_ai_provider_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_ai_provider_view(raw);
+  }
+
+  @protected
+  bool? dco_decode_opt_box_autoadd_bool(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_bool(raw);
+  }
+
+  @protected
+  CaptionHitView? dco_decode_opt_box_autoadd_caption_hit_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_caption_hit_view(raw);
+  }
+
+  @protected
   ErrorCode? dco_decode_opt_box_autoadd_error_code(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_box_autoadd_error_code(raw);
+  }
+
+  @protected
+  double? dco_decode_opt_box_autoadd_f_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_f_32(raw);
+  }
+
+  @protected
+  PathView? dco_decode_opt_box_autoadd_path_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_path_view(raw);
+  }
+
+  @protected
+  PictureView? dco_decode_opt_box_autoadd_picture_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_picture_view(raw);
+  }
+
+  @protected
+  PresetKindView? dco_decode_opt_box_autoadd_preset_kind_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_preset_kind_view(raw);
+  }
+
+  @protected
+  PresetView? dco_decode_opt_box_autoadd_preset_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_preset_view(raw);
+  }
+
+  @protected
+  TextElementView? dco_decode_opt_box_autoadd_text_element_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_text_element_view(raw);
+  }
+
+  @protected
+  ThumbnailView? dco_decode_opt_box_autoadd_thumbnail_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_thumbnail_view(raw);
+  }
+
+  @protected
+  TransformView? dco_decode_opt_box_autoadd_transform_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_transform_view(raw);
+  }
+
+  @protected
+  TransitionKindView? dco_decode_opt_box_autoadd_transition_kind_view(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null
+        ? null
+        : dco_decode_box_autoadd_transition_kind_view(raw);
+  }
+
+  @protected
+  OverlayBoxView dco_decode_overlay_box_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return OverlayBoxView(
+      id: dco_decode_String(arr[0]),
+      centerX: dco_decode_f_32(arr[1]),
+      centerY: dco_decode_f_32(arr[2]),
+      width: dco_decode_f_32(arr[3]),
+      height: dco_decode_f_32(arr[4]),
+      rotation: dco_decode_f_32(arr[5]),
+    );
+  }
+
+  @protected
+  OverlayKindView dco_decode_overlay_kind_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return OverlayKindView.values[raw as int];
+  }
+
+  @protected
+  OverlayView dco_decode_overlay_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 16)
+      throw Exception('unexpected arr length: expect 16 but see ${arr.length}');
+    return OverlayView(
+      id: dco_decode_String(arr[0]),
+      kind: dco_decode_overlay_kind_view(arr[1]),
+      startUs: dco_decode_i_64(arr[2]),
+      endUs: dco_decode_i_64(arr[3]),
+      locked: dco_decode_bool(arr[4]),
+      hidden: dco_decode_bool(arr[5]),
+      hasAnimation: dco_decode_bool(arr[6]),
+      transform: dco_decode_transform_view(arr[7]),
+      text: dco_decode_opt_box_autoadd_text_element_view(arr[8]),
+      animIn: dco_decode_opt_box_autoadd_preset_view(arr[9]),
+      animLoop: dco_decode_opt_box_autoadd_preset_view(arr[10]),
+      animOut: dco_decode_opt_box_autoadd_preset_view(arr[11]),
+      keyframes: dco_decode_list_keyframe_view(arr[12]),
+      path: dco_decode_opt_box_autoadd_path_view(arr[13]),
+      colorable: dco_decode_bool(arr[14]),
+      color: dco_decode_opt_String(arr[15]),
+    );
+  }
+
+  @protected
+  PathPointView dco_decode_path_point_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return PathPointView(
+      timeUs: dco_decode_i_64(arr[0]),
+      x: dco_decode_f_32(arr[1]),
+      y: dco_decode_f_32(arr[2]),
+    );
+  }
+
+  @protected
+  PathView dco_decode_path_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return PathView(
+      points: dco_decode_list_path_point_view(arr[0]),
+      smoothing: dco_decode_f_32(arr[1]),
+      orientToPath: dco_decode_bool(arr[2]),
+    );
+  }
+
+  @protected
+  PictureView dco_decode_picture_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return PictureView(
+      width: dco_decode_u_32(arr[0]),
+      height: dco_decode_u_32(arr[1]),
+      rgba: dco_decode_list_prim_u_8_strict(arr[2]),
+    );
+  }
+
+  @protected
+  PresetKindView dco_decode_preset_kind_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return PresetKindView.values[raw as int];
+  }
+
+  @protected
+  PresetSampleView dco_decode_preset_sample_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return PresetSampleView(
+      dx: dco_decode_f_32(arr[0]),
+      dy: dco_decode_f_32(arr[1]),
+      scale: dco_decode_f_32(arr[2]),
+      rotation: dco_decode_f_32(arr[3]),
+      opacity: dco_decode_f_32(arr[4]),
+      reveal: dco_decode_f_32(arr[5]),
+    );
+  }
+
+  @protected
+  PresetView dco_decode_preset_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return PresetView(
+      kind: dco_decode_preset_kind_view(arr[0]),
+      durationUs: dco_decode_i_64(arr[1]),
+    );
   }
 
   @protected
@@ -1453,8 +6128,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ProjectView dco_decode_project_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 7)
-      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    if (arr.length != 12)
+      throw Exception('unexpected arr length: expect 12 but see ${arr.length}');
     return ProjectView(
       id: dco_decode_String(arr[0]),
       title: dco_decode_String(arr[1]),
@@ -1463,6 +6138,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       canRedo: dco_decode_bool(arr[4]),
       tracks: dco_decode_list_track_view(arr[5]),
       media: dco_decode_list_media_item_view(arr[6]),
+      sound: dco_decode_sound_view(arr[7]),
+      look: dco_decode_look_view(arr[8]),
+      transcripts: dco_decode_list_transcript_view(arr[9]),
+      captions: dco_decode_captions_view(arr[10]),
+      overlays: dco_decode_list_overlay_view(arr[11]),
     );
   }
 
@@ -1470,6 +6150,37 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   SaveStateView dco_decode_save_state_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return SaveStateView.values[raw as int];
+  }
+
+  @protected
+  SegmentView dco_decode_segment_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return SegmentView(
+      id: dco_decode_String(arr[0]),
+      hidden: dco_decode_bool(arr[1]),
+      words: dco_decode_list_word_view(arr[2]),
+    );
+  }
+
+  @protected
+  ShapeKindView dco_decode_shape_kind_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return ShapeKindView.values[raw as int];
+  }
+
+  @protected
+  SoundView dco_decode_sound_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return SoundView(
+      clips: dco_decode_list_clip_sound_view(arr[0]),
+      tracks: dco_decode_list_audio_track_view(arr[1]),
+    );
   }
 
   @protected
@@ -1492,15 +6203,55 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  TextDecorationView dco_decode_text_decoration_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return TextDecorationView.values[raw as int];
+  }
+
+  @protected
+  TextElementView dco_decode_text_element_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return TextElementView(
+      content: dco_decode_String(arr[0]),
+      font: dco_decode_String(arr[1]),
+      size: dco_decode_f_32(arr[2]),
+      color: dco_decode_String(arr[3]),
+      uppercase: dco_decode_bool(arr[4]),
+      decoration: dco_decode_text_decoration_view(arr[5]),
+    );
+  }
+
+  @protected
+  ThumbnailView dco_decode_thumbnail_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return ThumbnailView(
+      timeUs: dco_decode_i_64(arr[0]),
+      width: dco_decode_u_32(arr[1]),
+      height: dco_decode_u_32(arr[2]),
+      rgba: dco_decode_list_prim_u_8_strict(arr[3]),
+    );
+  }
+
+  @protected
   TrackItemView dco_decode_track_item_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 3)
-      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
     return TrackItemView(
       id: dco_decode_String(arr[0]),
       startUs: dco_decode_i_64(arr[1]),
       endUs: dco_decode_i_64(arr[2]),
+      mediaId: dco_decode_opt_String(arr[3]),
+      sourceInUs: dco_decode_i_64(arr[4]),
+      speed: dco_decode_f_32(arr[5]),
+      slowZoom: dco_decode_opt_box_autoadd_bool(arr[6]),
     );
   }
 
@@ -1514,13 +6265,53 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TrackView dco_decode_track_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 3)
-      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
     return TrackView(
       kind: dco_decode_track_kind_view(arr[0]),
       name: dco_decode_opt_String(arr[1]),
-      items: dco_decode_list_track_item_view(arr[2]),
+      id: dco_decode_opt_String(arr[2]),
+      muted: dco_decode_bool(arr[3]),
+      locked: dco_decode_bool(arr[4]),
+      hidden: dco_decode_bool(arr[5]),
+      items: dco_decode_list_track_item_view(arr[6]),
     );
+  }
+
+  @protected
+  TranscriptView dco_decode_transcript_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return TranscriptView(
+      clipId: dco_decode_opt_String(arr[0]),
+      audioId: dco_decode_opt_String(arr[1]),
+      language: dco_decode_String(arr[2]),
+      segments: dco_decode_list_segment_view(arr[3]),
+    );
+  }
+
+  @protected
+  TransformView dco_decode_transform_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return TransformView(
+      x: dco_decode_f_32(arr[0]),
+      y: dco_decode_f_32(arr[1]),
+      scale: dco_decode_f_32(arr[2]),
+      rotation: dco_decode_f_32(arr[3]),
+      opacity: dco_decode_f_32(arr[4]),
+      flip: dco_decode_bool(arr[5]),
+    );
+  }
+
+  @protected
+  TransitionKindView dco_decode_transition_kind_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return TransitionKindView.values[raw as int];
   }
 
   @protected
@@ -1542,9 +6333,56 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  UncertainView dco_decode_uncertain_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return UncertainView(
+      clipId: dco_decode_String(arr[0]),
+      clipNumber: dco_decode_u_32(arr[1]),
+      reason: dco_decode_String(arr[2]),
+    );
+  }
+
+  @protected
   void dco_decode_unit(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return;
+  }
+
+  @protected
+  VersionReasonView dco_decode_version_reason_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return VersionReasonView.values[raw as int];
+  }
+
+  @protected
+  VersionView dco_decode_version_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return VersionView(
+      name: dco_decode_String(arr[0]),
+      savedAtMs: dco_decode_i_64(arr[1]),
+      reason: dco_decode_version_reason_view(arr[2]),
+    );
+  }
+
+  @protected
+  WordView dco_decode_word_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return WordView(
+      index: dco_decode_u_32(arr[0]),
+      text: dco_decode_String(arr[1]),
+      startUs: dco_decode_i_64(arr[2]),
+      deleted: dco_decode_bool(arr[3]),
+      emphasis: dco_decode_bool(arr[4]),
+    );
   }
 
   @protected
@@ -1571,6 +6409,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  RustStreamSink<ThumbnailView> sse_decode_StreamSink_thumbnail_view_Sse(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    throw UnimplementedError('Unreachable ()');
+  }
+
+  @protected
   RustStreamSink<BigInt> sse_decode_StreamSink_u_64_Sse(
     SseDeserializer deserializer,
   ) {
@@ -1586,9 +6432,143 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  AiPayloadView sse_decode_ai_payload_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_provider = sse_decode_String(deserializer);
+    var var_model = sse_decode_String(deserializer);
+    var var_url = sse_decode_String(deserializer);
+    var var_body = sse_decode_String(deserializer);
+    return AiPayloadView(
+      provider: var_provider,
+      model: var_model,
+      url: var_url,
+      body: var_body,
+    );
+  }
+
+  @protected
+  AiProviderView sse_decode_ai_provider_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return AiProviderView.values[inner];
+  }
+
+  @protected
+  AiSettingsView sse_decode_ai_settings_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_provider = sse_decode_opt_box_autoadd_ai_provider_view(
+      deserializer,
+    );
+    var var_model = sse_decode_String(deserializer);
+    var var_baseUrl = sse_decode_String(deserializer);
+    var var_hasKey = sse_decode_bool(deserializer);
+    return AiSettingsView(
+      provider: var_provider,
+      model: var_model,
+      baseUrl: var_baseUrl,
+      hasKey: var_hasKey,
+    );
+  }
+
+  @protected
+  AnimSlotView sse_decode_anim_slot_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return AnimSlotView.values[inner];
+  }
+
+  @protected
+  ArrangeReviewView sse_decode_arrange_review_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_beforeUs = sse_decode_i_64(deserializer);
+    var var_afterUs = sse_decode_i_64(deserializer);
+    var var_summary = sse_decode_String(deserializer);
+    var var_decisions = sse_decode_list_decision_view(deserializer);
+    var var_uncertain = sse_decode_list_uncertain_view(deserializer);
+    var var_project = sse_decode_project_view(deserializer);
+    return ArrangeReviewView(
+      beforeUs: var_beforeUs,
+      afterUs: var_afterUs,
+      summary: var_summary,
+      decisions: var_decisions,
+      uncertain: var_uncertain,
+      project: var_project,
+    );
+  }
+
+  @protected
+  AudioItemView sse_decode_audio_item_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_mediaId = sse_decode_String(deserializer);
+    var var_role = sse_decode_audio_role_view(deserializer);
+    var var_volume = sse_decode_f_32(deserializer);
+    var var_fadeInUs = sse_decode_i_64(deserializer);
+    var var_fadeOutUs = sse_decode_i_64(deserializer);
+    var var_looped = sse_decode_bool(deserializer);
+    var var_ducking = sse_decode_opt_box_autoadd_f_32(deserializer);
+    return AudioItemView(
+      id: var_id,
+      mediaId: var_mediaId,
+      role: var_role,
+      volume: var_volume,
+      fadeInUs: var_fadeInUs,
+      fadeOutUs: var_fadeOutUs,
+      looped: var_looped,
+      ducking: var_ducking,
+    );
+  }
+
+  @protected
+  AudioRoleView sse_decode_audio_role_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return AudioRoleView.values[inner];
+  }
+
+  @protected
+  AudioTrackView sse_decode_audio_track_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_opt_String(deserializer);
+    var var_name = sse_decode_opt_String(deserializer);
+    var var_muted = sse_decode_bool(deserializer);
+    var var_items = sse_decode_list_audio_item_view(deserializer);
+    return AudioTrackView(
+      id: var_id,
+      name: var_name,
+      muted: var_muted,
+      items: var_items,
+    );
+  }
+
+  @protected
   bool sse_decode_bool(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getUint8() != 0;
+  }
+
+  @protected
+  AiProviderView sse_decode_box_autoadd_ai_provider_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_ai_provider_view(deserializer));
+  }
+
+  @protected
+  bool sse_decode_box_autoadd_bool(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_bool(deserializer));
+  }
+
+  @protected
+  CaptionHitView sse_decode_box_autoadd_caption_hit_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_caption_hit_view(deserializer));
   }
 
   @protected
@@ -1606,10 +6586,225 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  double sse_decode_box_autoadd_f_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_f_32(deserializer));
+  }
+
+  @protected
+  PathView sse_decode_box_autoadd_path_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_path_view(deserializer));
+  }
+
+  @protected
+  PictureView sse_decode_box_autoadd_picture_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_picture_view(deserializer));
+  }
+
+  @protected
+  PresetKindView sse_decode_box_autoadd_preset_kind_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_preset_kind_view(deserializer));
+  }
+
+  @protected
+  PresetView sse_decode_box_autoadd_preset_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_preset_view(deserializer));
+  }
+
+  @protected
+  TextElementView sse_decode_box_autoadd_text_element_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_text_element_view(deserializer));
+  }
+
+  @protected
+  ThumbnailView sse_decode_box_autoadd_thumbnail_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_thumbnail_view(deserializer));
+  }
+
+  @protected
+  TransformView sse_decode_box_autoadd_transform_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_transform_view(deserializer));
+  }
+
+  @protected
+  TransitionKindView sse_decode_box_autoadd_transition_kind_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_transition_kind_view(deserializer));
+  }
+
+  @protected
+  BrandAssetView sse_decode_brand_asset_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_name = sse_decode_String(deserializer);
+    var var_kind = sse_decode_brand_kind_view(deserializer);
+    return BrandAssetView(id: var_id, name: var_name, kind: var_kind);
+  }
+
+  @protected
+  BrandKindView sse_decode_brand_kind_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return BrandKindView.values[inner];
+  }
+
+  @protected
+  CaptionAnimationView sse_decode_caption_animation_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return CaptionAnimationView.values[inner];
+  }
+
+  @protected
+  CaptionHitView sse_decode_caption_hit_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_clipId = sse_decode_opt_String(deserializer);
+    var var_audioId = sse_decode_opt_String(deserializer);
+    var var_segment = sse_decode_String(deserializer);
+    var var_word = sse_decode_u_32(deserializer);
+    var var_text = sse_decode_String(deserializer);
+    var var_left = sse_decode_f_64(deserializer);
+    var var_top = sse_decode_f_64(deserializer);
+    var var_width = sse_decode_f_64(deserializer);
+    var var_height = sse_decode_f_64(deserializer);
+    return CaptionHitView(
+      clipId: var_clipId,
+      audioId: var_audioId,
+      segment: var_segment,
+      word: var_word,
+      text: var_text,
+      left: var_left,
+      top: var_top,
+      width: var_width,
+      height: var_height,
+    );
+  }
+
+  @protected
+  CaptionPresetView sse_decode_caption_preset_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return CaptionPresetView.values[inner];
+  }
+
+  @protected
+  CaptionsView sse_decode_captions_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_enabled = sse_decode_bool(deserializer);
+    var var_preset = sse_decode_caption_preset_view(deserializer);
+    var var_animation = sse_decode_caption_animation_view(deserializer);
+    var var_font = sse_decode_String(deserializer);
+    var var_size = sse_decode_f_32(deserializer);
+    var var_uppercase = sse_decode_bool(deserializer);
+    var var_color = sse_decode_String(deserializer);
+    var var_emphasisColor = sse_decode_String(deserializer);
+    var var_anchor = sse_decode_f_32(deserializer);
+    return CaptionsView(
+      enabled: var_enabled,
+      preset: var_preset,
+      animation: var_animation,
+      font: var_font,
+      size: var_size,
+      uppercase: var_uppercase,
+      color: var_color,
+      emphasisColor: var_emphasisColor,
+      anchor: var_anchor,
+    );
+  }
+
+  @protected
   ClipEdge sse_decode_clip_edge(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_i_32(deserializer);
     return ClipEdge.values[inner];
+  }
+
+  @protected
+  ClipLookView sse_decode_clip_look_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_clipId = sse_decode_String(deserializer);
+    var var_speed = sse_decode_f_32(deserializer);
+    var var_brightness = sse_decode_f_32(deserializer);
+    var var_contrast = sse_decode_f_32(deserializer);
+    var var_saturation = sse_decode_f_32(deserializer);
+    return ClipLookView(
+      clipId: var_clipId,
+      speed: var_speed,
+      brightness: var_brightness,
+      contrast: var_contrast,
+      saturation: var_saturation,
+    );
+  }
+
+  @protected
+  ClipSoundView sse_decode_clip_sound_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_clipId = sse_decode_String(deserializer);
+    var var_volume = sse_decode_f_32(deserializer);
+    var var_muted = sse_decode_bool(deserializer);
+    var var_fadeInUs = sse_decode_i_64(deserializer);
+    var var_fadeOutUs = sse_decode_i_64(deserializer);
+    return ClipSoundView(
+      clipId: var_clipId,
+      volume: var_volume,
+      muted: var_muted,
+      fadeInUs: var_fadeInUs,
+      fadeOutUs: var_fadeOutUs,
+    );
+  }
+
+  @protected
+  DecisionKindView sse_decode_decision_kind_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return DecisionKindView.values[inner];
+  }
+
+  @protected
+  DecisionView sse_decode_decision_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_clipId = sse_decode_String(deserializer);
+    var var_clipNumber = sse_decode_u_32(deserializer);
+    var var_kind = sse_decode_decision_kind_view(deserializer);
+    var var_reason = sse_decode_opt_String(deserializer);
+    var var_removedUs = sse_decode_i_64(deserializer);
+    return DecisionView(
+      clipId: var_clipId,
+      clipNumber: var_clipNumber,
+      kind: var_kind,
+      reason: var_reason,
+      removedUs: var_removedUs,
+    );
+  }
+
+  @protected
+  EasingView sse_decode_easing_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return EasingView.values[inner];
   }
 
   @protected
@@ -1632,6 +6827,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_width = sse_decode_u_32(deserializer);
     var var_fps = sse_decode_u_32(deserializer);
     return ExportSettings(width: var_width, fps: var_fps);
+  }
+
+  @protected
+  double sse_decode_f_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getFloat32();
   }
 
   @protected
@@ -1661,6 +6862,22 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  KeyframeView sse_decode_keyframe_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_timeUs = sse_decode_i_64(deserializer);
+    var var_easing = sse_decode_easing_view(deserializer);
+    return KeyframeView(timeUs: var_timeUs, easing: var_easing);
+  }
+
+  @protected
+  LibraryItemView sse_decode_library_item_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_name = sse_decode_String(deserializer);
+    var var_category = sse_decode_String(deserializer);
+    return LibraryItemView(name: var_name, category: var_category);
+  }
+
+  @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -1668,6 +6885,90 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var ans_ = <String>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_String(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<AudioItemView> sse_decode_list_audio_item_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <AudioItemView>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_audio_item_view(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<AudioTrackView> sse_decode_list_audio_track_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <AudioTrackView>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_audio_track_view(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<BrandAssetView> sse_decode_list_brand_asset_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <BrandAssetView>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_brand_asset_view(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<ClipLookView> sse_decode_list_clip_look_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <ClipLookView>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_clip_look_view(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<ClipSoundView> sse_decode_list_clip_sound_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <ClipSoundView>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_clip_sound_view(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<DecisionView> sse_decode_list_decision_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <DecisionView>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_decision_view(deserializer));
     }
     return ans_;
   }
@@ -1687,6 +6988,34 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<KeyframeView> sse_decode_list_keyframe_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <KeyframeView>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_keyframe_view(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<LibraryItemView> sse_decode_list_library_item_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <LibraryItemView>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_library_item_view(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<MediaItemView> sse_decode_list_media_item_view(
     SseDeserializer deserializer,
   ) {
@@ -1696,6 +7025,46 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var ans_ = <MediaItemView>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_media_item_view(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<OverlayBoxView> sse_decode_list_overlay_box_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <OverlayBoxView>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_overlay_box_view(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<OverlayView> sse_decode_list_overlay_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <OverlayView>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_overlay_view(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<PathPointView> sse_decode_list_path_point_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <PathPointView>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_path_point_view(deserializer));
     }
     return ans_;
   }
@@ -1717,6 +7086,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var ans_ = <ProjectSummary>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_project_summary(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<SegmentView> sse_decode_list_segment_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <SegmentView>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_segment_view(deserializer));
     }
     return ans_;
   }
@@ -1748,6 +7129,68 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<TranscriptView> sse_decode_list_transcript_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <TranscriptView>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_transcript_view(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<UncertainView> sse_decode_list_uncertain_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <UncertainView>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_uncertain_view(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<VersionView> sse_decode_list_version_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <VersionView>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_version_view(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<WordView> sse_decode_list_word_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <WordView>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_word_view(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  LookView sse_decode_look_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_clips = sse_decode_list_clip_look_view(deserializer);
+    var var_transition = sse_decode_opt_box_autoadd_transition_kind_view(
+      deserializer,
+    );
+    return LookView(clips: var_clips, transition: var_transition);
+  }
+
+  @protected
   MediaItemView sse_decode_media_item_view(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_id = sse_decode_String(deserializer);
@@ -1772,11 +7215,56 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ModelView sse_decode_model_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_ready = sse_decode_bool(deserializer);
+    var var_bytes = sse_decode_u_64(deserializer);
+    return ModelView(ready: var_ready, bytes: var_bytes);
+  }
+
+  @protected
   String? sse_decode_opt_String(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
     if (sse_decode_bool(deserializer)) {
       return (sse_decode_String(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  AiProviderView? sse_decode_opt_box_autoadd_ai_provider_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_ai_provider_view(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  bool? sse_decode_opt_box_autoadd_bool(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_bool(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  CaptionHitView? sse_decode_opt_box_autoadd_caption_hit_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_caption_hit_view(deserializer));
     } else {
       return null;
     }
@@ -1793,6 +7281,249 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     } else {
       return null;
     }
+  }
+
+  @protected
+  double? sse_decode_opt_box_autoadd_f_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_f_32(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  PathView? sse_decode_opt_box_autoadd_path_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_path_view(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  PictureView? sse_decode_opt_box_autoadd_picture_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_picture_view(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  PresetKindView? sse_decode_opt_box_autoadd_preset_kind_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_preset_kind_view(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  PresetView? sse_decode_opt_box_autoadd_preset_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_preset_view(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  TextElementView? sse_decode_opt_box_autoadd_text_element_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_text_element_view(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  ThumbnailView? sse_decode_opt_box_autoadd_thumbnail_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_thumbnail_view(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  TransformView? sse_decode_opt_box_autoadd_transform_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_transform_view(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  TransitionKindView? sse_decode_opt_box_autoadd_transition_kind_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_transition_kind_view(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  OverlayBoxView sse_decode_overlay_box_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_centerX = sse_decode_f_32(deserializer);
+    var var_centerY = sse_decode_f_32(deserializer);
+    var var_width = sse_decode_f_32(deserializer);
+    var var_height = sse_decode_f_32(deserializer);
+    var var_rotation = sse_decode_f_32(deserializer);
+    return OverlayBoxView(
+      id: var_id,
+      centerX: var_centerX,
+      centerY: var_centerY,
+      width: var_width,
+      height: var_height,
+      rotation: var_rotation,
+    );
+  }
+
+  @protected
+  OverlayKindView sse_decode_overlay_kind_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return OverlayKindView.values[inner];
+  }
+
+  @protected
+  OverlayView sse_decode_overlay_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_kind = sse_decode_overlay_kind_view(deserializer);
+    var var_startUs = sse_decode_i_64(deserializer);
+    var var_endUs = sse_decode_i_64(deserializer);
+    var var_locked = sse_decode_bool(deserializer);
+    var var_hidden = sse_decode_bool(deserializer);
+    var var_hasAnimation = sse_decode_bool(deserializer);
+    var var_transform = sse_decode_transform_view(deserializer);
+    var var_text = sse_decode_opt_box_autoadd_text_element_view(deserializer);
+    var var_animIn = sse_decode_opt_box_autoadd_preset_view(deserializer);
+    var var_animLoop = sse_decode_opt_box_autoadd_preset_view(deserializer);
+    var var_animOut = sse_decode_opt_box_autoadd_preset_view(deserializer);
+    var var_keyframes = sse_decode_list_keyframe_view(deserializer);
+    var var_path = sse_decode_opt_box_autoadd_path_view(deserializer);
+    var var_colorable = sse_decode_bool(deserializer);
+    var var_color = sse_decode_opt_String(deserializer);
+    return OverlayView(
+      id: var_id,
+      kind: var_kind,
+      startUs: var_startUs,
+      endUs: var_endUs,
+      locked: var_locked,
+      hidden: var_hidden,
+      hasAnimation: var_hasAnimation,
+      transform: var_transform,
+      text: var_text,
+      animIn: var_animIn,
+      animLoop: var_animLoop,
+      animOut: var_animOut,
+      keyframes: var_keyframes,
+      path: var_path,
+      colorable: var_colorable,
+      color: var_color,
+    );
+  }
+
+  @protected
+  PathPointView sse_decode_path_point_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_timeUs = sse_decode_i_64(deserializer);
+    var var_x = sse_decode_f_32(deserializer);
+    var var_y = sse_decode_f_32(deserializer);
+    return PathPointView(timeUs: var_timeUs, x: var_x, y: var_y);
+  }
+
+  @protected
+  PathView sse_decode_path_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_points = sse_decode_list_path_point_view(deserializer);
+    var var_smoothing = sse_decode_f_32(deserializer);
+    var var_orientToPath = sse_decode_bool(deserializer);
+    return PathView(
+      points: var_points,
+      smoothing: var_smoothing,
+      orientToPath: var_orientToPath,
+    );
+  }
+
+  @protected
+  PictureView sse_decode_picture_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_width = sse_decode_u_32(deserializer);
+    var var_height = sse_decode_u_32(deserializer);
+    var var_rgba = sse_decode_list_prim_u_8_strict(deserializer);
+    return PictureView(width: var_width, height: var_height, rgba: var_rgba);
+  }
+
+  @protected
+  PresetKindView sse_decode_preset_kind_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return PresetKindView.values[inner];
+  }
+
+  @protected
+  PresetSampleView sse_decode_preset_sample_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_dx = sse_decode_f_32(deserializer);
+    var var_dy = sse_decode_f_32(deserializer);
+    var var_scale = sse_decode_f_32(deserializer);
+    var var_rotation = sse_decode_f_32(deserializer);
+    var var_opacity = sse_decode_f_32(deserializer);
+    var var_reveal = sse_decode_f_32(deserializer);
+    return PresetSampleView(
+      dx: var_dx,
+      dy: var_dy,
+      scale: var_scale,
+      rotation: var_rotation,
+      opacity: var_opacity,
+      reveal: var_reveal,
+    );
+  }
+
+  @protected
+  PresetView sse_decode_preset_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_kind = sse_decode_preset_kind_view(deserializer);
+    var var_durationUs = sse_decode_i_64(deserializer);
+    return PresetView(kind: var_kind, durationUs: var_durationUs);
   }
 
   @protected
@@ -1820,6 +7551,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_canRedo = sse_decode_bool(deserializer);
     var var_tracks = sse_decode_list_track_view(deserializer);
     var var_media = sse_decode_list_media_item_view(deserializer);
+    var var_sound = sse_decode_sound_view(deserializer);
+    var var_look = sse_decode_look_view(deserializer);
+    var var_transcripts = sse_decode_list_transcript_view(deserializer);
+    var var_captions = sse_decode_captions_view(deserializer);
+    var var_overlays = sse_decode_list_overlay_view(deserializer);
     return ProjectView(
       id: var_id,
       title: var_title,
@@ -1828,6 +7564,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       canRedo: var_canRedo,
       tracks: var_tracks,
       media: var_media,
+      sound: var_sound,
+      look: var_look,
+      transcripts: var_transcripts,
+      captions: var_captions,
+      overlays: var_overlays,
     );
   }
 
@@ -1836,6 +7577,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_i_32(deserializer);
     return SaveStateView.values[inner];
+  }
+
+  @protected
+  SegmentView sse_decode_segment_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_hidden = sse_decode_bool(deserializer);
+    var var_words = sse_decode_list_word_view(deserializer);
+    return SegmentView(id: var_id, hidden: var_hidden, words: var_words);
+  }
+
+  @protected
+  ShapeKindView sse_decode_shape_kind_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return ShapeKindView.values[inner];
+  }
+
+  @protected
+  SoundView sse_decode_sound_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_clips = sse_decode_list_clip_sound_view(deserializer);
+    var var_tracks = sse_decode_list_audio_track_view(deserializer);
+    return SoundView(clips: var_clips, tracks: var_tracks);
   }
 
   @protected
@@ -1863,12 +7628,67 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  TextDecorationView sse_decode_text_decoration_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return TextDecorationView.values[inner];
+  }
+
+  @protected
+  TextElementView sse_decode_text_element_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_content = sse_decode_String(deserializer);
+    var var_font = sse_decode_String(deserializer);
+    var var_size = sse_decode_f_32(deserializer);
+    var var_color = sse_decode_String(deserializer);
+    var var_uppercase = sse_decode_bool(deserializer);
+    var var_decoration = sse_decode_text_decoration_view(deserializer);
+    return TextElementView(
+      content: var_content,
+      font: var_font,
+      size: var_size,
+      color: var_color,
+      uppercase: var_uppercase,
+      decoration: var_decoration,
+    );
+  }
+
+  @protected
+  ThumbnailView sse_decode_thumbnail_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_timeUs = sse_decode_i_64(deserializer);
+    var var_width = sse_decode_u_32(deserializer);
+    var var_height = sse_decode_u_32(deserializer);
+    var var_rgba = sse_decode_list_prim_u_8_strict(deserializer);
+    return ThumbnailView(
+      timeUs: var_timeUs,
+      width: var_width,
+      height: var_height,
+      rgba: var_rgba,
+    );
+  }
+
+  @protected
   TrackItemView sse_decode_track_item_view(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_id = sse_decode_String(deserializer);
     var var_startUs = sse_decode_i_64(deserializer);
     var var_endUs = sse_decode_i_64(deserializer);
-    return TrackItemView(id: var_id, startUs: var_startUs, endUs: var_endUs);
+    var var_mediaId = sse_decode_opt_String(deserializer);
+    var var_sourceInUs = sse_decode_i_64(deserializer);
+    var var_speed = sse_decode_f_32(deserializer);
+    var var_slowZoom = sse_decode_opt_box_autoadd_bool(deserializer);
+    return TrackItemView(
+      id: var_id,
+      startUs: var_startUs,
+      endUs: var_endUs,
+      mediaId: var_mediaId,
+      sourceInUs: var_sourceInUs,
+      speed: var_speed,
+      slowZoom: var_slowZoom,
+    );
   }
 
   @protected
@@ -1883,8 +7703,63 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_kind = sse_decode_track_kind_view(deserializer);
     var var_name = sse_decode_opt_String(deserializer);
+    var var_id = sse_decode_opt_String(deserializer);
+    var var_muted = sse_decode_bool(deserializer);
+    var var_locked = sse_decode_bool(deserializer);
+    var var_hidden = sse_decode_bool(deserializer);
     var var_items = sse_decode_list_track_item_view(deserializer);
-    return TrackView(kind: var_kind, name: var_name, items: var_items);
+    return TrackView(
+      kind: var_kind,
+      name: var_name,
+      id: var_id,
+      muted: var_muted,
+      locked: var_locked,
+      hidden: var_hidden,
+      items: var_items,
+    );
+  }
+
+  @protected
+  TranscriptView sse_decode_transcript_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_clipId = sse_decode_opt_String(deserializer);
+    var var_audioId = sse_decode_opt_String(deserializer);
+    var var_language = sse_decode_String(deserializer);
+    var var_segments = sse_decode_list_segment_view(deserializer);
+    return TranscriptView(
+      clipId: var_clipId,
+      audioId: var_audioId,
+      language: var_language,
+      segments: var_segments,
+    );
+  }
+
+  @protected
+  TransformView sse_decode_transform_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_x = sse_decode_f_32(deserializer);
+    var var_y = sse_decode_f_32(deserializer);
+    var var_scale = sse_decode_f_32(deserializer);
+    var var_rotation = sse_decode_f_32(deserializer);
+    var var_opacity = sse_decode_f_32(deserializer);
+    var var_flip = sse_decode_bool(deserializer);
+    return TransformView(
+      x: var_x,
+      y: var_y,
+      scale: var_scale,
+      rotation: var_rotation,
+      opacity: var_opacity,
+      flip: var_flip,
+    );
+  }
+
+  @protected
+  TransitionKindView sse_decode_transition_kind_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return TransitionKindView.values[inner];
   }
 
   @protected
@@ -1906,8 +7781,60 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  UncertainView sse_decode_uncertain_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_clipId = sse_decode_String(deserializer);
+    var var_clipNumber = sse_decode_u_32(deserializer);
+    var var_reason = sse_decode_String(deserializer);
+    return UncertainView(
+      clipId: var_clipId,
+      clipNumber: var_clipNumber,
+      reason: var_reason,
+    );
+  }
+
+  @protected
   void sse_decode_unit(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
+  }
+
+  @protected
+  VersionReasonView sse_decode_version_reason_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return VersionReasonView.values[inner];
+  }
+
+  @protected
+  VersionView sse_decode_version_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_name = sse_decode_String(deserializer);
+    var var_savedAtMs = sse_decode_i_64(deserializer);
+    var var_reason = sse_decode_version_reason_view(deserializer);
+    return VersionView(
+      name: var_name,
+      savedAtMs: var_savedAtMs,
+      reason: var_reason,
+    );
+  }
+
+  @protected
+  WordView sse_decode_word_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_index = sse_decode_u_32(deserializer);
+    var var_text = sse_decode_String(deserializer);
+    var var_startUs = sse_decode_i_64(deserializer);
+    var var_deleted = sse_decode_bool(deserializer);
+    var var_emphasis = sse_decode_bool(deserializer);
+    return WordView(
+      index: var_index,
+      text: var_text,
+      startUs: var_startUs,
+      deleted: var_deleted,
+      emphasis: var_emphasis,
+    );
   }
 
   @protected
@@ -1954,6 +7881,23 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_StreamSink_thumbnail_view_Sse(
+    RustStreamSink<ThumbnailView> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(
+      self.setupAndSerialize(
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_thumbnail_view,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+      ),
+      serializer,
+    );
+  }
+
+  @protected
   void sse_encode_StreamSink_u_64_Sse(
     RustStreamSink<BigInt> self,
     SseSerializer serializer,
@@ -1977,9 +7921,123 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_ai_payload_view(
+    AiPayloadView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.provider, serializer);
+    sse_encode_String(self.model, serializer);
+    sse_encode_String(self.url, serializer);
+    sse_encode_String(self.body, serializer);
+  }
+
+  @protected
+  void sse_encode_ai_provider_view(
+    AiProviderView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_ai_settings_view(
+    AiSettingsView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_opt_box_autoadd_ai_provider_view(self.provider, serializer);
+    sse_encode_String(self.model, serializer);
+    sse_encode_String(self.baseUrl, serializer);
+    sse_encode_bool(self.hasKey, serializer);
+  }
+
+  @protected
+  void sse_encode_anim_slot_view(AnimSlotView self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_arrange_review_view(
+    ArrangeReviewView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_64(self.beforeUs, serializer);
+    sse_encode_i_64(self.afterUs, serializer);
+    sse_encode_String(self.summary, serializer);
+    sse_encode_list_decision_view(self.decisions, serializer);
+    sse_encode_list_uncertain_view(self.uncertain, serializer);
+    sse_encode_project_view(self.project, serializer);
+  }
+
+  @protected
+  void sse_encode_audio_item_view(
+    AudioItemView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.mediaId, serializer);
+    sse_encode_audio_role_view(self.role, serializer);
+    sse_encode_f_32(self.volume, serializer);
+    sse_encode_i_64(self.fadeInUs, serializer);
+    sse_encode_i_64(self.fadeOutUs, serializer);
+    sse_encode_bool(self.looped, serializer);
+    sse_encode_opt_box_autoadd_f_32(self.ducking, serializer);
+  }
+
+  @protected
+  void sse_encode_audio_role_view(
+    AudioRoleView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_audio_track_view(
+    AudioTrackView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_opt_String(self.id, serializer);
+    sse_encode_opt_String(self.name, serializer);
+    sse_encode_bool(self.muted, serializer);
+    sse_encode_list_audio_item_view(self.items, serializer);
+  }
+
+  @protected
   void sse_encode_bool(bool self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putUint8(self ? 1 : 0);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_ai_provider_view(
+    AiProviderView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_ai_provider_view(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_bool(bool self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_bool(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_caption_hit_view(
+    CaptionHitView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_caption_hit_view(self, serializer);
   }
 
   @protected
@@ -2001,7 +8059,202 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_f_32(double self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_f_32(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_path_view(
+    PathView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_path_view(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_picture_view(
+    PictureView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_picture_view(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_preset_kind_view(
+    PresetKindView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_preset_kind_view(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_preset_view(
+    PresetView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_preset_view(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_text_element_view(
+    TextElementView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_text_element_view(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_thumbnail_view(
+    ThumbnailView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_thumbnail_view(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_transform_view(
+    TransformView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_transform_view(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_transition_kind_view(
+    TransitionKindView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_transition_kind_view(self, serializer);
+  }
+
+  @protected
+  void sse_encode_brand_asset_view(
+    BrandAssetView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.name, serializer);
+    sse_encode_brand_kind_view(self.kind, serializer);
+  }
+
+  @protected
+  void sse_encode_brand_kind_view(
+    BrandKindView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_caption_animation_view(
+    CaptionAnimationView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_caption_hit_view(
+    CaptionHitView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_opt_String(self.clipId, serializer);
+    sse_encode_opt_String(self.audioId, serializer);
+    sse_encode_String(self.segment, serializer);
+    sse_encode_u_32(self.word, serializer);
+    sse_encode_String(self.text, serializer);
+    sse_encode_f_64(self.left, serializer);
+    sse_encode_f_64(self.top, serializer);
+    sse_encode_f_64(self.width, serializer);
+    sse_encode_f_64(self.height, serializer);
+  }
+
+  @protected
+  void sse_encode_caption_preset_view(
+    CaptionPresetView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_captions_view(CaptionsView self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_bool(self.enabled, serializer);
+    sse_encode_caption_preset_view(self.preset, serializer);
+    sse_encode_caption_animation_view(self.animation, serializer);
+    sse_encode_String(self.font, serializer);
+    sse_encode_f_32(self.size, serializer);
+    sse_encode_bool(self.uppercase, serializer);
+    sse_encode_String(self.color, serializer);
+    sse_encode_String(self.emphasisColor, serializer);
+    sse_encode_f_32(self.anchor, serializer);
+  }
+
+  @protected
   void sse_encode_clip_edge(ClipEdge self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_clip_look_view(ClipLookView self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.clipId, serializer);
+    sse_encode_f_32(self.speed, serializer);
+    sse_encode_f_32(self.brightness, serializer);
+    sse_encode_f_32(self.contrast, serializer);
+    sse_encode_f_32(self.saturation, serializer);
+  }
+
+  @protected
+  void sse_encode_clip_sound_view(
+    ClipSoundView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.clipId, serializer);
+    sse_encode_f_32(self.volume, serializer);
+    sse_encode_bool(self.muted, serializer);
+    sse_encode_i_64(self.fadeInUs, serializer);
+    sse_encode_i_64(self.fadeOutUs, serializer);
+  }
+
+  @protected
+  void sse_encode_decision_kind_view(
+    DecisionKindView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_decision_view(DecisionView self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.clipId, serializer);
+    sse_encode_u_32(self.clipNumber, serializer);
+    sse_encode_decision_kind_view(self.kind, serializer);
+    sse_encode_opt_String(self.reason, serializer);
+    sse_encode_i_64(self.removedUs, serializer);
+  }
+
+  @protected
+  void sse_encode_easing_view(EasingView self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.index, serializer);
   }
@@ -2026,6 +8279,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_u_32(self.width, serializer);
     sse_encode_u_32(self.fps, serializer);
+  }
+
+  @protected
+  void sse_encode_f_32(double self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putFloat32(self);
   }
 
   @protected
@@ -2054,11 +8313,100 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_keyframe_view(KeyframeView self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_64(self.timeUs, serializer);
+    sse_encode_easing_view(self.easing, serializer);
+  }
+
+  @protected
+  void sse_encode_library_item_view(
+    LibraryItemView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.name, serializer);
+    sse_encode_String(self.category, serializer);
+  }
+
+  @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_String(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_audio_item_view(
+    List<AudioItemView> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_audio_item_view(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_audio_track_view(
+    List<AudioTrackView> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_audio_track_view(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_brand_asset_view(
+    List<BrandAssetView> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_brand_asset_view(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_clip_look_view(
+    List<ClipLookView> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_clip_look_view(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_clip_sound_view(
+    List<ClipSoundView> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_clip_sound_view(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_decision_view(
+    List<DecisionView> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_decision_view(item, serializer);
     }
   }
 
@@ -2075,6 +8423,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_keyframe_view(
+    List<KeyframeView> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_keyframe_view(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_library_item_view(
+    List<LibraryItemView> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_library_item_view(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_media_item_view(
     List<MediaItemView> self,
     SseSerializer serializer,
@@ -2083,6 +8455,42 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_media_item_view(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_overlay_box_view(
+    List<OverlayBoxView> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_overlay_box_view(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_overlay_view(
+    List<OverlayView> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_overlay_view(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_path_point_view(
+    List<PathPointView> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_path_point_view(item, serializer);
     }
   }
 
@@ -2105,6 +8513,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_project_summary(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_segment_view(
+    List<SegmentView> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_segment_view(item, serializer);
     }
   }
 
@@ -2133,6 +8553,64 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_transcript_view(
+    List<TranscriptView> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_transcript_view(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_uncertain_view(
+    List<UncertainView> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_uncertain_view(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_version_view(
+    List<VersionView> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_version_view(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_word_view(
+    List<WordView> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_word_view(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_look_view(LookView self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_clip_look_view(self.clips, serializer);
+    sse_encode_opt_box_autoadd_transition_kind_view(
+      self.transition,
+      serializer,
+    );
+  }
+
+  @protected
   void sse_encode_media_item_view(
     MediaItemView self,
     SseSerializer serializer,
@@ -2155,12 +8633,55 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_model_view(ModelView self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_bool(self.ready, serializer);
+    sse_encode_u_64(self.bytes, serializer);
+  }
+
+  @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
     sse_encode_bool(self != null, serializer);
     if (self != null) {
       sse_encode_String(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_ai_provider_view(
+    AiProviderView? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_ai_provider_view(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_bool(bool? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_bool(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_caption_hit_view(
+    CaptionHitView? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_caption_hit_view(self, serializer);
     }
   }
 
@@ -2175,6 +8696,221 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     if (self != null) {
       sse_encode_box_autoadd_error_code(self, serializer);
     }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_f_32(double? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_f_32(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_path_view(
+    PathView? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_path_view(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_picture_view(
+    PictureView? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_picture_view(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_preset_kind_view(
+    PresetKindView? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_preset_kind_view(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_preset_view(
+    PresetView? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_preset_view(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_text_element_view(
+    TextElementView? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_text_element_view(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_thumbnail_view(
+    ThumbnailView? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_thumbnail_view(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_transform_view(
+    TransformView? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_transform_view(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_transition_kind_view(
+    TransitionKindView? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_transition_kind_view(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_overlay_box_view(
+    OverlayBoxView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_f_32(self.centerX, serializer);
+    sse_encode_f_32(self.centerY, serializer);
+    sse_encode_f_32(self.width, serializer);
+    sse_encode_f_32(self.height, serializer);
+    sse_encode_f_32(self.rotation, serializer);
+  }
+
+  @protected
+  void sse_encode_overlay_kind_view(
+    OverlayKindView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_overlay_view(OverlayView self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_overlay_kind_view(self.kind, serializer);
+    sse_encode_i_64(self.startUs, serializer);
+    sse_encode_i_64(self.endUs, serializer);
+    sse_encode_bool(self.locked, serializer);
+    sse_encode_bool(self.hidden, serializer);
+    sse_encode_bool(self.hasAnimation, serializer);
+    sse_encode_transform_view(self.transform, serializer);
+    sse_encode_opt_box_autoadd_text_element_view(self.text, serializer);
+    sse_encode_opt_box_autoadd_preset_view(self.animIn, serializer);
+    sse_encode_opt_box_autoadd_preset_view(self.animLoop, serializer);
+    sse_encode_opt_box_autoadd_preset_view(self.animOut, serializer);
+    sse_encode_list_keyframe_view(self.keyframes, serializer);
+    sse_encode_opt_box_autoadd_path_view(self.path, serializer);
+    sse_encode_bool(self.colorable, serializer);
+    sse_encode_opt_String(self.color, serializer);
+  }
+
+  @protected
+  void sse_encode_path_point_view(
+    PathPointView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_64(self.timeUs, serializer);
+    sse_encode_f_32(self.x, serializer);
+    sse_encode_f_32(self.y, serializer);
+  }
+
+  @protected
+  void sse_encode_path_view(PathView self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_path_point_view(self.points, serializer);
+    sse_encode_f_32(self.smoothing, serializer);
+    sse_encode_bool(self.orientToPath, serializer);
+  }
+
+  @protected
+  void sse_encode_picture_view(PictureView self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.width, serializer);
+    sse_encode_u_32(self.height, serializer);
+    sse_encode_list_prim_u_8_strict(self.rgba, serializer);
+  }
+
+  @protected
+  void sse_encode_preset_kind_view(
+    PresetKindView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_preset_sample_view(
+    PresetSampleView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_f_32(self.dx, serializer);
+    sse_encode_f_32(self.dy, serializer);
+    sse_encode_f_32(self.scale, serializer);
+    sse_encode_f_32(self.rotation, serializer);
+    sse_encode_f_32(self.opacity, serializer);
+    sse_encode_f_32(self.reveal, serializer);
+  }
+
+  @protected
+  void sse_encode_preset_view(PresetView self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_preset_kind_view(self.kind, serializer);
+    sse_encode_i_64(self.durationUs, serializer);
   }
 
   @protected
@@ -2199,6 +8935,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self.canRedo, serializer);
     sse_encode_list_track_view(self.tracks, serializer);
     sse_encode_list_media_item_view(self.media, serializer);
+    sse_encode_sound_view(self.sound, serializer);
+    sse_encode_look_view(self.look, serializer);
+    sse_encode_list_transcript_view(self.transcripts, serializer);
+    sse_encode_captions_view(self.captions, serializer);
+    sse_encode_list_overlay_view(self.overlays, serializer);
   }
 
   @protected
@@ -2208,6 +8949,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_segment_view(SegmentView self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_bool(self.hidden, serializer);
+    sse_encode_list_word_view(self.words, serializer);
+  }
+
+  @protected
+  void sse_encode_shape_kind_view(
+    ShapeKindView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_sound_view(SoundView self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_clip_sound_view(self.clips, serializer);
+    sse_encode_list_audio_track_view(self.tracks, serializer);
   }
 
   @protected
@@ -2231,6 +8996,38 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_text_decoration_view(
+    TextDecorationView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_text_element_view(
+    TextElementView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.content, serializer);
+    sse_encode_String(self.font, serializer);
+    sse_encode_f_32(self.size, serializer);
+    sse_encode_String(self.color, serializer);
+    sse_encode_bool(self.uppercase, serializer);
+    sse_encode_text_decoration_view(self.decoration, serializer);
+  }
+
+  @protected
+  void sse_encode_thumbnail_view(ThumbnailView self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_64(self.timeUs, serializer);
+    sse_encode_u_32(self.width, serializer);
+    sse_encode_u_32(self.height, serializer);
+    sse_encode_list_prim_u_8_strict(self.rgba, serializer);
+  }
+
+  @protected
   void sse_encode_track_item_view(
     TrackItemView self,
     SseSerializer serializer,
@@ -2239,6 +9036,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.id, serializer);
     sse_encode_i_64(self.startUs, serializer);
     sse_encode_i_64(self.endUs, serializer);
+    sse_encode_opt_String(self.mediaId, serializer);
+    sse_encode_i_64(self.sourceInUs, serializer);
+    sse_encode_f_32(self.speed, serializer);
+    sse_encode_opt_box_autoadd_bool(self.slowZoom, serializer);
   }
 
   @protected
@@ -2255,7 +9056,43 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_track_kind_view(self.kind, serializer);
     sse_encode_opt_String(self.name, serializer);
+    sse_encode_opt_String(self.id, serializer);
+    sse_encode_bool(self.muted, serializer);
+    sse_encode_bool(self.locked, serializer);
+    sse_encode_bool(self.hidden, serializer);
     sse_encode_list_track_item_view(self.items, serializer);
+  }
+
+  @protected
+  void sse_encode_transcript_view(
+    TranscriptView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_opt_String(self.clipId, serializer);
+    sse_encode_opt_String(self.audioId, serializer);
+    sse_encode_String(self.language, serializer);
+    sse_encode_list_segment_view(self.segments, serializer);
+  }
+
+  @protected
+  void sse_encode_transform_view(TransformView self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_f_32(self.x, serializer);
+    sse_encode_f_32(self.y, serializer);
+    sse_encode_f_32(self.scale, serializer);
+    sse_encode_f_32(self.rotation, serializer);
+    sse_encode_f_32(self.opacity, serializer);
+    sse_encode_bool(self.flip, serializer);
+  }
+
+  @protected
+  void sse_encode_transition_kind_view(
+    TransitionKindView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
   }
 
   @protected
@@ -2277,7 +9114,42 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_uncertain_view(UncertainView self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.clipId, serializer);
+    sse_encode_u_32(self.clipNumber, serializer);
+    sse_encode_String(self.reason, serializer);
+  }
+
+  @protected
   void sse_encode_unit(void self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
+  }
+
+  @protected
+  void sse_encode_version_reason_view(
+    VersionReasonView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_version_view(VersionView self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.name, serializer);
+    sse_encode_i_64(self.savedAtMs, serializer);
+    sse_encode_version_reason_view(self.reason, serializer);
+  }
+
+  @protected
+  void sse_encode_word_view(WordView self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.index, serializer);
+    sse_encode_String(self.text, serializer);
+    sse_encode_i_64(self.startUs, serializer);
+    sse_encode_bool(self.deleted, serializer);
+    sse_encode_bool(self.emphasis, serializer);
   }
 }

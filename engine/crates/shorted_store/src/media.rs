@@ -15,6 +15,7 @@ pub fn classify(path: &Path) -> Option<MediaKind> {
         "mov" | "mp4" | "m4v" | "webm" | "mkv" => Some(MediaKind::Video),
         "jpg" | "jpeg" | "png" | "heic" | "heif" | "webp" => Some(MediaKind::Image),
         "gif" => Some(MediaKind::AnimatedImage),
+        "m4a" | "aac" | "mp3" | "wav" | "flac" | "ogg" | "opus" => Some(MediaKind::Audio),
         _ => None,
     }
 }

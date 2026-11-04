@@ -1,11 +1,12 @@
 //! Composes frames from `core::evaluate` (ADR-0003): the one renderer for preview and export.
-//! Clips, crop, rotation and crossfade for now; overlays and text come with T-0402.
+//! Clips with crop, colour and transitions, captions, and overlays placed as sprites.
 
 use bytemuck::{Pod, Zeroable};
 
 use crate::spike::{RenderError, TARGET_FORMAT, target_descriptor};
 
-const MAX_LAYERS: u64 = 2;
+/// Two clips during a transition, the overlays, and the caption on top.
+const MAX_LAYERS: u64 = 64;
 const LAYER_STRIDE: u64 = 256;
 const BYTES_PER_PIXEL: u32 = 4;
 
@@ -16,7 +17,84 @@ struct LayerUniform {
     offset: [f32; 2],
     quarter_turns: u32,
     opacity: f32,
+    shift: [f32; 2],
+    tint: [f32; 4],
+    brightness: f32,
+    contrast: f32,
+    saturation: f32,
+    frame_zoom: f32,
+    picture_alpha: f32,
+    sprite: f32,
     padding: [f32; 2],
+    sprite_u: [f32; 4],
+    sprite_v: [f32; 4],
+}
+
+/// What a clip's colour and a transition do to a layer. The default changes nothing.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct LayerEffect {
+    pub opacity: f32,
+    pub shift: [f32; 2],
+    pub tint: [f32; 4],
+    pub brightness: f32,
+    pub contrast: f32,
+    pub saturation: f32,
+    pub frame_zoom: f32,
+    /// True for pictures with transparency.
+    pub keeps_alpha: bool,
+    /// Set for overlays: drawn at a place in the frame instead of filling it.
+    pub sprite: Option<Sprite>,
+}
+
+/// Where an overlay sits, in fractions of the frame.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Sprite {
+    pub center: [f32; 2],
+    pub size: [f32; 2],
+    /// Degrees, clockwise.
+    pub rotation: f32,
+    pub flip: bool,
+    /// How much shows, from the picture's left edge: 1 is all of it.
+    pub reveal: f32,
+}
+
+impl Sprite {
+    /// The affine map from frame 0..1 to the sprite's own 0..1, as two rows: undoes the move, the
+    /// turn and the size, in pixels so a turn keeps its shape on a tall frame.
+    fn rows(&self, frame_width: u32, frame_height: u32) -> ([f32; 4], [f32; 4]) {
+        let (width, height) = (frame_width as f32, frame_height.max(1) as f32);
+        let (sin, cos) = self.rotation.to_radians().sin_cos();
+        let (size_x, size_y) = (self.size[0].max(1e-6), self.size[1].max(1e-6));
+        let mut u = [cos / size_x, sin * height / (size_x * width)];
+        let v = [-sin * width / (size_y * height), cos / size_y];
+        let [x, y] = self.center;
+        let mut u_offset = 0.5 - (u[0] * x + u[1] * y);
+        let v_offset = 0.5 - (v[0] * x + v[1] * y);
+        if self.flip {
+            u = [-u[0], -u[1]];
+            u_offset = 1.0 - u_offset;
+        }
+        (
+            [u[0], u[1], u_offset, self.reveal.clamp(0.0, 1.0)],
+            [v[0], v[1], v_offset, 0.0],
+        )
+    }
+}
+
+impl Default for LayerEffect {
+    fn default() -> Self {
+        Self {
+            opacity: 1.0,
+            shift: [0.0; 2],
+            tint: [0.0; 4],
+            brightness: 0.0,
+            contrast: 1.0,
+            saturation: 1.0,
+            frame_zoom: 1.0,
+            keeps_alpha: false,
+            sprite: None,
+        }
+    }
 }
 
 /// How to place one source in the frame.
@@ -30,7 +108,7 @@ pub struct LayerPlacement {
     /// Crop: centre in 0..1 of the displayed picture, and zoom.
     pub center: [f32; 2],
     pub zoom: f32,
-    pub opacity: f32,
+    pub effect: LayerEffect,
 }
 
 impl LayerPlacement {
@@ -55,12 +133,29 @@ impl LayerPlacement {
             self.center[0].clamp(scale[0] / 2.0, 1.0 - scale[0] / 2.0),
             self.center[1].clamp(scale[1] / 2.0, 1.0 - scale[1] / 2.0),
         ];
+        let (sprite_u, sprite_v) = self.effect.sprite.map_or(([0.0; 4], [0.0; 4]), |sprite| {
+            sprite.rows(frame_width, frame_height)
+        });
         LayerUniform {
             scale,
             offset,
             quarter_turns: self.quarter_turns % 4,
-            opacity: self.opacity,
+            opacity: self.effect.opacity,
+            shift: self.effect.shift,
+            tint: self.effect.tint,
+            brightness: self.effect.brightness,
+            contrast: self.effect.contrast,
+            saturation: self.effect.saturation,
+            frame_zoom: self.effect.frame_zoom.max(0.01),
+            picture_alpha: if self.effect.keeps_alpha { 1.0 } else { 0.0 },
+            sprite: if self.effect.sprite.is_some() {
+                1.0
+            } else {
+                0.0
+            },
             padding: [0.0; 2],
+            sprite_u,
+            sprite_v,
         }
     }
 }
@@ -207,6 +302,25 @@ impl Compositor {
         texture
     }
 
+    /// Replaces the pixels of a texture made by `texture_from_rgba`, for the next frame of an
+    /// animation.
+    pub fn write_rgba(&self, texture: &wgpu::Texture, width: u32, height: u32, rgba: &[u8]) {
+        self.queue.write_texture(
+            texture.as_image_copy(),
+            rgba,
+            wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(width * BYTES_PER_PIXEL),
+                rows_per_image: None,
+            },
+            wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
+        );
+    }
+
     fn encode(
         &self,
         layers: &[(&wgpu::Texture, LayerPlacement)],
@@ -340,8 +454,15 @@ impl Compositor {
     }
 }
 
-/// Decodes an image file to RGBA pixels.
+/// Decodes an image file to RGBA pixels. SVG is drawn at its declared size.
 pub fn load_image(path: &std::path::Path) -> Option<(u32, u32, Vec<u8>)> {
+    let is_svg = path
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("svg"));
+    if is_svg {
+        return crate::library::rasterize_svg_full(&std::fs::read(path).ok()?);
+    }
     let picture = image::open(path).ok()?.into_rgba8();
     let (width, height) = picture.dimensions();
     Some((width, height, picture.into_raw()))
@@ -383,7 +504,7 @@ mod tests {
             quarter_turns: 0,
             center: [0.5, 0.5],
             zoom: 1.0,
-            opacity: 1.0,
+            effect: LayerEffect::default(),
         }
     }
 
@@ -455,7 +576,10 @@ mod tests {
         let black = solid(&compositor, [0, 0, 0]);
         let white = solid(&compositor, [255, 255, 255]);
         let top = LayerPlacement {
-            opacity: 0.5,
+            effect: LayerEffect {
+                opacity: 0.5,
+                ..LayerEffect::default()
+            },
             ..placement()
         };
         let pixels = compositor
@@ -487,6 +611,86 @@ mod tests {
         assert_eq!(uniform.offset, [0.25, 0.75]);
     }
 
+    /// The middle pixel of a solid colour drawn with `effect`.
+    fn drawn(rgb: [u8; 3], effect: LayerEffect) -> Option<[u8; 3]> {
+        let compositor = compositor()?;
+        let texture = solid(&compositor, rgb);
+        let layer = LayerPlacement {
+            effect,
+            ..placement()
+        };
+        let pixels = compositor.render_to_pixels(&[(&texture, layer)]).ok()?;
+        Some(rgb_at(&pixels, 0.5, 0.5))
+    }
+
+    #[test]
+    fn colour_adjustments_change_the_picture() {
+        let grey = [128, 128, 128];
+        let plain = LayerEffect::default();
+        let Some(same) = drawn(grey, plain) else {
+            return;
+        };
+        assert!(close(same, grey), "{same:?}");
+        let bright = LayerEffect {
+            brightness: 0.25,
+            ..plain
+        };
+        assert!(close(drawn(grey, bright).unwrap(), [192, 192, 192]));
+        let flat = LayerEffect {
+            contrast: 0.0,
+            ..plain
+        };
+        assert!(close(drawn([255, 0, 0], flat).unwrap(), [128, 128, 128]));
+        let pale = LayerEffect {
+            saturation: 0.0,
+            ..plain
+        };
+        let luma = drawn([255, 0, 0], pale).unwrap();
+        assert!(close(luma, [54, 54, 54]), "{luma:?}");
+    }
+
+    #[test]
+    fn a_transparent_layer_leaves_the_clip_visible() {
+        let Some(compositor) = compositor() else {
+            return;
+        };
+        let clip = solid(&compositor, [200, 0, 0]);
+        let clear = compositor.texture_from_rgba(1, 1, &[0, 255, 0, 0]);
+        let over = LayerPlacement {
+            effect: LayerEffect {
+                keeps_alpha: true,
+                ..LayerEffect::default()
+            },
+            ..placement()
+        };
+        let pixels = compositor
+            .render_to_pixels(&[(&clip, placement()), (&clear, over)])
+            .unwrap();
+        assert!(close(rgb_at(&pixels, 0.5, 0.5), [200, 0, 0]));
+    }
+
+    #[test]
+    fn a_tint_covers_the_picture() {
+        let white = LayerEffect {
+            tint: [1.0, 1.0, 1.0, 1.0],
+            ..LayerEffect::default()
+        };
+        if let Some(found) = drawn([10, 20, 30], white) {
+            assert!(close(found, [255, 255, 255]), "{found:?}");
+        }
+    }
+
+    #[test]
+    fn a_shifted_picture_leaves_the_frame() {
+        let gone = LayerEffect {
+            shift: [1.0, 0.0],
+            ..LayerEffect::default()
+        };
+        if let Some(found) = drawn([200, 200, 200], gone) {
+            assert!(close(found, [0, 0, 0]), "{found:?}");
+        }
+    }
+
     #[test]
     fn extra_layers_are_ignored_without_crashing() {
         let Some(compositor) = compositor() else {
@@ -499,5 +703,93 @@ mod tests {
             (&texture, placement()),
         ];
         assert!(compositor.render_to_pixels(&layers).is_ok());
+    }
+
+    fn sprite(center: [f32; 2], size: [f32; 2], rotation: f32, flip: bool) -> LayerPlacement {
+        LayerPlacement {
+            effect: LayerEffect {
+                keeps_alpha: true,
+                sprite: Some(Sprite {
+                    center,
+                    size,
+                    rotation,
+                    flip,
+                    reveal: 1.0,
+                }),
+                ..LayerEffect::default()
+            },
+            ..placement()
+        }
+    }
+
+    #[test]
+    fn a_sprite_covers_only_its_place() {
+        let Some(compositor) = compositor() else {
+            return;
+        };
+        let texture = solid(&compositor, [0, 200, 0]);
+        let layer = sprite([0.25, 0.25], [0.3, 0.2], 0.0, false);
+        let pixels = compositor.render_to_pixels(&[(&texture, layer)]).unwrap();
+        assert!(close(rgb_at(&pixels, 0.25, 0.25), [0, 200, 0]));
+        assert!(close(rgb_at(&pixels, 0.75, 0.75), [0, 0, 0]));
+        assert!(close(rgb_at(&pixels, 0.45, 0.25), [0, 0, 0]));
+    }
+
+    #[test]
+    fn a_turned_sprite_keeps_its_shape() {
+        let Some(compositor) = compositor() else {
+            return;
+        };
+        let texture = solid(&compositor, [0, 200, 0]);
+        // 60 x 16 pixels on a 90 x 160 frame, turned upright: 16 wide and 60 tall.
+        let layer = sprite([0.5, 0.5], [60.0 / 90.0, 0.1], 90.0, false);
+        let pixels = compositor.render_to_pixels(&[(&texture, layer)]).unwrap();
+        assert!(close(rgb_at(&pixels, 0.5, 0.5 + 25.0 / 160.0), [0, 200, 0]));
+        assert!(close(rgb_at(&pixels, 0.5 + 20.0 / 90.0, 0.5), [0, 0, 0]));
+    }
+
+    #[test]
+    fn a_flipped_sprite_is_mirrored() {
+        let Some(compositor) = compositor() else {
+            return;
+        };
+        let texture = quadrants(&compositor);
+        let layer = sprite([0.5, 0.5], [1.0, 1.0], 0.0, true);
+        let pixels = compositor.render_to_pixels(&[(&texture, layer)]).unwrap();
+        // Red was top left.
+        assert!(close(rgb_at(&pixels, 0.75, 0.25), [255, 0, 0]));
+    }
+
+    #[test]
+    fn a_sprite_turns_clockwise() {
+        let Some(compositor) = compositor() else {
+            return;
+        };
+        let texture = quadrants(&compositor);
+        let layer = sprite([0.5, 0.5], [0.5, 50.0 / 160.0 * 0.9], 90.0, false);
+        let size = 45.0;
+        let pixels = compositor.render_to_pixels(&[(&texture, layer)]).unwrap();
+        // The top-left red goes to the top right once turned a quarter clockwise.
+        let (x, y) = (0.5 + size / 4.0 / 90.0, 0.5 - size / 4.0 / 160.0);
+        assert!(
+            close(rgb_at(&pixels, x, y), [255, 0, 0]),
+            "{:?}",
+            rgb_at(&pixels, x, y)
+        );
+    }
+
+    #[test]
+    fn a_half_revealed_sprite_shows_its_left_half() {
+        let Some(compositor) = compositor() else {
+            return;
+        };
+        let texture = solid(&compositor, [0, 200, 0]);
+        let mut layer = sprite([0.5, 0.5], [0.8, 0.5], 0.0, false);
+        if let Some(sprite) = layer.effect.sprite.as_mut() {
+            sprite.reveal = 0.5;
+        }
+        let pixels = compositor.render_to_pixels(&[(&texture, layer)]).unwrap();
+        assert!(close(rgb_at(&pixels, 0.3, 0.5), [0, 200, 0]));
+        assert!(close(rgb_at(&pixels, 0.7, 0.5), [0, 0, 0]));
     }
 }

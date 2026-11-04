@@ -136,6 +136,11 @@ fn copy_folder(from: &Path, to: &Path) -> io::Result<()> {
 }
 
 /// Copies a project, media included, under a new id and title.
+/// A closed project as it was last saved, journal included.
+pub fn load_project(root: &Path, id: Id) -> Result<Project, StoreError> {
+    load(&project_folder(root, id)).map(|(project, _)| project)
+}
+
 pub fn duplicate_project(
     root: &Path,
     id: Id,

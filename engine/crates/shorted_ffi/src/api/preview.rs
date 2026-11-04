@@ -13,6 +13,12 @@ pub fn preview_play() {
     transport().play();
 }
 
+/// Plays slower or faster, silent unless `rate` is 1: for recording a path (T-0708).
+#[flutter_rust_bridge::frb(sync)]
+pub fn preview_play_at(rate: f32) {
+    transport().play_at(rate);
+}
+
 #[flutter_rust_bridge::frb(sync)]
 pub fn preview_pause() {
     transport().pause();

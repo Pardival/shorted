@@ -1,14 +1,39 @@
+import 'dart:async';
+import 'dart:ui' as ui;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../bridge/api/projects.dart';
 import '../../design_system/tokens.g.dart';
 import '../../l10n/generated/app_localizations.dart';
+import '../project/project_providers.dart';
 import '../timeline/timeline_layout.dart';
 
-enum ProjectAction { rename, duplicate, delete }
+enum ProjectAction { rename, duplicate, export, delete }
 
-class ProjectCard extends StatelessWidget {
+final _coverProvider = FutureProvider.autoDispose.family<ui.Image?, String>((
+  ref,
+  id,
+) async {
+  final view = await ref.read(projectGatewayProvider).cover(id);
+  if (view == null) return null;
+  final done = Completer<ui.Image>();
+  ui.decodeImageFromPixels(
+    view.rgba,
+    view.width,
+    view.height,
+    ui.PixelFormat.rgba8888,
+    done.complete,
+  );
+  final image = await done.future;
+  ref.onDispose(image.dispose);
+  return image;
+});
+
+class ProjectCard extends ConsumerWidget {
   const ProjectCard({
     super.key,
     required this.project,
@@ -21,8 +46,9 @@ class ProjectCard extends StatelessWidget {
   final ValueChanged<ProjectAction> onAction;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
+    final cover = ref.watch(_coverProvider(project.id)).value;
     final locale = Localizations.localeOf(context).toString();
     final edited = DateTime.fromMillisecondsSinceEpoch(
       project.editedAtMs.toInt(),
@@ -36,9 +62,16 @@ class ProjectCard extends StatelessWidget {
         children: [
           Expanded(
             child: Container(
+              clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
                 color: ShortedColors.mediaPlaceholder,
                 borderRadius: BorderRadius.circular(ShortedRadius.m),
+                image: cover == null
+                    ? null
+                    : DecorationImage(
+                        image: _CoverImage(cover),
+                        fit: BoxFit.cover,
+                      ),
               ),
               alignment: Alignment.bottomRight,
               padding: const EdgeInsets.all(ShortedSpace.s),
@@ -82,6 +115,10 @@ class ProjectCard extends StatelessWidget {
                     child: Text(l10n.duplicate),
                   ),
                   PopupMenuItem(
+                    value: ProjectAction.export,
+                    child: Text(l10n.exportBundle),
+                  ),
+                  PopupMenuItem(
                     value: ProjectAction.delete,
                     child: Text(l10n.delete),
                   ),
@@ -93,4 +130,30 @@ class ProjectCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Paints an image already in memory.
+class _CoverImage extends ImageProvider<_CoverImage> {
+  const _CoverImage(this.image);
+
+  final ui.Image image;
+
+  @override
+  Future<_CoverImage> obtainKey(ImageConfiguration configuration) =>
+      SynchronousFuture(this);
+
+  @override
+  ImageStreamCompleter loadImage(
+    _CoverImage key,
+    ImageDecoderCallback decode,
+  ) => OneFrameImageStreamCompleter(
+    SynchronousFuture(ImageInfo(image: image.clone())),
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      other is _CoverImage && other.image == image;
+
+  @override
+  int get hashCode => image.hashCode;
 }

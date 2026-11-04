@@ -127,7 +127,11 @@ fn audio_item(
     let kind = *media
         .get(&item.media_id)
         .ok_or(ModelError::UnknownId(item.media_id))?;
-    check(kind == MediaKind::Audio, "audio media kind")?;
+    // A video's own sound can be taken out of its clip (detach).
+    check(
+        matches!(kind, MediaKind::Audio | MediaKind::Video),
+        "audio media kind",
+    )?;
     if let AudioTrackRef::User(track) = item.track {
         known(tracks, track)?;
     }
@@ -192,6 +196,9 @@ fn overlay(item: &OverlayItem, media: &HashSet<Id>) -> Result<(), ModelError> {
             style(value)?;
         }
         OverlayKind::Shape { fill, .. } => color(fill)?,
+    }
+    if let Some(tint) = &item.tint {
+        color(tint)?;
     }
     let mut properties = HashSet::new();
     for track in &item.keyframes {

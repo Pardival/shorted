@@ -5,14 +5,64 @@
 
 import '../error.dart';
 import '../frb_generated.dart';
+import 'audio.dart';
+import 'look.dart';
 import 'media.dart';
+import 'overlays.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 import 'projects.dart';
+import 'transcribe.dart';
 
-// These functions are ignored because they are not marked as `pub`: `edit`, `locate`, `parse`, `snap_to_frame`
+// These functions are ignored because they are not marked as `pub`: `edit`, `locate`, `moved_crop`, `parse`, `picture_aspect`, `slow_zoom`, `snap_to_frame`, `visible_fraction`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `eq`
+
+/// Follows a gesture on the preview. Nothing is recorded until `commit_crop`, so that one gesture
+/// is one undo step.
+void moveCrop({
+  required String id,
+  required double dx,
+  required double dy,
+  required double zoomBy,
+}) => RustLib.instance.api.crateApiClipsMoveCrop(
+  id: id,
+  dx: dx,
+  dy: dy,
+  zoomBy: zoomBy,
+);
+
+/// Records the crop the gesture left on the preview, as one undo step.
+Future<ProjectView> commitCrop({required String id}) =>
+    RustLib.instance.api.crateApiClipsCommitCrop(id: id);
+
+/// Removes a range from every unlocked track, closing the gap (FR-TL).
+Future<ProjectView> deleteRange({
+  required PlatformInt64 startUs,
+  required PlatformInt64 endUs,
+}) => RustLib.instance.api.crateApiClipsDeleteRange(
+  startUs: startUs,
+  endUs: endUs,
+);
+
+/// Silences a range on every unlocked track.
+Future<ProjectView> muteRange({
+  required PlatformInt64 startUs,
+  required PlatformInt64 endUs,
+}) =>
+    RustLib.instance.api.crateApiClipsMuteRange(startUs: startUs, endUs: endUs);
+
+/// Splits every unlocked track at one time.
+Future<ProjectView> splitAllAt({required PlatformInt64 timeUs}) =>
+    RustLib.instance.api.crateApiClipsSplitAllAt(timeUs: timeUs);
+
+/// Turns the slow zoom of an image clip on or off (FR-CLIP-03).
+Future<ProjectView> toggleSlowZoom({required String id}) =>
+    RustLib.instance.api.crateApiClipsToggleSlowZoom(id: id);
+
+/// Back to the centred picture.
+Future<ProjectView> resetCrop({required String id}) =>
+    RustLib.instance.api.crateApiClipsResetCrop(id: id);
 
 /// Splits the clip under `time_us` at the nearest frame.
 Future<ProjectView> splitClip({

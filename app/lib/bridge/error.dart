@@ -47,4 +47,34 @@ enum ErrorCode {
 
   /// The video could not be written.
   exportFailed,
+
+  /// The file is larger than the app accepts (docs/08).
+  tooLarge,
+
+  /// No AI provider, or no key for it.
+  aiNotConfigured,
+
+  /// The system has no safe place for the key here.
+  keyStorage,
+
+  /// The provider refused the key (401, 403).
+  aiKeyRejected,
+
+  /// Too many requests, or no credit left (429).
+  aiRateLimited,
+
+  /// The provider is having trouble (5xx).
+  aiUnavailable,
+
+  /// No answer: offline, wrong address, or too slow.
+  aiUnreachable,
+
+  /// The provider answered something unusable.
+  aiBadResponse,
+
+  /// A `.shorted` file that is damaged, unsafe, or not a project.
+  badBundle,
+
+  /// A media file of the project cannot be found.
+  missingMedia,
 }

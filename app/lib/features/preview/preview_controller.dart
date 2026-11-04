@@ -8,6 +8,9 @@ abstract interface class PreviewTransport {
   Future<void> stopTexture();
   void seek(int timeUs);
   void play();
+
+  /// Silent unless `rate` is 1: for recording a path.
+  void playAt(double rate);
   void pause();
   int get positionUs;
   bool get isPlaying;
@@ -49,6 +52,9 @@ class EngineTransport implements PreviewTransport {
 
   @override
   void play() => engine.previewPlay();
+
+  @override
+  void playAt(double rate) => engine.previewPlayAt(rate: rate);
 
   @override
   void pause() => engine.previewPause();

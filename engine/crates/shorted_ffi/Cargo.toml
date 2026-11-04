@@ -32,11 +32,21 @@ thiserror = "2.0.21"
 tracing = "0.1.44"
 tracing-appender = "0.2.5"
 regex = "1.13.1"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
 tracing-subscriber = { version = "0.3.23", default-features = false, features = ["fmt", "std", "ansi"] }
 wgpu = "30.0.1"
 uuid = { version = "1.29.0", features = ["v7"] }
 time = { version = "0.3.55", features = ["formatting"] }
 
 [target.'cfg(target_vendor = "apple")'.dependencies]
+cpal = "0.18.2"
 objc2-core-foundation = "0.3.2"
 objc2-io-surface = { version = "0.3.2", default-features = false, features = ["IOSurfaceRef"] }
+rtrb = "0.4.1"
+security-framework = "3.7.0"
+ureq = { version = "3.1.2", default-features = false, features = ["native-tls"] }
+
+[dev-dependencies]
+image = { version = "0.25.10", default-features = false, features = ["png", "gif"] }
+tempfile = "3.27.0"

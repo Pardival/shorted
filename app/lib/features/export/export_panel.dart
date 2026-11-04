@@ -7,14 +7,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../bridge/error.dart';
 import '../../bridge/runtime.dart';
 import '../../design_system/components.dart';
+import '../../design_system/task_progress.dart';
 import '../../design_system/tokens.g.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../project/project_dialogs.dart';
 import '../project/project_providers.dart';
 
 const _widths = {720: '720p', 1080: '1080p'};
+const _uhdWidth = 2160;
 const _frameRates = [30, 60];
 const _maxDurationUs = 120000000;
+
+const _bytesPerMegabyte = 1000 * 1000;
 
 class ExportPanel extends ConsumerStatefulWidget {
   const ExportPanel({super.key, required this.durationUs, this.chooseFile});
@@ -31,7 +35,9 @@ class ExportPanel extends ConsumerStatefulWidget {
 class _ExportPanelState extends ConsumerState<ExportPanel> {
   var _width = 1080;
   var _fps = 30;
+  var _srt = false;
   double? _progress;
+  String? _savedPath;
   BigInt? _taskId;
   StreamSubscription<TaskEvent>? _events;
 
@@ -58,11 +64,25 @@ class _ExportPanelState extends ConsumerState<ExportPanel> {
       case TaskEvent_Finished():
         setState(() => _progress = null);
         showToast(context, l10n.exportDone);
+        unawaited(_saveCaptions(l10n));
       case TaskEvent_Cancelled():
         setState(() => _progress = null);
       case TaskEvent_Failed(:final code):
         setState(() => _progress = null);
         showToast(context, errorMessage(l10n, EngineFailure(code: code)));
+    }
+  }
+
+  /// The `.srt` sits next to the video, with the same name.
+  Future<void> _saveCaptions(AppLocalizations l10n) async {
+    final path = _savedPath;
+    if (!_srt || path == null) return;
+    final dot = path.lastIndexOf('.');
+    final base = dot < 0 ? path : path.substring(0, dot);
+    try {
+      await ref.read(projectGatewayProvider).writeSrt('$base.srt');
+    } on Object catch (error) {
+      if (mounted) showToast(context, errorMessage(l10n, error));
     }
   }
 
@@ -72,6 +92,7 @@ class _ExportPanelState extends ConsumerState<ExportPanel> {
     if (path == null || !mounted) return;
     setState(() => _progress = 0);
     final gateway = ref.read(projectGatewayProvider);
+    _savedPath = path;
     _events = gateway
         .export(path, width: _width, fps: _fps)
         .listen((event) => _onEvent(event, l10n));
@@ -118,16 +139,11 @@ class _ExportPanelState extends ConsumerState<ExportPanel> {
       _ => null,
     };
     if (progress != null) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ProgressRing(value: progress),
-            const SizedBox(height: ShortedSpace.m),
-            Text(l10n.exportProgress((progress * 100).round())),
-            TextButton(onPressed: _cancel, child: Text(l10n.exportCancel)),
-          ],
-        ),
+      return TaskProgress(
+        label: l10n.exportProgress((progress * 100).round()),
+        fraction: progress,
+        cancelLabel: l10n.exportCancel,
+        onCancel: _cancel,
       );
     }
     return SingleChildScrollView(
@@ -142,7 +158,11 @@ class _ExportPanelState extends ConsumerState<ExportPanel> {
           ),
           _choice(
             label: l10n.exportResolution,
-            options: _widths,
+            options: {
+              ..._widths,
+              if (ref.read(projectGatewayProvider).exportSupports4k())
+                _uhdWidth: '4K',
+            },
             selected: _width,
             onSelected: (value) => setState(() => _width = value),
           ),
@@ -152,10 +172,27 @@ class _ExportPanelState extends ConsumerState<ExportPanel> {
             selected: _fps,
             onSelected: (value) => setState(() => _fps = value),
           ),
-          Text(
-            blocked ?? l10n.exportSilentNote,
-            style: const TextStyle(color: ShortedColors.attention),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.exportSrt),
+            value: _srt,
+            onChanged: (value) => setState(() => _srt = value),
           ),
+          if (blocked == null)
+            Text(
+              l10n.estimatedSize(
+                ref
+                        .read(projectGatewayProvider)
+                        .exportSizeEstimate(_width, _fps, widget.durationUs) ~/
+                    _bytesPerMegabyte,
+              ),
+              style: const TextStyle(color: ShortedColors.textMuted),
+            ),
+          if (blocked != null)
+            Text(
+              blocked,
+              style: const TextStyle(color: ShortedColors.attention),
+            ),
           PrimaryButton(
             label: l10n.exportStart,
             onPressed: blocked == null ? _start : null,

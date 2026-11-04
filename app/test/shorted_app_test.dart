@@ -1,7 +1,11 @@
+import 'package:flutter/rendering.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shorted/features/captions/captions_panel.dart';
 import 'package:shorted/app/shorted_app.dart';
+import 'package:shorted/bridge/api/audio.dart';
 import 'package:shorted/bridge/api/projects.dart';
 import 'package:shorted/bridge/error.dart';
 import 'package:shorted/features/editor/editor_parts.dart';
@@ -191,6 +195,277 @@ void main() {
     expect(find.byTooltip('Split'), findsNothing);
   });
 
+  testWidgets('a clip selected on the timeline opens its own sound', (
+    tester,
+  ) async {
+    final project = FakeProject('p1', 'Mine')..clips.add('c1');
+    final gateway = FakeGateway()..projects.add(project);
+    await open(
+      tester,
+      '/editor/p1/clips',
+      size: const Size(1280, 800),
+      gateway: gateway,
+    );
+    final timeline = tester.getTopLeft(find.byType(TimelineView));
+    await tester.tapAt(timeline + const Offset(100, 40));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.byTooltip('Sound'));
+    await tester.pumpAndSettle();
+    final sheet = find.byType(BottomSheet);
+    expect(
+      find.descendant(of: sheet, matching: find.text('Sound of clip 1')),
+      findsOneWidget,
+    );
+    await tester.tap(
+      find.descendant(of: sheet, matching: find.byTooltip('Mute')),
+    );
+    await tester.pumpAndSettle();
+    expect(gateway.audioCalls.last, startsWith('clip c1'));
+  });
+
+  testWidgets('Properties shows the project, then the selected clip', (
+    tester,
+  ) async {
+    final project = FakeProject('p1', 'Mine')..clips.add('c1');
+    final gateway = FakeGateway()..projects.add(project);
+    await open(
+      tester,
+      '/editor/p1/clips',
+      size: const Size(1700, 1000),
+      gateway: gateway,
+    );
+    final inspector = find.byType(Inspector);
+    expect(
+      find.descendant(of: inspector, matching: find.textContaining('1 clip ·')),
+      findsOneWidget,
+    );
+    final timeline = tester.getTopLeft(find.byType(TimelineView));
+    await tester.tapAt(timeline + const Offset(100, 40));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(of: inspector, matching: find.text('Clip 1')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: inspector, matching: find.text('Sound of clip 1')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('a clip\'s sound has its own row; it can be detached', (
+    tester,
+  ) async {
+    final project = FakeProject('p1', 'Mine')..clips.add('c1');
+    final gateway = FakeGateway()..projects.add(project);
+    await open(
+      tester,
+      '/editor/p1/clips',
+      size: const Size(1280, 800),
+      gateway: gateway,
+    );
+    final timeline = find.byType(TimelineView);
+    // Rows: ruler, Video, then the clip's own sound right under it.
+    final origin = tester.getTopLeft(timeline);
+    await tester.tapAt(origin + const Offset(100, 24 + 36 + 18));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Split'), findsNothing, reason: 'not the clip');
+    await tester.tap(find.byTooltip('Detach the sound'));
+    await tester.pumpAndSettle();
+    expect(gateway.audioCalls.last, 'detach c1');
+  });
+
+  testWidgets('a crop gesture follows the finger and records one step', (
+    tester,
+  ) async {
+    final project = FakeProject('p1', 'Mine')..clips.add('c1');
+    final gateway = FakeGateway()..projects.add(project);
+    await open(
+      tester,
+      '/editor/p1/audio',
+      size: const Size(1280, 800),
+      gateway: gateway,
+    );
+    final timeline = tester.getTopLeft(find.byType(TimelineView));
+    await tester.tapAt(timeline + const Offset(100, 40));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byKey(PreviewArea.cropKey), findsNothing);
+
+    await tester.tap(find.byTooltip('Crop'));
+    await tester.pump();
+    await tester.drag(find.byKey(PreviewArea.cropKey), const Offset(60, 0));
+    await tester.pumpAndSettle();
+    expect(gateway.cropMoves, isNotEmpty);
+    expect(gateway.cropMoves.first.$1, 'c1');
+    final moved = gateway.cropMoves.fold(0.0, (sum, move) => sum + move.$2);
+    expect(moved, greaterThan(0));
+    expect(gateway.cropCommits, ['c1']);
+
+    await tester.tap(find.byTooltip('Reset crop'));
+    await tester.pumpAndSettle();
+    expect(gateway.cropResets, ['c1']);
+
+    await tester.tap(find.byTooltip('Crop'));
+    await tester.pump();
+    expect(find.byKey(PreviewArea.cropKey), findsNothing);
+  });
+
+  testWidgets('only still images offer the slow zoom', (tester) async {
+    final project = FakeProject('p1', 'Mine')
+      ..clips.addAll(['video', 'still'])
+      ..stills.add('still');
+    final gateway = FakeGateway()..projects.add(project);
+    await open(
+      tester,
+      '/editor/p1/audio',
+      size: const Size(1280, 800),
+      gateway: gateway,
+    );
+    final timeline = tester.getTopLeft(find.byType(TimelineView));
+    await tester.tapAt(timeline + const Offset(100, 40));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byTooltip('Split'), findsOneWidget);
+    expect(find.byTooltip('Slow zoom'), findsNothing);
+
+    // The tools take room above the timeline, so it has moved.
+    final moved = tester.getTopLeft(find.byType(TimelineView));
+    await tester.tapAt(moved + const Offset(148, 40));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.byTooltip('Slow zoom'));
+    await tester.pumpAndSettle();
+    expect(gateway.slowZooms, ['still']);
+  });
+
+  testWidgets('keyboard shortcuts reach the editor', (tester) async {
+    final project = FakeProject('p1', 'Mine')..clips.add('c1');
+    final gateway = FakeGateway()..projects.add(project);
+    await open(
+      tester,
+      '/editor/p1/clips',
+      size: const Size(1280, 800),
+      gateway: gateway,
+    );
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyL);
+    await tester.pump();
+    expect(find.textContaining('0:01'), findsWidgets);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyJ);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyS);
+    await tester.pumpAndSettle();
+    expect(gateway.clipCalls.single, startsWith('split c1'));
+
+    final timeline = tester.getTopLeft(find.byType(TimelineView));
+    await tester.tapAt(timeline + const Offset(100, 40));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.sendKeyEvent(LogicalKeyboardKey.delete);
+    await tester.pumpAndSettle();
+    expect(gateway.clipCalls.last, 'delete c1');
+  });
+
+  testWidgets('a long press on the ruler selects a range for every track', (
+    tester,
+  ) async {
+    final project = FakeProject('p1', 'Mine')..clips.add('c1');
+    final gateway = FakeGateway()..projects.add(project);
+    await open(
+      tester,
+      '/editor/p1/clips',
+      size: const Size(1280, 800),
+      gateway: gateway,
+    );
+    final timeline = tester.getTopLeft(find.byType(TimelineView));
+    final gesture = await tester.startGesture(timeline + const Offset(128, 6));
+    await tester.pump(const Duration(milliseconds: 700));
+    await gesture.moveBy(const Offset(40, 0));
+    await tester.pump();
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Delete range'));
+    await tester.pumpAndSettle();
+    expect(gateway.rangeCalls, ['delete 1000000 2000000']);
+    expect(find.byTooltip('Delete range'), findsNothing);
+  });
+
+  testWidgets('a track header opens its menu and reaches the engine', (
+    tester,
+  ) async {
+    final project = FakeProject('p1', 'Mine')..clips.add('c1');
+    final gateway = FakeGateway()..projects.add(project);
+    await open(
+      tester,
+      '/editor/p1/clips',
+      size: const Size(1280, 800),
+      gateway: gateway,
+    );
+    final timeline = tester.getTopLeft(find.byType(TimelineView));
+    await tester.tapAt(timeline + const Offset(20, 40));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Lock'));
+    await tester.pumpAndSettle();
+    expect(gateway.audioCalls.single, 'flags video null true null');
+  });
+
+  testWidgets('on phones the timeline folds and unfolds', (tester) async {
+    await open(tester, '/editor/p1/clips');
+    await tester.tap(find.text('All tracks'));
+    await tester.pumpAndSettle();
+    expect(find.text('Collapse timeline'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a sound moves along the timeline and to another track', (
+    tester,
+  ) async {
+    final gateway = FakeGateway();
+    final project = FakeProject('p1', 'Mine')
+      ..audioTracks.addAll([
+        AudioTrackView(
+          id: 't1',
+          name: 'Audio 1',
+          muted: false,
+          items: const [],
+        ),
+        AudioTrackView(
+          id: 't2',
+          name: 'Audio 2',
+          muted: false,
+          items: const [],
+        ),
+      ])
+      ..sounds['t1'] = ['s1'];
+    gateway.projects.add(project);
+    await open(
+      tester,
+      '/editor/p1/clips',
+      size: const Size(1280, 800),
+      gateway: gateway,
+    );
+    final view = find.byType(TimelineView);
+    // Below Widgets, Video, Original sound, Captions and Voice-over.
+    Offset at(double x, int track) =>
+        tester.getTopLeft(view) + Offset(x, 24 + 36 * track + 12);
+    await tester.tapAt(at(108, 2));
+    await tester.pump(const Duration(milliseconds: 400));
+    final moved = tester.getTopLeft(view);
+    Offset after(double x, int track) =>
+        moved + Offset(x, 24 + 36 * track + 12);
+    final gesture = await tester.startGesture(after(108, 2));
+    await tester.pump();
+    await gesture.moveTo(after(148, 3));
+    await tester.pump();
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(gateway.audioCalls.single, 'move s1 1000000 t2');
+  });
+
+  testWidgets('the splash hands over to Home', (tester) async {
+    await open(tester, '/');
+    expect(find.text('New short'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('a project that cannot open shows a human message', (
     tester,
   ) async {
@@ -209,10 +484,7 @@ void main() {
 
   testWidgets('deep link opens the right section', (tester) async {
     await open(tester, '/editor/p1/captions');
-    expect(
-      find.text('Captions tools arrive with their tickets.'),
-      findsOneWidget,
-    );
+    expect(find.byType(CaptionsPanel), findsOneWidget);
   });
 
   testWidgets('an unknown section falls back to Clips', (tester) async {
@@ -242,7 +514,7 @@ void main() {
     await tester.pumpAndSettle();
     resize(tester, const Size(390, 844));
     await tester.pumpAndSettle();
-    expect(find.text('Audio tools arrive with their tickets.'), findsOneWidget);
+    expect(find.text('Original sound'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -260,5 +532,57 @@ void main() {
       expect(tester.takeException(), isNull, reason: '$size');
       expect(find.text('Enregistré'), findsOneWidget);
     }
+  });
+
+  testWidgets('no button label wraps, in any language, on phone or desktop', (
+    tester,
+  ) async {
+    addTearDown(tester.platformDispatcher.clearLocalesTestValue);
+    var checked = 0;
+    for (final locale in const ['en', 'fr', 'es', 'pt']) {
+      tester.platformDispatcher.localesTestValue = [Locale(locale)];
+      for (final size in const [Size(390, 844), Size(1440, 900)]) {
+        for (final section in const [
+          'clips',
+          'audio',
+          'captions',
+          'enhance',
+          'export',
+        ]) {
+          final project = FakeProject('p1', 'Mine')..clips.add('c1');
+          final gateway = FakeGateway()..projects.add(project);
+          await gateway.open('p1');
+          await gateway.importFiles(const ['/a.mov']);
+          await open(
+            tester,
+            '/editor/p1/$section',
+            size: size,
+            gateway: gateway,
+          );
+          final where = '$locale $size $section';
+          expect(tester.takeException(), isNull, reason: where);
+          final labels = find.descendant(
+            of: find.byWidgetPredicate((widget) => widget is ButtonStyleButton),
+            matching: find.byType(RichText),
+          );
+          for (final element in labels.evaluate()) {
+            final paragraph = element.renderObject! as RenderParagraph;
+            if (!paragraph.attached || paragraph.text.toPlainText().isEmpty) {
+              continue;
+            }
+            final line = paragraph.getFullHeightForCaret(
+              const TextPosition(offset: 0),
+            );
+            checked++;
+            expect(
+              paragraph.size.height,
+              lessThan(line * 1.5),
+              reason: '$where: "${paragraph.text.toPlainText()}" wraps',
+            );
+          }
+        }
+      }
+    }
+    expect(checked, greaterThan(100), reason: 'buttons were looked at');
   });
 }
