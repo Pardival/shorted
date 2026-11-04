@@ -342,5 +342,9 @@
   "zoomOut": "Afastar",
   "zoomFit": "Mostrar tudo",
   "trackOriginalSound": "Som original",
-  "detachSound": "Separar o som"
+  "detachSound": "Separar o som",
+  "exportCover": "Salvar também uma imagem de capa",
+  "exportCoverHint": "Um quadro do vídeo, salvo como JPEG ao lado dele.",
+  "exportCoverAt": "Quadro em {time}. Mova o controle para escolher outro.",
+  "exportPaused": "Exportação em pausa: continua quando você voltar"
 }

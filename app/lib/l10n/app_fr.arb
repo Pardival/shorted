@@ -342,5 +342,9 @@
   "zoomOut": "Dézoomer",
   "zoomFit": "Tout afficher",
   "trackOriginalSound": "Son d'origine",
-  "detachSound": "Détacher le son"
+  "detachSound": "Détacher le son",
+  "exportCover": "Enregistrer aussi une image de couverture",
+  "exportCoverHint": "Une image de la vidéo, enregistrée en JPEG à côté d'elle.",
+  "exportCoverAt": "Image à {time}. Déplace le curseur pour en choisir une autre.",
+  "exportPaused": "Export en pause : il reprend à ton retour"
 }

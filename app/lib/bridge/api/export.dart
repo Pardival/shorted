@@ -9,8 +9,12 @@ import '../runtime.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `audio_chunk`, `audio_target`, `bits_per_second`, `frame_count`, `frame_time_us`, `output_size`, `probe_4k`, `run_export`
+// These functions are ignored because they are not marked as `pub`: `audio_chunk`, `audio_target`, `bits_per_second`, `cover_jpeg`, `frame_count`, `frame_time_us`, `move_into_place`, `output_size`, `partial_path`, `probe_4k`, `run_export`, `wait_while_paused`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`
+
+/// Pauses or resumes the running export. Phones call it when the app leaves or comes back.
+void setExportPaused({required bool paused}) =>
+    RustLib.instance.api.crateApiExportSetExportPaused(paused: paused);
 
 /// Starts exporting the open project. The first event carries the id for `cancel_task`.
 Stream<TaskEvent> startExport({
@@ -20,6 +24,12 @@ Stream<TaskEvent> startExport({
   path: path,
   settings: settings,
 );
+
+/// Saves the frame at `time_us` as a JPEG cover picture (FR-EXP-05).
+Future<void> writeCover({
+  required String path,
+  required PlatformInt64 timeUs,
+}) => RustLib.instance.api.crateApiExportWriteCover(path: path, timeUs: timeUs);
 
 /// About how many bytes an export will take, sound included.
 PlatformInt64 exportSizeEstimate({

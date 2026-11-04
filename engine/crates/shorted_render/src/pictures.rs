@@ -26,6 +26,24 @@ pub enum PictureError {
     TooLarge,
 }
 
+/// Quality of a cover picture: sharp enough for a thumbnail, still small.
+const COVER_JPEG_QUALITY: u8 = 90;
+
+/// A JPEG of BGRA pixels, for a cover picture (T-0903).
+pub fn jpeg_from_bgra(bgra: &[u8], width: u32, height: u32) -> Option<Vec<u8>> {
+    let rgb: Vec<u8> = bgra
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .flat_map(|&[b, g, r, _]| [r, g, b])
+        .collect();
+    let mut out = Vec::new();
+    image::codecs::jpeg::JpegEncoder::new_with_quality(&mut out, COVER_JPEG_QUALITY)
+        .encode(&rgb, width, height, image::ExtendedColorType::Rgb8)
+        .ok()?;
+    Some(out)
+}
+
 /// A decoded animation: every frame at full size, each with the time it starts.
 pub struct Animation {
     pub width: u32,
@@ -237,5 +255,16 @@ mod tests {
         let (width, height, rgba) = preview(&path, 10).unwrap();
         assert_eq!((width, height), (10, 5));
         assert_eq!(&rgba[..4], &[0, 0, 255, 255]);
+    }
+
+    #[test]
+    fn a_cover_jpeg_decodes_back_to_its_size_and_colour() {
+        // Two by one, both pure blue in BGRA.
+        let bgra = [255, 0, 0, 255, 255, 0, 0, 255];
+        let jpeg = jpeg_from_bgra(&bgra, 2, 1).unwrap();
+        let back = image::load_from_memory(&jpeg).unwrap().to_rgb8();
+        assert_eq!(back.dimensions(), (2, 1));
+        let pixel = back.get_pixel(0, 0);
+        assert!(pixel[2] > 200 && pixel[0] < 60, "{pixel:?}");
     }
 }

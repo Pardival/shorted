@@ -405,9 +405,21 @@ impl Compositor {
         &self,
         layers: &[(&wgpu::Texture, LayerPlacement)],
     ) -> Result<Vec<u8>, RenderError> {
-        let target = self
-            .device
-            .create_texture(&target_descriptor(self.width, self.height));
+        let target = self.offscreen_target();
+        let mut encoder = self.device.create_command_encoder(&Default::default());
+        self.encode(layers, &target, &mut encoder);
+        self.queue.submit([encoder.finish()]);
+        self.read_pixels(&target)
+    }
+
+    /// A target of the compositor's size that `read_pixels` can read.
+    pub fn offscreen_target(&self) -> wgpu::Texture {
+        self.device
+            .create_texture(&target_descriptor(self.width, self.height))
+    }
+
+    /// The BGRA pixels of a target made by `offscreen_target`, once the GPU is done with it.
+    pub fn read_pixels(&self, target: &wgpu::Texture) -> Result<Vec<u8>, RenderError> {
         let row =
             (self.width * BYTES_PER_PIXEL).next_multiple_of(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT);
         let readback = self.device.create_buffer(&wgpu::BufferDescriptor {
@@ -417,7 +429,6 @@ impl Compositor {
             mapped_at_creation: false,
         });
         let mut encoder = self.device.create_command_encoder(&Default::default());
-        self.encode(layers, &target, &mut encoder);
         encoder.copy_texture_to_buffer(
             target.as_image_copy(),
             wgpu::TexelCopyBufferInfo {

@@ -73,13 +73,19 @@ impl TaskContext<'_> {
         }
     }
 
+    /// Cancels this task as `cancel_task` would.
+    #[cfg(test)]
+    pub(crate) fn cancel_for_test(&self) {
+        self.token.cancel();
+    }
+
     pub fn progress(&self, fraction: f64) {
         self.reporter.report(TaskEvent::Progress { fraction });
     }
 }
 
 /// Runs `task` as a job would, without a queue or a listener.
-#[cfg(all(test, target_vendor = "apple"))]
+#[cfg(test)]
 pub(crate) fn with_test_context<R>(task: impl FnOnce(&TaskContext<'_>) -> R) -> R {
     struct Silent;
     impl TaskReporter for Silent {

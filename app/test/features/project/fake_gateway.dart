@@ -1024,6 +1024,15 @@ class FakeGateway implements ProjectGateway {
   @override
   Future<void> writeSrt(String path) async => srts.add(path);
 
+  final covers = <String>[];
+  @override
+  Future<void> writeCover(String path, int timeUs) async =>
+      covers.add('$path $timeUs');
+
+  final pauses = <bool>[];
+  @override
+  void setExportPaused(bool paused) => pauses.add(paused);
+
   @override
   Future<ProjectView> hideSegment(
     TranscriptView transcript,

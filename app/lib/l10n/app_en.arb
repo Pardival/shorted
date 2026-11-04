@@ -556,5 +556,16 @@
   "zoomOut": "Zoom out",
   "zoomFit": "Show everything",
   "trackOriginalSound": "Original sound",
-  "detachSound": "Detach the sound"
+  "detachSound": "Detach the sound",
+  "exportCover": "Also save a cover picture",
+  "exportCoverHint": "A frame of the video, saved as a JPEG next to it.",
+  "exportCoverAt": "Frame at {time}. Move the slider to choose another.",
+  "@exportCoverAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "exportPaused": "Export paused: it goes on when you come back"
 }
