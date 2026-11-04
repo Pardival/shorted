@@ -56,6 +56,9 @@ abstract interface class ProjectGateway {
   Future<int> importFiles(List<String> paths);
   Future<ProjectView> placeClips(List<String> mediaIds);
   Future<ProjectView> relink(String mediaId, String path);
+
+  /// Takes a media out of the project with what shows it on the timeline, as one undo step.
+  Future<ProjectView> removeMedia(String mediaId);
   Future<ProjectView> splitClip(String id, int timeUs);
   Future<ProjectView> deleteClip(String id);
   Future<ProjectView> duplicateClip(String id);
@@ -401,6 +404,10 @@ class EngineGateway implements ProjectGateway {
   @override
   Future<ProjectView> relink(String mediaId, String path) =>
       media.relinkMedia(id: mediaId, path: path);
+
+  @override
+  Future<ProjectView> removeMedia(String mediaId) =>
+      media.removeMedia(id: mediaId);
 
   @override
   Future<ProjectView> splitClip(String id, int timeUs) =>

@@ -356,5 +356,8 @@
   "onboardingPrivacy": "Tus vídeos se quedan en tu dispositivo.",
   "onboardingNext": "Siguiente",
   "onboardingStart": "Empezar",
-  "replayOnboarding": "Ver la presentación otra vez"
+  "replayOnboarding": "Ver la presentación otra vez",
+  "removeMedia": "Quitar del proyecto",
+  "removeMediaTitle": "¿Quitar «{name}»?",
+  "removeMediaBody": "Sus clips, sonidos y elementos también salen de la línea de tiempo. El archivo en tu dispositivo se conserva y Deshacer lo restaura todo."
 }

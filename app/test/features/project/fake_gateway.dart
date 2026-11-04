@@ -1196,4 +1196,12 @@ class FakeGateway implements ProjectGateway {
     );
     return view();
   }
+
+  final removedMedia = <String>[];
+  @override
+  Future<ProjectView> removeMedia(String mediaId) async {
+    removedMedia.add(mediaId);
+    opened!.media.removeWhere((m) => m.id == mediaId);
+    return view();
+  }
 }

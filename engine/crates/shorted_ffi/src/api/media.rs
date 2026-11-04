@@ -332,6 +332,62 @@ pub async fn relink_media(id: String, path: String) -> Result<ProjectView, Engin
     })
 }
 
+/// Takes a media out of the project, with every clip, sound and element that shows it, as one
+/// undo step. Its file stays on disk so that undo brings everything back.
+pub async fn remove_media(id: String) -> Result<ProjectView, EngineFailure> {
+    on_command_thread(move || {
+        let mut command = None;
+        with_active(|session| {
+            command = Some(remove_media_command(session.project(), &id));
+            Ok(())
+        })?;
+        let command = command.ok_or_else(|| EngineError::Internal("no project".into()))??;
+        with_active(|session| {
+            session.execute(&command)?;
+            Ok(view_of(session))
+        })
+    })
+}
+
+fn remove_media_command(project: &Project, id: &str) -> Result<Command, EngineError> {
+    let media = project
+        .media
+        .iter()
+        .find(|m| m.id.to_string() == id)
+        .ok_or_else(|| EngineError::Internal("unknown media".into()))?;
+    let timeline = &project.timeline;
+    let clips = timeline
+        .clips
+        .iter()
+        .filter(|clip| clip.media_id == media.id)
+        .map(|clip| Command::DeleteClip { id: clip.id });
+    let sounds = timeline
+        .audio
+        .iter()
+        .filter(|item| item.media_id == media.id)
+        .map(|item| Command::DeleteAudio { id: item.id });
+    let elements = timeline
+        .overlays
+        .iter()
+        .filter(|item| match &item.kind {
+            OverlayKind::Image { asset } | OverlayKind::AnimatedImage { asset } => {
+                *asset == media.id
+            }
+            OverlayKind::Video { media: shown, .. } => *shown == media.id,
+            OverlayKind::Text { .. } | OverlayKind::Shape { .. } => false,
+        })
+        .map(|item| Command::DeleteOverlay { id: item.id });
+    let commands = clips
+        .chain(sounds)
+        .chain(elements)
+        .chain([Command::RemoveMedia { id: media.id }])
+        .collect();
+    Ok(Command::Group {
+        label: "remove media".into(),
+        commands,
+    })
+}
+
 /// Copies every referenced file into the project, as one undo step (T-0106). Files that cannot
 /// be reached stay referenced.
 pub async fn collect_media() -> Result<ProjectView, EngineFailure> {
@@ -744,5 +800,37 @@ mod filmstrip_tests {
         assert_eq!(thumbnail_times(2_500_000), [0, 1_000_000, 2_000_000]);
         assert_eq!(thumbnail_times(0), [0]);
         assert_eq!(thumbnail_times(3_600_000_000).len(), 120);
+    }
+
+    /// Removing a media takes its clips, sounds and elements with it, and undo brings all back.
+    #[test]
+    fn removing_a_media_takes_what_shows_it_and_undo_restores_it() {
+        let json = include_str!("../../../../fixtures/projects/v1_full.json");
+        let mut project = Project::from_json(json).unwrap();
+        let original = project.clone();
+        let media = project.timeline.clips[0].media_id;
+        let command = remove_media_command(&project, &media.to_string()).unwrap();
+        let inverse = command.apply(&mut project).unwrap();
+        project.validate().unwrap();
+        assert!(project.media.iter().all(|m| m.id != media));
+        assert!(project.timeline.clips.iter().all(|c| c.media_id != media));
+        assert!(project.timeline.audio.iter().all(|a| a.media_id != media));
+        inverse.apply(&mut project).unwrap();
+        assert_eq!(project, original);
+    }
+
+    #[test]
+    fn every_media_of_the_fixture_can_be_removed() {
+        let json = include_str!("../../../../fixtures/projects/v1_full.json");
+        let original = Project::from_json(json).unwrap();
+        for media in &original.media {
+            let mut project = original.clone();
+            remove_media_command(&project, &media.id.to_string())
+                .unwrap()
+                .apply(&mut project)
+                .unwrap();
+            project.validate().unwrap();
+        }
+        assert!(remove_media_command(&original, "nope").is_err());
     }
 }

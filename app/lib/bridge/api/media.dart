@@ -14,7 +14,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'projects.dart';
 import 'transcribe.dart';
 
-// These functions are ignored because they are not marked as `pub`: `audio_probe`, `cache_folders`, `clip_for`, `decode_strip`, `display_name`, `encode_strip`, `folder_bytes`, `image_probe`, `import_one`, `location_for`, `make_media`, `make_strip`, `media_views`, `read_cover`, `resolve`, `send_still`, `send_strip`, `strip_cache`, `thumbnail_size`, `thumbnail_times`, `video_probe`, `write_cover`
+// These functions are ignored because they are not marked as `pub`: `audio_probe`, `cache_folders`, `clip_for`, `decode_strip`, `display_name`, `encode_strip`, `folder_bytes`, `image_probe`, `import_one`, `location_for`, `make_media`, `make_strip`, `media_views`, `read_cover`, `remove_media_command`, `resolve`, `send_still`, `send_strip`, `strip_cache`, `thumbnail_size`, `thumbnail_times`, `video_probe`, `write_cover`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `eq`
 
 /// Imports files one by one: a bad file fails alone.
@@ -28,6 +28,11 @@ Future<ProjectView> placeClips({required List<String> mediaIds}) =>
 /// Points a missing media at a file with the same content.
 Future<ProjectView> relinkMedia({required String id, required String path}) =>
     RustLib.instance.api.crateApiMediaRelinkMedia(id: id, path: path);
+
+/// Takes a media out of the project, with every clip, sound and element that shows it, as one
+/// undo step. Its file stays on disk so that undo brings everything back.
+Future<ProjectView> removeMedia({required String id}) =>
+    RustLib.instance.api.crateApiMediaRemoveMedia(id: id);
 
 /// Copies every referenced file into the project, as one undo step (T-0106). Files that cannot
 /// be reached stay referenced.

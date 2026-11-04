@@ -356,5 +356,8 @@
   "onboardingPrivacy": "Tes vidéos restent sur ton appareil.",
   "onboardingNext": "Suivant",
   "onboardingStart": "Commencer",
-  "replayOnboarding": "Revoir la présentation"
+  "replayOnboarding": "Revoir la présentation",
+  "removeMedia": "Retirer du projet",
+  "removeMediaTitle": "Retirer « {name} » ?",
+  "removeMediaBody": "Ses clips, sons et éléments quittent aussi la timeline. Le fichier sur ton appareil est conservé, et Annuler remet tout en place."
 }
