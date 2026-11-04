@@ -200,6 +200,31 @@ class _ClipsPanelState extends ConsumerState<ClipsPanel> {
     await _guard(() => _editor.relink(item.id, file.path));
   }
 
+  /// Asks first: the media's clips, sounds and elements leave the timeline with it.
+  Future<void> _remove(MediaItemView item) async {
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.removeMediaTitle(item.name)),
+        content: Text(l10n.removeMediaBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(l10n.removeMedia),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _picked.remove(item.id));
+    await _guard(() => _editor.removeMedia(item.id));
+  }
+
   void _toggle(MediaItemView item) {
     setState(() {
       if (!_picked.remove(item.id)) _picked.add(item.id);
@@ -318,6 +343,7 @@ class _ClipsPanelState extends ConsumerState<ClipsPanel> {
                             : null,
                         onTap: item.offline ? null : () => _toggle(item),
                         onRelink: () => _relink(item),
+                        onRemove: () => _remove(item),
                       ),
                   ],
                 ),
@@ -345,6 +371,7 @@ class _MediaRow extends StatelessWidget {
     required this.order,
     required this.onTap,
     required this.onRelink,
+    required this.onRemove,
   });
 
   final MediaItemView item;
@@ -352,6 +379,7 @@ class _MediaRow extends StatelessWidget {
   final int? order;
   final VoidCallback? onTap;
   final VoidCallback onRelink;
+  final VoidCallback onRemove;
 
   @override
   Widget build(BuildContext context) {
@@ -414,9 +442,20 @@ class _MediaRow extends StatelessWidget {
               : ShortedColors.textMuted,
         ),
       ),
-      trailing: item.offline
-          ? TextButton(onPressed: onRelink, child: Text(l10n.relink))
-          : null,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (item.offline)
+            TextButton(onPressed: onRelink, child: Text(l10n.relink)),
+          IconButton(
+            key: ValueKey('remove-media-${item.id}'),
+            tooltip: l10n.removeMedia,
+            icon: const Icon(Icons.remove_circle_outline),
+            color: ShortedColors.textMuted,
+            onPressed: onRemove,
+          ),
+        ],
+      ),
     );
   }
 }

@@ -9,7 +9,7 @@ use std::time::SystemTime;
 
 use shorted_core::command::Command;
 use shorted_core::evaluate::clip_positions;
-use shorted_core::model::{AudioTrackRef, CaptionSource, Id, MediaKind, Project, Transcript};
+use shorted_core::model::{AudioTrackRef, Id, MediaKind, Project};
 use shorted_store::library::{self, ProjectEntry};
 use shorted_store::session::{project_folder, ProjectSession, SaveStatus, StoreError};
 use time::format_description::well_known::Rfc3339;
@@ -412,15 +412,6 @@ fn track_view(session: &ProjectSession) -> Vec<TrackView> {
                 .collect(),
         },
         TrackView {
-            kind: TrackKindView::Captions,
-            name: None,
-            id: None,
-            muted: timeline.track_flags.captions.muted,
-            locked: timeline.track_flags.captions.locked,
-            hidden: timeline.track_flags.captions.hidden,
-            items: caption_items(project),
-        },
-        TrackView {
             kind: TrackKindView::VoiceOver,
             name: None,
             id: None,
@@ -440,76 +431,6 @@ fn track_view(session: &ProjectSession) -> Vec<TrackView> {
         items: audio_on(AudioTrackRef::User(track.id)),
     }));
     tracks
-}
-
-/// Each phrase shown as a caption, where it plays on the timeline (T-1203).
-fn caption_items(project: &Project) -> Vec<TrackItemView> {
-    let settings = &project.captions;
-    if !settings.enabled {
-        return Vec::new();
-    }
-    let timeline = &project.timeline;
-    let phrases = |transcript: &Transcript, used: std::ops::Range<i64>| {
-        transcript
-            .segments
-            .iter()
-            .filter(|segment| !segment.hidden)
-            .filter_map(move |segment| {
-                let mut words = segment
-                    .words
-                    .iter()
-                    .filter(|w| !w.deleted && used.contains(&w.start_us));
-                let first = words.next()?;
-                let last = words.next_back().unwrap_or(first);
-                Some((segment.id, first.start_us, last.end_us.min(used.end)))
-            })
-            .collect::<Vec<_>>()
-    };
-    let mut items = Vec::new();
-    if settings.sources.contains(&CaptionSource::OriginalSound) {
-        for ((_, start, _), clip) in clip_positions(project).into_iter().zip(&timeline.clips) {
-            let Some(transcript) = clip.transcript.as_ref() else {
-                continue;
-            };
-            if !clip.original_audio.transcribe {
-                continue;
-            }
-            let speed = f64::from(clip.speed.max(0.01));
-            let at = |source: i64| start + ((source - clip.source_in_us) as f64 / speed) as i64;
-            for (id, from, to) in phrases(transcript, clip.source_in_us..clip.source_out_us) {
-                items.push((id, at(from), at(to)));
-            }
-        }
-    }
-    for item in &timeline.audio {
-        if !settings
-            .sources
-            .contains(&CaptionSource::AudioItem(item.id))
-        {
-            continue;
-        }
-        let Some(transcript) = item.transcript.as_ref() else {
-            continue;
-        };
-        let at = |source: i64| item.start_us + source - item.source_in_us;
-        for (id, from, to) in phrases(transcript, item.source_in_us..item.source_out_us) {
-            items.push((id, at(from), at(to)));
-        }
-    }
-    items.sort_by_key(|(_, start, _)| *start);
-    items
-        .into_iter()
-        .filter(|(_, start, end)| end > start)
-        .map(|(id, start_us, end_us)| TrackItemView {
-            id: id.to_string(),
-            start_us,
-            end_us,
-            media_id: None,
-            source_in_us: 0,
-            speed: 1.0,
-            slow_zoom: None,
-        })
-        .collect()
 }
 
 pub(crate) fn view_of(session: &ProjectSession) -> ProjectView {
@@ -595,29 +516,4 @@ pub async fn redo() -> Result<ProjectView, EngineFailure> {
             Ok(view_of(session))
         })
     })
-}
-
-#[cfg(test)]
-mod caption_track_tests {
-    use super::*;
-
-    #[test]
-    fn phrases_show_on_the_captions_track_where_they_play() {
-        let json = include_str!("../../../../fixtures/projects/v1_full.json");
-        let mut project = Project::from_json(json).unwrap();
-        project.captions.enabled = true;
-        project.captions.sources = vec![CaptionSource::OriginalSound];
-        let items = caption_items(&project);
-        assert!(!items.is_empty());
-        let end = project.duration_us();
-        for item in &items {
-            assert!(
-                item.start_us < item.end_us && item.end_us <= end,
-                "{}",
-                item.id
-            );
-        }
-        project.captions.enabled = false;
-        assert!(caption_items(&project).is_empty());
-    }
 }

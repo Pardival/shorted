@@ -577,5 +577,15 @@
   "onboardingPrivacy": "Your videos stay on your device.",
   "onboardingNext": "Next",
   "onboardingStart": "Start",
-  "replayOnboarding": "Show the introduction again"
+  "replayOnboarding": "Show the introduction again",
+  "removeMedia": "Remove from project",
+  "removeMediaTitle": "Remove “{name}”?",
+  "@removeMediaTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "removeMediaBody": "Its clips, sounds and elements leave the timeline too. The file on your device is kept, and Undo brings everything back."
 }

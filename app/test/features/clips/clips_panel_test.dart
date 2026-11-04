@@ -112,4 +112,26 @@ void main() {
     await tester.pump();
     expect(find.textContaining('Place in this order'), findsNothing);
   });
+
+  testWidgets('a media can be removed from the project, after a confirmation', (
+    tester,
+  ) async {
+    final gateway = await pump(tester, const ['/a.mov', '/b.mov']);
+    final id = gateway.opened!.media.first.id;
+    await tester.tap(find.byKey(ValueKey('remove-media-$id')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('leave the timeline too'), findsOneWidget);
+
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(gateway.removedMedia, isEmpty);
+
+    await tester.tap(find.byKey(ValueKey('remove-media-$id')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Remove from project').last);
+    await tester.pumpAndSettle();
+    expect(gateway.removedMedia, [id]);
+    expect(find.byKey(ValueKey('remove-media-$id')), findsNothing);
+    expect(gateway.opened!.media, hasLength(1));
+  });
 }

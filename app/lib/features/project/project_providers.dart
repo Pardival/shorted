@@ -273,6 +273,9 @@ class EditorController extends AsyncNotifier<EditorState> {
   Future<void> relink(String mediaId, String path) async =>
       _show(await _gateway.relink(mediaId, path));
 
+  Future<void> removeMedia(String mediaId) async =>
+      _show(await _gateway.removeMedia(mediaId));
+
   Future<void> splitClip(String id, int timeUs) async =>
       _show(await _gateway.splitClip(id, timeUs));
 
